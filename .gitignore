@@ -1,0 +1,61 @@
+
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Dependencies
+node_modules/
+node_modules
+.venv/
+venv/
+env/
+
+# Python Cache & Compiled Files
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.pkl
+06_APP/uploads/*.pkl
+
+# Databases (Local SQLite, etc.)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+LOGS/
+04_LOGS/*
+!04_LOGS/README.md
+
+# Reports & Output Data (Generated files containing PII)
+RELATORIOS/
+03_RELATORIOS/*
+!03_RELATORIOS/README.md
+
+# Raw Data (Containing client PII - LGPD)
+BASE DE DADOS/
+02_DADOS/BASE DE DADOS/*
+
+# IDE & OS Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# AI Agent Settings & Caches
+.aiox/
+.aiox-core/
+.antigravity/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.kimi/
+

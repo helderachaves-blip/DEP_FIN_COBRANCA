@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cobranças – Ineprotec / Matrícula EAD</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    /* ── Base ────────────────────────────────────── */
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; font-family: 'Segoe UI', sans-serif; background: #f5f6fa; }
+
+    /* ── Sidebar ─────────────────────────────────── */
+    .sidebar {
+      width: 230px; min-width: 230px;
+      background: #1a1a2e;
+      display: flex; flex-direction: column;
+      min-height: 100vh;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 100;
+    }
+
+    .sidebar-system-name {
+      padding: 1rem 1.3rem .6rem;
+      font-size: .95rem; font-weight: 700;
+      color: #fff; letter-spacing: .02em;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+
+    .sidebar-nav { flex: 1; padding: .6rem 0; overflow-y: auto; }
+
+    .sidebar-nav .nav-section {
+      font-size: .67rem; font-weight: 700; letter-spacing: .09em;
+      text-transform: uppercase; color: rgba(255,255,255,.3);
+      padding: .9rem 1.3rem .3rem;
+    }
+
+    .sidebar-nav .nav-link {
+      color: rgba(255,255,255,.68);
+      padding: .58rem 1.3rem;
+      border-radius: 0 10px 10px 0;
+      margin-right: .6rem;
+      display: flex; align-items: center; gap: .65rem;
+      font-size: .9rem;
+      transition: background .15s, color .15s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-nav .nav-link i { font-size: 1rem; min-width: 1.1rem; }
+    .sidebar-nav .nav-link:hover {
+      color: #fff;
+      background: rgba(255,255,255,.09);
+    }
+    .sidebar-nav .nav-link.active {
+      color: #a0c4ff;
+      background: rgba(160,196,255,.14);
+      font-weight: 600;
+      border-left: 3px solid #a0c4ff;
+      padding-left: calc(1.3rem - 3px);
+    }
+
+    /* ── Main wrapper ────────────────────────────── */
+    .main-wrapper {
+      margin-left: 230px;
+      flex: 1;
+      display: flex; flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Topbar ──────────────────────────────────── */
+    .topbar {
+      background: #1a1a2e;
+      padding: .5rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+      gap: 1rem;
+    }
+    .topbar-logo { display: flex; align-items: center; flex-shrink: 0; }
+    .topbar-logo img { height: 34px; object-fit: contain; }
+    .topbar-title {
+      font-weight: 700; font-size: 1rem; color: #fff;
+      white-space: nowrap; letter-spacing: .02em;
+    }
+
+    /* ── Toggle empresa ──────────────────────────── */
+    .empresa-toggle {
+      display: flex; align-items: center;
+      background: rgba(255,255,255,.1);
+      border-radius: 20px; padding: 3px; gap: 2px;
+    }
+    .empresa-btn {
+      padding: .22rem .85rem; border-radius: 16px;
+      color: rgba(255,255,255,.55); text-decoration: none;
+      font-size: .78rem; font-weight: 600; letter-spacing: .02em;
+      transition: all .15s; white-space: nowrap;
+    }
+    .empresa-btn.active { background: #fff; color: #1a1a2e; }
+    .empresa-btn:hover:not(.active) { color: #fff; background: rgba(255,255,255,.15); }
+
+    /* ── Content area ────────────────────────────── */
+    .content-area { padding: 1.5rem 1.75rem; flex: 1; }
+
+    /* ── Cards ───────────────────────────────────── */
+    .card { border: none; box-shadow: 0 2px 8px rgba(0,0,0,.08); border-radius: 12px; }
+    .card-header {
+      background: #1a1a2e; color: #fff;
+      border-radius: 12px 12px 0 0 !important; font-weight: 600;
+    }
+
+    /* ── Badges ──────────────────────────────────── */
+    .badge-cat-a      { background: #1565C0; }
+    .badge-cat-b      { background: #B71C1C; }
+    .badge-inadimplente { background: #d32f2f; }
+    .badge-quitado      { background: #388e3c; }
+    .badge-renegociado  { background: #f57c00; }
+
+    /* ── Stat cards ──────────────────────────────── */
+    .stat-card { border-radius: 12px; padding: 1rem 1.5rem; color: #fff; }
+    .stat-card.azul     { background: linear-gradient(135deg, #1565C0, #42A5F5); }
+    .stat-card.verde    { background: linear-gradient(135deg, #2e7d32, #66bb6a); }
+    .stat-card.vermelho { background: linear-gradient(135deg, #b71c1c, #ef5350); }
+    .stat-card.laranja  { background: linear-gradient(135deg, #e65100, #ffa726); }
+    .stat-num   { font-size: 2rem; font-weight: 700; }
+    .stat-label { font-size: .85rem; opacity: .9; }
+
+    /* ── Tabela ──────────────────────────────────── */
+    table { font-size: .9rem; }
+    .table-cat-a { background: #E3F2FD; }
+    .table-cat-b { background: #FFEBEE; }
+
+    /* ── Sidebar submenu ─────────────────────────── */
+    .nav-link-parent {
+      display: flex; align-items: center; gap: .65rem;
+      cursor: pointer; user-select: none;
+    }
+    .nav-link-parent .chevron {
+      margin-left: auto; font-size: .75rem;
+      transition: transform .2s; opacity: .6;
+    }
+    .nav-link-parent[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+    .nav-sublink {
+      color: rgba(255,255,255,.5);
+      padding: .35rem 1.3rem .35rem 2.6rem;
+      border-radius: 0 8px 8px 0;
+      margin-right: .6rem;
+      display: flex; align-items: center; gap: .5rem;
+      font-size: .82rem;
+      transition: background .15s, color .15s;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+    }
+    .nav-sublink i { font-size: .65rem; opacity: .7; }
+    .nav-sublink:hover { color: #fff; background: rgba(255,255,255,.07); }
+    .nav-sublink.active {
+      color: #a0c4ff; font-weight: 600;
+      background: rgba(160,196,255,.1);
+      border-left: 3px solid #a0c4ff;
+      padding-left: calc(2.6rem - 3px);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════ SIDEBAR ════════════════════════════════════ -->
+<aside class="sidebar">
+
+  <div class="sidebar-system-name">Cobranças INE-MAT</div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">Menu</div>
+
+    <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="/">
+      <i class="bi bi-house"></i> Início
+    </a>
+    <a class="nav-link {% if request.endpoint == 'resultado' %}active{% endif %}" href="/resultado">
+      <i class="bi bi-table"></i> Resultado
+    </a>
+    <a class="nav-link {% if request.endpoint == 'wizard_whatsapp' %}active{% endif %}" href="/wizard-whatsapp">
+      <i class="bi bi-whatsapp"></i> Envio de Mensagens
+    </a>
+    <a class="nav-link {% if request.endpoint == 'base' %}active{% endif %}" href="/base">
+      <i class="bi bi-database"></i> Base
+    </a>
+    <!-- Configurações com submenu colapsável -->
+    <a class="nav-link nav-link-parent {% if request.endpoint == 'configuracoes' %}active{% endif %}"
+       data-bs-toggle="collapse" href="#submenuConfig" role="button"
+       aria-expanded="{{ 'true' if request.endpoint == 'configuracoes' else 'false' }}"
+       aria-controls="submenuConfig">
+      <i class="bi bi-gear"></i>
+      <span>Configurações</span>
+      <i class="bi bi-chevron-down chevron"></i>
+    </a>
+    <div class="collapse {% if request.endpoint == 'configuracoes' %}show{% endif %}"
+         id="submenuConfig">
+      <a class="nav-sublink" href="/configuracoes#tab-mensagens">
+        <i class="bi bi-dot"></i>Mensagens
+      </a>
+      <a class="nav-sublink" href="/configuracoes#tab-regua">
+        <i class="bi bi-dot"></i>Régua
+      </a>
+      <a class="nav-sublink" href="/configuracoes#tab-alunos">
+        <i class="bi bi-dot"></i>Clientes
+      </a>
+      <a class="nav-sublink" href="/configuracoes#tab-email">
+        <i class="bi bi-dot"></i>E-mail
+      </a>
+      <a class="nav-sublink" href="/configuracoes#tab-risco">
+        <i class="bi bi-dot"></i>Zona de Risco
+      </a>
+    </div>
+
+  </nav>
+
+
+</aside>
+
+<!-- ════ MAIN ════════════════════════════════════════ -->
+<div class="main-wrapper">
+
+  <div class="topbar">
+    <div class="topbar-logo">
+      <img src="{{ url_for('static', filename='logo-ineprotec.png') }}" alt="Ineprotec"
+           style="opacity: {{ '1' if empresa_ativa == 'INEPROTEC' else '0.35' }}; transition:.2s">
+    </div>
+
+    <div class="empresa-toggle">
+      {% for key, label in empresa_labels.items() %}
+      <a href="{{ url_for('trocar_empresa', nome=key) }}"
+         class="empresa-btn {{ 'active' if empresa_ativa == key }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    <div class="topbar-logo">
+      <img src="{{ url_for('static', filename='logo-matriculaead.png') }}" alt="Matrícula EaD"
+           style="opacity: {{ '1' if empresa_ativa == 'MATRICULAEAD' else '0.35' }}; transition:.2s">
+    </div>
+  </div>
+
+  <div class="content-area">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

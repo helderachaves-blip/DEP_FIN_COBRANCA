@@ -1,0 +1,619 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+
+    <h4 class="fw-bold mb-1"><i class="bi bi-gear me-2"></i>Configurações</h4>
+    <p class="text-muted mb-3">
+      Gerencie templates de mensagem, régua de cobranças e cadastro de clientes.
+    </p>
+
+    <!-- TABS -->
+    <ul class="nav nav-tabs mb-4" id="configTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-mensagens-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-mensagens" type="button" role="tab">
+          <i class="bi bi-chat-dots me-1"></i>Mensagens
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-regua-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-regua" type="button" role="tab">
+          <i class="bi bi-bar-chart-steps me-1"></i>Régua
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-alunos-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-alunos" type="button" role="tab">
+          <i class="bi bi-people me-1"></i>Clientes
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-email-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-email" type="button" role="tab">
+          <i class="bi bi-envelope me-1"></i>E-mail
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link text-danger" id="tab-risco-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-risco" type="button" role="tab">
+          <i class="bi bi-exclamation-triangle me-1"></i>Zona de Risco
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+
+      <!-- ── TAB MENSAGENS ─────────────────────────────────────────────── -->
+      <div class="tab-pane fade show active" id="tab-mensagens" role="tabpanel">
+
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <p class="text-muted mb-0 small">
+            Gerencie os templates de mensagem para WhatsApp. Use
+            <code>{TRATAMENTO}</code>, <code>{NOME}</code>,
+            <code>{DATA_VENCIMENTO}</code>, <code>{LINK_PAGAMENTO}</code>.
+          </p>
+          <button type="button" class="btn btn-success btn-sm ms-3 text-nowrap"
+                  data-bs-toggle="modal" data-bs-target="#modalNovaMsg">
+            <i class="bi bi-plus-circle me-1"></i>Nova Mensagem
+          </button>
+        </div>
+
+        {% for t in templates %}
+        <div class="card mb-3 border-start border-4
+          {% if t.categoria == 'A Vencer' %}border-warning
+          {% elif t.categoria == 'Novos Inadimplentes' %}border-success
+          {% elif t.categoria == 'Régua' %}border-primary
+          {% elif t.categoria == 'Acima 30 Dias' %}border-danger
+          {% else %}border-secondary{% endif %}">
+
+          <div class="card-header d-flex align-items-center gap-2 py-2">
+            <i class="bi bi-chat-dots text-muted"></i>
+            <span class="fw-semibold">{{ t.titulo }}</span>
+
+            <!-- Badge de dias -->
+            {% if t.categoria == 'A Vencer' %}
+              <span class="badge bg-warning text-dark">🔔 A Vencer</span>
+            {% elif t.dias_de is not none %}
+              {% if t.dias_ate is not none %}
+                <span class="badge bg-light text-dark border">
+                  <i class="bi bi-calendar-range me-1"></i>Dia {{ t.dias_de }} – {{ t.dias_ate }}
+                </span>
+              {% else %}
+                <span class="badge bg-light text-dark border">
+                  <i class="bi bi-calendar-range me-1"></i>A partir do dia {{ t.dias_de }}
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-light text-muted border">Sem dias definidos</span>
+            {% endif %}
+
+            {% if t.categoria == 'Novos Inadimplentes' %}
+              <span class="badge bg-success">Novos</span>
+            {% elif t.categoria == 'Régua' %}
+              <span class="badge bg-primary">Régua</span>
+            {% elif t.categoria == 'Acima 30 Dias' %}
+              <span class="badge bg-danger">+30 dias</span>
+            {% elif t.categoria == 'Custom' %}
+              <span class="badge bg-secondary">Custom</span>
+            {% endif %}
+
+            <div class="ms-auto d-flex gap-1">
+              <button type="button" class="btn btn-outline-primary btn-sm"
+                      title="Editar mensagem"
+                      data-bs-toggle="modal" data-bs-target="#modalEditarMsg"
+                      data-tid="{{ t.id }}"
+                      data-titulo="{{ t.titulo | e }}"
+                      data-dias-de="{{ t.dias_de if t.dias_de is not none else '' }}"
+                      data-dias-ate="{{ t.dias_ate if t.dias_ate is not none else '' }}"
+                      data-conteudo="{{ t.conteudo | e }}"
+                      data-is-avencer="{{ 'true' if t.categoria == 'A Vencer' else 'false' }}">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button type="button" class="btn btn-outline-danger btn-sm"
+                      title="Excluir mensagem"
+                      data-bs-toggle="modal" data-bs-target="#modalExcluirMsg"
+                      data-tid="{{ t.id }}" data-titulo="{{ t.titulo }}">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body py-2">
+            <div class="font-monospace text-secondary" style="white-space:pre-wrap; font-size:.82rem">{{ t.conteudo.replace('{TRATAMENTO}','Sra.').replace('{NOME}','Maria').replace('{DATA_VENCIMENTO}','15/06/2026').replace('{LINK_PAGAMENTO}','[LINK]') }}</div>
+          </div>
+        </div>
+        {% endfor %}
+
+      </div><!-- /tab-mensagens -->
+
+      <!-- ── TAB RÉGUA ─────────────────────────────────────────────────── -->
+      <div class="tab-pane fade" id="tab-regua" role="tabpanel">
+
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h5 class="fw-bold mb-0">Régua de Cobranças</h5>
+            <p class="text-muted small mb-0">
+              Sequência atual de mensagens, ordenada por dias de atraso.
+              Gerada automaticamente a partir das mensagens cadastradas.
+            </p>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm ms-3 text-nowrap"
+                  onclick="document.getElementById('tab-mensagens-btn').click()">
+            <i class="bi bi-pencil me-1"></i>Editar Mensagens
+          </button>
+        </div>
+
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th style="width:130px">Dias de Atraso</th>
+                <th>Mensagem</th>
+                <th style="width:110px">Arquivo fonte</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set ns = namespace(tem_regua=false) %}
+              {% for t in templates %}
+                {% set ns.tem_regua = true %}
+                <tr>
+                  <td class="text-center">
+                    {% if t.categoria == 'A Vencer' or (t.dias_de is not none and t.dias_de < 0) %}
+                      <span class="badge bg-warning text-dark fs-6">Lembrete</span>
+                      <div class="small text-muted mt-1">pré-vencimento</div>
+                    {% elif t.dias_de is not none and t.dias_ate is not none %}
+                      <span class="badge bg-primary fs-6">{{ t.dias_de }} – {{ t.dias_ate }}</span>
+                    {% elif t.dias_de is not none %}
+                      <span class="badge bg-danger fs-6">{{ t.dias_de }}+</span>
+                    {% else %}
+                      <span class="badge bg-secondary">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="fw-semibold">{{ t.titulo }}</div>
+                    <div class="text-muted small font-monospace mt-1"
+                         style="white-space:pre-wrap; max-height:60px; overflow:hidden">{{ t.conteudo[:120] }}{% if t.conteudo|length > 120 %}…{% endif %}</div>
+                  </td>
+                  <td class="text-center">
+                    {% if t.categoria == 'A Vencer' or (t.dias_de is not none and t.dias_de < 0) %}
+                      <span class="badge bg-secondary">AVENCER</span>
+                    {% else %}
+                      <span class="badge bg-secondary">VENCIDOS</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+              {% if not ns.tem_regua %}
+              <tr>
+                <td colspan="3" class="text-center text-muted py-3">
+                  Nenhuma mensagem cadastrada.
+                  <a href="#" onclick="document.getElementById('tab-mensagens-btn').click(); return false;">Cadastre agora</a>.
+                </td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-info mb-3">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Como funciona:</strong> ao gerar o relatório WhatsApp, cada cliente recebe
+          automaticamente a mensagem cujo intervalo de dias cobre seu tempo de atraso.
+          O contador <strong>Cobr.</strong> (visível em <a href="/base">Base</a>) incrementa
+          +1 a cada relatório gerado.
+        </div>
+
+        <div class="alert alert-warning mb-0">
+          <i class="bi bi-link-45deg me-2"></i>
+          <strong>{LINK_PAGAMENTO}:</strong> o relatório TXT mantém esse texto como placeholder —
+          o operador substitui manualmente pelo link do boleto antes de enviar no WhatsApp.
+        </div>
+
+      </div><!-- /tab-regua -->
+
+      <!-- ── TAB ALUNOS ─────────────────────────────────────────────────── -->
+      <div class="tab-pane fade" id="tab-alunos" role="tabpanel">
+
+        <h5 class="fw-bold mb-3">Cadastro de Clientes</h5>
+        <p class="text-muted mb-3">
+          Importe o arquivo de cadastro de clientes exportado do Synapta.
+          Este arquivo muda raramente — atualize apenas quando houver novos clientes.
+        </p>
+
+        {% if auto_alunos %}
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Arquivo atual</span>
+          <small class="text-muted">{{ auto_alunos.name }}</small>
+        </div>
+        {% else %}
+        <div class="mb-3">
+          <span class="badge bg-warning text-dark">
+            <i class="bi bi-exclamation-circle me-1"></i>Nenhum arquivo de clientes encontrado
+          </span>
+        </div>
+        {% endif %}
+
+        <form action="/upload" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+          <input type="hidden" name="tipo" value="alunos">
+          <input type="file" class="form-control form-control-sm" name="arquivo"
+                 accept=".csv,.xlsx,.xls">
+          <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">
+            <i class="bi bi-upload me-1"></i>Importar
+          </button>
+        </form>
+
+      </div><!-- /tab-alunos -->
+
+      <!-- ── TAB E-MAIL ────────────────────────────────────────────────── -->
+      <div class="tab-pane fade" id="tab-email" role="tabpanel">
+
+        <h5 class="fw-bold mb-1"><i class="bi bi-envelope me-2"></i>Cobranças por E-mail</h5>
+        <p class="text-muted small mb-3">
+          Configure o servidor SMTP para envio de e-mails de cobrança.
+          O conteúdo é o mesmo das mensagens WhatsApp (aba Mensagens).
+          Defina um assunto específico por mensagem abaixo.
+        </p>
+
+        <!-- SMTP Config -->
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-server me-2"></i>Configuração SMTP</div>
+          <div class="card-body">
+            <form method="post" action="/email/configurar" class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Servidor SMTP <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="smtp_host"
+                       value="{{ config_email.get('smtp_host', '') }}"
+                       placeholder="smtp.gmail.com ou smtp.office365.com">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-semibold">Porta</label>
+                <input type="number" class="form-control" name="smtp_port"
+                       value="{{ config_email.get('smtp_port', 587) }}">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Nome do Remetente</label>
+                <input type="text" class="form-control" name="smtp_from_name"
+                       value="{{ config_email.get('smtp_from_name', '') }}"
+                       placeholder="Financeiro Ineprotec">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Usuário / E-mail <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" name="smtp_usuario"
+                       value="{{ config_email.get('smtp_usuario', '') }}"
+                       placeholder="cobrancas@empresa.com.br">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Senha / App Password <span class="text-danger">*</span></label>
+                <input type="password" class="form-control" name="smtp_senha"
+                       value="{{ config_email.get('smtp_senha', '') }}"
+                       placeholder="••••••••">
+                <div class="form-text">Gmail: use uma <em>Senha de App</em>.</div>
+              </div>
+              <div class="col-md-2 d-flex align-items-end pb-1">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" name="smtp_tls" value="1"
+                         id="smtpTls"
+                         {{ 'checked' if config_email.get('smtp_tls', 1) else '' }}>
+                  <label class="form-check-label small" for="smtpTls">STARTTLS</label>
+                </div>
+              </div>
+              <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">
+                  <i class="bi bi-floppy me-1"></i>Salvar Configurações
+                </button>
+              </div>
+            </form>
+
+            {% if config_email.get('smtp_host') %}
+            <form method="post" action="/email/testar" class="mt-2">
+              <button type="submit" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-plug me-1"></i>Testar Conexão
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Assuntos por mensagem -->
+        <div class="card mb-3">
+          <div class="card-header">
+            <i class="bi bi-tag me-2"></i>Assuntos de E-mail por Mensagem
+            <small class="text-white-50 ms-2">opcional — deixe em branco para usar o padrão</small>
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle">
+              <thead class="table-dark">
+                <tr>
+                  <th>Mensagem</th>
+                  <th>Assunto do E-mail</th>
+                  <th style="width:90px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for t in templates %}
+                {% if t.categoria != 'A Vencer' or t.dias_de is none %}
+                <tr>
+                  <td>
+                    <span class="fw-semibold">{{ t.titulo }}</span>
+                    <span class="badge bg-secondary ms-1" style="font-size:.7rem">{{ t.categoria }}</span>
+                  </td>
+                  <td>
+                    <form method="post" action="/email/assunto/{{ t.id }}" class="d-flex gap-2">
+                      <input type="text" class="form-control form-control-sm" name="assunto_email"
+                             value="{{ t.assunto_email or '' }}"
+                             placeholder="Padrão automático por categoria">
+                      <button type="submit" class="btn btn-outline-primary btn-sm text-nowrap">
+                        <i class="bi bi-floppy"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="alert alert-info mb-0">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Como usar:</strong> na tela <a href="/wizard-whatsapp">Envio de Mensagens</a>,
+          cada aluno com e-mail cadastrado terá o botão <i class="bi bi-envelope"></i>.
+          Clique para enviar individualmente, ou use o botão
+          <strong>Enviar E-mail para Todos</strong> no topo da tela de envio para envio em lote.
+          Todos os envios ficam registrados no banco de dados.
+        </div>
+
+      </div><!-- /tab-email -->
+
+      <!-- ── TAB ZONA DE RISCO ──────────────────────────────────────────── -->
+      <div class="tab-pane fade" id="tab-risco" role="tabpanel">
+
+        <div class="card border-danger">
+          <div class="card-header bg-danger text-white">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Zona de Risco
+          </div>
+          <div class="card-body">
+            <p class="mb-1 fw-semibold">Limpar Base de Inadimplentes</p>
+            <p class="text-muted small mb-3">
+              Remove <strong>todos</strong> os registros da base SQLite
+              (inadimplentes e histórico). Esta ação não pode ser desfeita.
+            </p>
+            <button type="button" class="btn btn-outline-danger btn-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalLimparBase">
+              <i class="bi bi-trash3 me-1"></i>Limpar Base
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /tab-risco -->
+
+    </div><!-- /tab-content -->
+
+  </div>
+</div>
+
+<!-- MODAL EDITAR MENSAGEM -->
+<div class="modal fade" id="modalEditarMsg" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-pencil me-2 text-primary"></i>Editar Mensagem</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="formEditarMsg" action="">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Título <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="titulo" id="editTitulo" required>
+          </div>
+          <div class="row mb-3" id="editDiasRow">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-calendar-range me-1 text-muted"></i>Enviar a partir do dia vencido
+              </label>
+              <input type="number" class="form-control" name="dias_de" id="editDiasDe" placeholder="Ex: 1 ou -1">
+              <div class="form-text">Dia mínimo de atraso. Deixe em branco se não aplicável.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-calendar-range me-1 text-muted"></i>Até o dia (opcional)
+              </label>
+              <input type="number" class="form-control" name="dias_ate" id="editDiasAte" placeholder="Sem limite">
+              <div class="form-text">Deixe em branco para "sem limite".</div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Mensagem <span class="text-danger">*</span></label>
+            <textarea class="form-control" name="conteudo" id="editConteudo" rows="7" required></textarea>
+            <div class="form-text">
+              Variáveis: <code>{TRATAMENTO}</code>, <code>{NOME}</code>,
+              <code>{DATA_VENCIMENTO}</code>, <code>{LINK_PAGAMENTO}</code>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-floppy me-1"></i>Salvar Alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVA MENSAGEM -->
+<div class="modal fade" id="modalNovaMsg" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-plus-circle me-2 text-success"></i>Nova Mensagem</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="/configuracoes/template/novo">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Título <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="titulo" required
+                   placeholder="Ex: Cobrança Dia 5">
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-calendar-range me-1 text-muted"></i>Enviar a partir do dia vencido <span class="text-danger">*</span>
+              </label>
+              <input type="number" class="form-control" name="dias_de" required
+                     placeholder="Ex: 5 ou -1">
+              <div class="form-text">Número mínimo de dias de atraso.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-calendar-range me-1 text-muted"></i>Até o dia (opcional)
+              </label>
+              <input type="number" class="form-control" name="dias_ate"
+                     placeholder="Sem limite">
+              <div class="form-text">Deixe em branco para "sem limite".</div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Mensagem <span class="text-danger">*</span></label>
+            <textarea class="form-control" name="conteudo" rows="6" required
+                      placeholder="Olá, {TRATAMENTO} {NOME}. ..."></textarea>
+            <div class="form-text">
+              Variáveis: <code>{TRATAMENTO}</code>, <code>{NOME}</code>,
+              <code>{DATA_VENCIMENTO}</code>, <code>{LINK_PAGAMENTO}</code>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-plus me-1"></i>Criar Mensagem
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR EXCLUSÃO DE MENSAGEM -->
+<div class="modal fade" id="modalExcluirMsg" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-danger text-white">
+        <h6 class="modal-title">
+          <i class="bi bi-trash3-fill me-2"></i>Excluir Mensagem
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">Tem certeza que deseja excluir a mensagem:</p>
+        <p class="fw-semibold" id="excluirMsgTitulo">—</p>
+        <p class="text-danger small mb-0">Esta ação não pode ser desfeita.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form id="formExcluirMsg" method="post" action="">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash3 me-1"></i>Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR LIMPAR BASE -->
+<div class="modal fade" id="modalLimparBase" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-danger text-white">
+        <h6 class="modal-title">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Limpeza da Base
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Você está prestes a apagar <strong>todos os inadimplentes</strong> da base de dados.</p>
+        <p class="text-danger fw-semibold">Esta ação é irreversível.</p>
+        <p class="mb-0">Para confirmar, digite <strong>LIMPAR</strong> no campo abaixo:</p>
+        <input type="text" id="confirmacaoLimpar" class="form-control mt-2"
+               placeholder="Digite LIMPAR para confirmar">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form action="/base/limpar" method="post" id="formLimpar">
+          <button type="submit" id="btnConfirmarLimpar" class="btn btn-danger btn-sm" disabled>
+            <i class="bi bi-trash3 me-1"></i>Confirmar Limpeza
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('confirmacaoLimpar').addEventListener('input', function () {
+  document.getElementById('btnConfirmarLimpar').disabled = (this.value !== 'LIMPAR');
+});
+
+// Popula o modal de EDIÇÃO com dados do template clicado
+document.getElementById('modalEditarMsg').addEventListener('show.bs.modal', function (e) {
+  const btn      = e.relatedTarget;
+  const tid      = btn.getAttribute('data-tid');
+  const isAvencer = btn.getAttribute('data-is-avencer') === 'true';
+
+  document.getElementById('formEditarMsg').action = '/configuracoes/template/' + tid + '/editar';
+  document.getElementById('editTitulo').value    = btn.getAttribute('data-titulo');
+  document.getElementById('editDiasDe').value   = btn.getAttribute('data-dias-de');
+  document.getElementById('editDiasAte').value  = btn.getAttribute('data-dias-ate');
+  document.getElementById('editConteudo').value = btn.getAttribute('data-conteudo');
+
+  const diasRow = document.getElementById('editDiasRow');
+  if (isAvencer) {
+    diasRow.style.display = 'none';
+  } else {
+    diasRow.style.display = '';
+  }
+});
+
+// Popula o modal de exclusão de mensagem com tid e título corretos
+document.getElementById('modalExcluirMsg').addEventListener('show.bs.modal', function (e) {
+  const btn   = e.relatedTarget;
+  const tid   = btn.getAttribute('data-tid');
+  const titulo = btn.getAttribute('data-titulo');
+  document.getElementById('excluirMsgTitulo').textContent = titulo;
+  document.getElementById('formExcluirMsg').action = '/configuracoes/template/' + tid + '/excluir';
+});
+
+// Abre a aba correta pelo hash (carga inicial ou troca via sidebar)
+function abrirTabPorHash(hash) {
+  if (!hash) return;
+  const btn = document.querySelector(`[data-bs-target="${hash}"]`);
+  if (btn) btn.click();
+  // Atualiza sublinks ativos na sidebar
+  document.querySelectorAll('.nav-sublink').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '/configuracoes' + hash);
+  });
+}
+abrirTabPorHash(window.location.hash);
+window.addEventListener('hashchange', () => abrirTabPorHash(window.location.hash));
+
+// Sincroniza o hash da URL ao clicar nas abas manualmente
+document.querySelectorAll('[data-bs-toggle="tab"]').forEach(btn => {
+  btn.addEventListener('shown.bs.tab', () => {
+    const target = btn.getAttribute('data-bs-target');
+    if (target) history.replaceState(null, '', target);
+    document.querySelectorAll('.nav-sublink').forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '/configuracoes' + target);
+    });
+  });
+});
+</script>
+{% endblock %}

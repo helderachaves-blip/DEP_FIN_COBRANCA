@@ -1,0 +1,210 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="bi bi-database me-2"></i>Base de Inadimplentes</h4>
+    <small class="text-muted">
+      {{ info.total }} inadimplentes &nbsp;|&nbsp;
+      Última atualização: {{ info.ultima_atualizacao or 'nunca' }}
+    </small>
+  </div>
+</div>
+
+<!-- LEGENDA DE STATUS -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <span class="badge badge-inadimplente fs-6">INADIMPLENTE</span>
+  <span class="badge badge-quitado fs-6">QUITADO</span>
+  <span class="badge badge-renegociado fs-6">RENEGOCIADO</span>
+  <small class="text-muted align-self-center ms-2">
+    Clique em "Alterar Status" para atualizar individualmente cada cliente.
+  </small>
+</div>
+
+{% if not alunos %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Base ainda vazia. Consolide os dados e clique em "Comparar e Atualizar Base".
+  </div>
+{% else %}
+
+<!-- FILTROS -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto"><label class="form-label mb-0 fw-semibold">Filtrar:</label></div>
+      <div class="col-auto">
+        <select id="filtroStatus" class="form-select form-select-sm">
+          <option value="">Todos os status</option>
+          <option value="INADIMPLENTE">INADIMPLENTE</option>
+          <option value="QUITADO">QUITADO</option>
+          <option value="RENEGOCIADO">RENEGOCIADO</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <select id="filtroCategoria" class="form-select form-select-sm">
+          <option value="">Todas as categorias</option>
+          <option value="Novos Inadimplentes">Novos Inadimplentes</option>
+          <option value="Régua">Vencidos - 2 à 29 Dias</option>
+          <option value="Acima 30 Dias">Acima de 30 Dias</option>
+        </select>
+      </div>
+      <div class="col">
+        <input type="text" id="filtroBusca" class="form-control form-control-sm"
+               placeholder="Buscar por nome...">
+      </div>
+      <div class="col-auto">
+        <span id="contador" class="text-muted small">{{ alunos|length }} clientes</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TABELA -->
+<div class="card">
+  <div class="card-header"><i class="bi bi-table me-2"></i>Registro de Inadimplentes</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="tabelaBase">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Telefone</th>
+            <th class="text-center">Qtd</th>
+            <th class="text-end">Total</th>
+            <th>Últ. Vencimento</th>
+            <th>Dias</th>
+            <th>Cat.</th>
+            <th class="text-center" title="Quantidade de Cobranças">Cobr.</th>
+            <th>Status</th>
+            <th>Entrada</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in alunos %}
+          <tr data-status="{{ a.status }}" data-cat="{{ a.categoria }}" data-nome="{{ a.aluno|lower }}">
+            <td class="text-muted small">{{ loop.index }}</td>
+            <td class="fw-semibold">{{ a.aluno }}</td>
+            <td class="small text-muted">{{ a.cpf }}</td>
+            <td>{{ a.telefone }}</td>
+            <td class="text-center">{{ a.qtd }}</td>
+            <td class="text-end text-nowrap">{{ a.total }}</td>
+            <td>{{ a.vencimento }}</td>
+            <td class="text-center">
+              <span class="badge {{ 'bg-danger' if a.dias and a.dias > 30 else 'bg-warning text-dark' }}">
+                {{ a.dias or '-' }}d
+              </span>
+            </td>
+            <td>
+              {% if a.categoria == 'Novos Inadimplentes' %}
+                <span class="badge bg-success">Novo</span>
+              {% elif a.categoria == 'Régua' %}
+                <span class="badge badge-cat-a">Régua</span>
+              {% else %}
+                <span class="badge badge-cat-b">Acima 30d</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if a.qtd_cobranca %}
+                <span class="badge bg-secondary">{{ a.qtd_cobranca }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-{{ a.status|lower }}">{{ a.status }}</span>
+            </td>
+            <td class="small text-muted">{{ a.entrada }}</td>
+            <td>
+              <button class="btn btn-xs btn-outline-secondary btn-sm py-0"
+                      onclick="abrirModal('{{ a.cpf }}','{{ a.aluno }}','{{ a.status }}')">
+                <i class="bi bi-pencil"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+<!-- MODAL ALTERAR STATUS -->
+<div class="modal fade" id="modalStatus" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Alterar Status</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/base/status" method="post">
+        <div class="modal-body">
+          <p id="modalNome" class="fw-semibold mb-3"></p>
+          <input type="hidden" name="cpf" id="modalCpf">
+          <div class="d-grid gap-2">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="status" value="INADIMPLENTE" id="s1">
+              <label class="form-check-label badge-inadimplente badge fs-6" for="s1">INADIMPLENTE</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="status" value="QUITADO" id="s2">
+              <label class="form-check-label badge-quitado badge fs-6" for="s2">QUITADO</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="status" value="RENEGOCIADO" id="s3">
+              <label class="form-check-label badge-renegociado badge fs-6" for="s3">RENEGOCIADO</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function abrirModal(cpf, nome, statusAtual) {
+  document.getElementById('modalCpf').value = cpf;
+  document.getElementById('modalNome').textContent = nome;
+  const radios = document.querySelectorAll('input[name="status"]');
+  radios.forEach(r => r.checked = (r.value === statusAtual));
+  new bootstrap.Modal(document.getElementById('modalStatus')).show();
+}
+
+const filtroStatus   = document.getElementById('filtroStatus');
+const filtroCategoria = document.getElementById('filtroCategoria');
+const filtroBusca    = document.getElementById('filtroBusca');
+const contador       = document.getElementById('contador');
+const linhas         = document.querySelectorAll('#tabelaBase tbody tr');
+
+function filtrar() {
+  const st   = filtroStatus ? filtroStatus.value : '';
+  const cat   = filtroCategoria ? filtroCategoria.value : '';
+  const busca = filtroBusca ? filtroBusca.value.toLowerCase() : '';
+  let vis = 0;
+  linhas.forEach(tr => {
+    const stOk  = !st   || tr.dataset.status === st;
+    const catOk = !cat  || tr.dataset.cat    === cat;
+    const nomeOk = !busca || tr.dataset.nome.includes(busca);
+    tr.style.display = (stOk && catOk && nomeOk) ? '' : 'none';
+    if (stOk && catOk && nomeOk) vis++;
+  });
+  if (contador) contador.textContent = vis + ' cliente' + (vis !== 1 ? 's' : '');
+}
+
+if (filtroStatus)   filtroStatus.addEventListener('change', filtrar);
+if (filtroCategoria) filtroCategoria.addEventListener('change', filtrar);
+if (filtroBusca)    filtroBusca.addEventListener('input', filtrar);
+</script>
+{% endblock %}

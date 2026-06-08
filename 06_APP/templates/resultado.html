@@ -1,0 +1,282 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+{% if not linhas %}
+  <div class="alert alert-warning">
+    Nenhuma consolidação em curso. <a href="/">Volte ao início</a> e consolide primeiro.
+  </div>
+{% else %}
+
+<!-- AÇÕES -->
+<div class="row g-2 mb-3">
+  <div class="col-12 col-sm-6 col-md-3">
+    <form action="/gerar-relatorio" method="post" class="h-100">
+      <button type="submit" class="btn btn-success w-100 h-100">
+        <i class="bi bi-file-earmark-text me-1"></i>Gerar Relatórios
+      </button>
+    </form>
+  </div>
+  <div class="col-12 col-sm-6 col-md-3">
+    <a href="/wizard-whatsapp" class="btn btn-outline-success w-100 h-100 d-flex align-items-center justify-content-center">
+      <i class="bi bi-whatsapp me-1"></i>Envio de Mensagens
+    </a>
+  </div>
+  <div class="col-12 col-sm-6 col-md-3">
+    <form action="/atualizar-base" method="post" class="h-100">
+      <button type="submit" class="btn btn-warning text-dark w-100 h-100">
+        <i class="bi bi-database-up me-1"></i>Atualizar Base
+      </button>
+    </form>
+  </div>
+  <div class="col-6 col-md-2">
+    <a href="/abrir-relatorios" class="btn btn-outline-secondary w-100 h-100 d-flex align-items-center justify-content-center">
+      <i class="bi bi-folder-symlink me-1"></i>Relatórios
+    </a>
+  </div>
+  <div class="col-6 col-md-1">
+    <a href="/limpar" class="btn btn-outline-danger w-100 h-100 d-flex align-items-center justify-content-center"
+       title="Limpar consolidação">
+      <i class="bi bi-trash"></i>
+    </a>
+  </div>
+</div>
+
+<!-- FILTROS POR CATEGORIA (clique para filtrar) -->
+<div class="row mb-2 g-3">
+  {% if avencer_linhas %}
+  <div class="col-12 col-md-3">
+    <div class="stat-card" style="background:linear-gradient(135deg,#E65100,#FF9800)">
+      <div class="stat-num">{{ avencer_linhas|length }}</div>
+      <div class="stat-label"><i class="bi bi-bell me-1"></i>A Vencer Amanhã</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+  {% else %}
+  <div class="col-12 col-md-4">
+  {% endif %}
+    <div class="stat-card stat-filtro" data-filtro="Novos Inadimplentes"
+         style="background:linear-gradient(135deg,#2E7D32,#66BB6A);cursor:pointer" title="Clique para filtrar">
+      <div class="stat-num">{{ stats.cat_novos }}</div>
+      <div class="stat-label">Novos Inadimplentes <i class="bi bi-funnel-fill" style="font-size:.7rem;opacity:.7"></i></div>
+    </div>
+  </div>
+  {% if avencer_linhas %}
+  <div class="col-12 col-md-3">
+  {% else %}
+  <div class="col-12 col-md-4">
+  {% endif %}
+    <div class="stat-card stat-filtro" data-filtro="Régua"
+         style="background:linear-gradient(135deg,#1565C0,#42A5F5);cursor:pointer" title="Clique para filtrar">
+      <div class="stat-num">{{ stats.cat_regua }}</div>
+      <div class="stat-label">Vencidos - 2 à 29 Dias <i class="bi bi-funnel-fill" style="font-size:.7rem;opacity:.7"></i></div>
+    </div>
+  </div>
+  {% if avencer_linhas %}
+  <div class="col-12 col-md-3">
+  {% else %}
+  <div class="col-12 col-md-4">
+  {% endif %}
+    <div class="stat-card vermelho stat-filtro" data-filtro="Acima 30 Dias"
+         style="cursor:pointer" title="Clique para filtrar">
+      <div class="stat-num">{{ stats.cat_acima30 }}</div>
+      <div class="stat-label">Acima de 30 Dias <i class="bi bi-funnel-fill" style="font-size:.7rem;opacity:.7"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOTALIZADORES (atualizam com o filtro) -->
+<div class="row mb-3 g-3">
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100 stat-filtro" data-filtro=""
+         style="border:none;border-left:4px solid #1565C0;cursor:pointer;border-radius:12px" title="Clique para mostrar todos">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div id="totalAlunos" style="font-size:2.4rem;font-weight:700;color:#1565C0;line-height:1">{{ stats.total }}</div>
+        <div>
+          <div class="fw-semibold text-dark" style="font-size:.95rem">Total de Inadimplentes</div>
+          <small class="text-muted"><i class="bi bi-arrow-left-right me-1"></i>atualiza com o filtro</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="card shadow-sm h-100" style="border:none;border-left:4px solid #2e7d32;border-radius:12px">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div id="totalValor" style="font-size:1.6rem;font-weight:700;color:#2e7d32;line-height:1">{{ stats.valor_total | brl }}</div>
+        <div>
+          <div class="fw-semibold text-dark" style="font-size:.95rem">Total em Atraso</div>
+          <small class="text-muted"><i class="bi bi-arrow-left-right me-1"></i>atualiza com o filtro</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FILTRO -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <label class="form-label mb-0 fw-semibold">Filtrar:</label>
+      </div>
+      <div class="col-auto">
+        <select id="filtroCategoria" class="form-select form-select-sm">
+          <option value="">Todas as categorias</option>
+          <option value="Novos Inadimplentes">Novos Inadimplentes</option>
+          <option value="Régua">Vencidos - 2 à 29 Dias</option>
+          <option value="Acima 30 Dias">Acima de 30 Dias</option>
+        </select>
+      </div>
+      <div class="col">
+        <input type="text" id="filtroBusca" class="form-control form-control-sm"
+               placeholder="Buscar por nome...">
+      </div>
+      <div class="col-auto">
+        <span id="contadorFiltro" class="text-muted small">{{ linhas|length }} clientes</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TABELA -->
+<div class="card">
+  <div class="card-header">
+    <i class="bi bi-table me-2"></i>Resultado da Consolidação
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="tabelaResultado">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Nome do Cliente</th>
+            <th>Telefone</th>
+            <th class="text-center">Qtd Títulos</th>
+            <th class="text-end">Valor Total</th>
+            <th>Últ. Vencimento</th>
+            <th>Dias Atraso</th>
+            <th>Categoria</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in linhas %}
+          <tr class="{{ 'table-cat-a' if l.categoria == 'Novos Inadimplentes' else ('table-cat-a' if l.categoria == 'Régua' else 'table-cat-b') }}"
+              data-cat="{{ l.categoria }}" data-nome="{{ l.nome|lower }}" data-valor="{{ l.valor_raw }}">
+            <td class="text-muted small">{{ loop.index }}</td>
+            <td class="fw-semibold">{{ l.nome }}</td>
+            <td>{{ l.telefone }}</td>
+            <td class="text-center">{{ l.qtd }}</td>
+            <td class="text-end fw-semibold text-nowrap">{{ l.valor }}</td>
+            <td>{{ l.vencimento }}</td>
+            <td class="text-center">
+              <span class="badge {{ 'bg-danger' if l.dias > 30 else 'bg-warning text-dark' }}">
+                {{ l.dias }}d
+              </span>
+            </td>
+            <td>
+              {% if l.categoria == 'Novos Inadimplentes' %}
+                <span class="badge bg-success">Novo</span>
+              {% elif l.categoria == 'Régua' %}
+                <span class="badge badge-cat-a">Régua</span>
+              {% else %}
+                <span class="badge badge-cat-b">Acima 30d</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TABELA A VENCER -->
+{% if avencer_linhas %}
+<div class="card mt-4">
+  <div class="card-header text-white" style="background:#E65100">
+    <i class="bi bi-bell me-2"></i>Lembretes — A Vencer Hoje / Amanhã
+    <span class="badge bg-white text-dark ms-2">{{ avencer_linhas|length }}</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Nome do Cliente</th>
+            <th>Telefone</th>
+            <th class="text-center">Qtd Títulos</th>
+            <th class="text-end text-nowrap">Valor</th>
+            <th>Próx. Vencimento</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in avencer_linhas %}
+          <tr>
+            <td class="text-muted small">{{ loop.index }}</td>
+            <td class="fw-semibold">{{ a.nome }}</td>
+            <td>{{ a.telefone }}</td>
+            <td class="text-center">{{ a.qtd }}</td>
+            <td class="text-end fw-semibold text-nowrap">{{ a.valor }}</td>
+            <td>{{ a.vencimento }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const filtroCat   = document.getElementById('filtroCategoria');
+const filtroBusca = document.getElementById('filtroBusca');
+const contador    = document.getElementById('contadorFiltro');
+const totalAlunos = document.getElementById('totalAlunos');
+const totalValor  = document.getElementById('totalValor');
+const linhas      = document.querySelectorAll('#tabelaResultado tbody tr');
+const cards       = document.querySelectorAll('.stat-filtro');
+
+function fmtBrl(val) {
+  return 'R$ ' + val.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function filtrar() {
+  const cat   = filtroCat.value;
+  const busca = filtroBusca.value.toLowerCase();
+  let vis = 0, soma = 0;
+  linhas.forEach(tr => {
+    const catOk  = !cat   || tr.dataset.cat === cat;
+    const nomeOk = !busca || tr.dataset.nome.includes(busca);
+    const show   = catOk && nomeOk;
+    tr.style.display = show ? '' : 'none';
+    if (show) { vis++; soma += parseFloat(tr.dataset.valor || 0); }
+  });
+  contador.textContent    = vis + ' cliente' + (vis !== 1 ? 's' : '');
+  totalAlunos.textContent = vis;
+  totalValor.textContent  = fmtBrl(soma);
+
+  // Destaque visual no card ativo
+  cards.forEach(c => {
+    const ativo = c.dataset.filtro === cat;
+    c.style.outline      = ativo ? '3px solid #fff' : '';
+    c.style.boxShadow    = ativo ? '0 0 0 3px rgba(255,255,255,.5)' : '';
+    c.style.opacity      = (!cat || ativo) ? '1' : '0.55';
+  });
+}
+
+// Clique nos cards de categoria
+cards.forEach(card => {
+  card.addEventListener('click', () => {
+    filtroCat.value = card.dataset.filtro;
+    filtrar();
+  });
+});
+
+filtroCat.addEventListener('change', filtrar);
+filtroBusca.addEventListener('input', filtrar);
+</script>
+{% endblock %}

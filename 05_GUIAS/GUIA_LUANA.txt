@@ -1,0 +1,201 @@
+╔════════════════════════════════════════════════════════════════╗
+║        GUIA DE USO - CONSOLIDADOR DE INADIMPLÊNCIAS            ║
+║                     Para: LUANA                                ║
+║                     Data: 20/05/2026                           ║
+╚════════════════════════════════════════════════════════════════╝
+
+🎯 OBJETIVO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Consolidar faturas vencidas e gerar mensagens prontas para enviar
+pelo WhatsApp Web.
+
+📋 ANTES DE COMEÇAR - O QUE VOCÊ PRECISA FAZER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ BAIXAR OS ARQUIVOS DO SYNAPTA
+
+   Local para salvar: C:\Users\User\Desktop\MAT-INE - INADIMPLENCIA - 2026\BASE DE DADOS\
+
+   Arquivo 1: "VENCIDOS - 19-05-2026.csv"
+   ├─ Onde encontra: Synapta → Relatórios → Faturas Vencidas
+   ├─ Formato: CSV (não Excel!)
+   └─ Coloque em: BASE DE DADOS/
+
+   Arquivo 2: "(298) Alunos.csv"
+   ├─ Onde encontra: Synapta → Cadastros → Alunos (exportar)
+   ├─ Formato: CSV (não Excel!)
+   ├─ Renomeie para: (298) Alunos.csv (EXATO!)
+   └─ Coloque em: BASE DE DADOS/
+
+
+2️⃣ VERIFICAR SE OS ARQUIVOS ESTÃO NO LUGAR CERTO
+
+   Abra: C:\Users\User\Desktop\MAT-INE - INADIMPLENCIA - 2026\BASE DE DADOS\
+
+   Você deve ver:
+   ✓ VENCIDOS - 19-05-2026.csv
+   ✓ (298) Alunos.csv
+
+   Se não vê, volte ao passo 1 e coloque os arquivos lá!
+
+
+🚀 COMO USAR A APLICAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3️⃣ ABRIR A APLICAÇÃO
+
+   a) Abra Command Prompt (Windows)
+   b) Cole este comando:
+      cd "C:\Users\User\Desktop\MAT-INE - INADIMPLENCIA - 2026"
+
+   c) Digite:
+      python inadimplencia_app.py
+
+   d) Aguarde abrir a janela (pode levar 5-10 segundos)
+
+
+4️⃣ CLICAR EM "📥 CONSOLIDAR VENCIDAS"
+
+   a) Clique no botão verde "📥 Consolidar Vencidas"
+
+   b) Aguarde a consolidação (pode levar 30 segundos a 1 minuto)
+
+   c) Você verá uma tabela aparecendo com:
+      ├─ Nome do Aluno
+      ├─ Qtd Títulos (quantidade de boletos vencidos)
+      ├─ Valor Total (soma dos boletos)
+      └─ Categoria (A ou B)
+
+
+5️⃣ VISUALIZAR O RESULTADO (OPCIONAL)
+
+   a) Clique em "📊 Visualizar Resultado"
+
+   b) Aparecerá uma janela com estatísticas:
+      ├─ Total de alunos
+      ├─ Categoria A: quantos têm 1 título
+      ├─ Categoria B: quantos têm >1 título
+      ├─ Valor total em risco
+      └─ Cobertura de telefone/email
+
+
+6️⃣ GERAR RELATÓRIO PARA WHATSAPP
+
+   a) Clique em "📄 Gerar Relatório WhatsApp"
+
+   b) Serão criados 2 arquivos:
+      ├─ relatorio_vencidas_DD-MM-YYYY_HH-MM-SS.txt
+      └─ relatorio_vencidas_DD-MM-YYYY_HH-MM-SS.xlsx
+
+   c) Ambos serão salvos em:
+      C:\Users\User\Desktop\MAT-INE - INADIMPLENCIA - 2026\RELATORIOS\
+
+
+7️⃣ USAR O ARQUIVO TXT PARA ENVIAR WHATSAPP
+
+   a) Abra o arquivo .txt gerado
+
+   b) Você verá duas seções:
+      ├─ CATEGORIA A (1 título) - ENVIAR DIARIAMENTE
+      └─ CATEGORIA B (>1 título) - ENVIAR 1X POR SEMANA
+
+   c) Para cada aluno:
+      ├─ Nome
+      ├─ Telefone
+      └─ Mensagem (PRONTA PARA COPIAR)
+
+   d) Copie cada mensagem e cole no WhatsApp Web:
+      1. Abra: https://web.whatsapp.com
+      2. Clique no contato da pessoa
+      3. Cole a mensagem
+      4. Clique enviar
+
+
+📊 ENTENDENDO AS CATEGORIAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CATEGORIA A: Apenas 1 título vencido
+├─ Mensagem: Aviso com boleto
+├─ Frequência: ENVIAR DIARIAMENTE (novos casos)
+└─ Objetivo: Cobrança simples e direta
+
+CATEGORIA B: Mais de 1 título vencido
+├─ Mensagem: Abordagem de negociação
+├─ Frequência: ENVIAR 1X POR SEMANA
+└─ Objetivo: Retomar aluno / Parcelamento
+
+
+❓ DÚVIDAS FREQUENTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+P: Quanto tempo leva para consolidar?
+R: Entre 30 segundos e 1 minuto, dependendo da quantidade de dados.
+
+P: Posso fechar a janela antes de terminar?
+R: Não! Aguarde até aparecer "✅ Consolidação OK" na tela.
+
+P: Onde ficam os relatórios?
+R: Em: C:\Users\User\Desktop\MAT-INE - INADIMPLENCIA - 2026\RELATORIOS\
+
+P: Preciso baixar os arquivos todos os dias?
+R: Sim! Diariamente para pegar os novos vencidos.
+   Alunos: Uma vez por mês (ou quando cadastrar novos)
+
+P: Pode copiar várias mensagens ao mesmo tempo?
+R: Pode, mas recomenda uma por uma para garantir que vai pro contato certo.
+
+P: E se o aluno não tiver telefone?
+R: Aparecerá "N/A" (não disponível). Nesse caso, procure o contato manualmente.
+
+P: Consigo editar a mensagem antes de enviar?
+R: Sim! Copia, cola no WhatsApp e edita lá conforme necessário.
+
+
+⚠️ CHECKLIST ANTES DE COMEÇAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] Python está instalado (pediu pro Helder?)
+[ ] Arquivos VENCIDOS e ALUNOS estão em BASE DE DADOS/
+[ ] Nomes dos arquivos estão EXATOS:
+    - VENCIDOS - 19-05-2026.csv
+    - (298) Alunos.csv
+[ ] WhatsApp Web está funcionando (testar em browser)
+[ ] Abrir Command Prompt com facilidade
+
+
+🎯 FLUXO DIÁRIO (RECOMENDADO)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SEGUNDA A SEXTA (exceto quando atualizar alunos):
+
+1. Baixa novo arquivo VENCIDOS do Synapta
+2. Coloca em BASE DE DADOS/
+3. Abre a aplicação (python inadimplencia_app.py)
+4. Clica "Consolidar Vencidas"
+5. Clica "Gerar Relatório WhatsApp"
+6. Abre o TXT gerado
+7. Copia mensagens para WhatsApp Web
+8. Envia para os alunos
+
+Tempo total: ~10-15 minutos
+
+
+📞 PRECISA DE AJUDA?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Contato: HELDER (TI)
+Descrição do problema:
+├─ Qual foi a ação que tentou fazer?
+├─ Qual foi a mensagem de erro? (copia tudo!)
+└─ Screenshots ajudam!
+
+Ou visite aqui no Claude e diga: "Helder, estou com erro..."
+
+
+🎉 PRONTO!
+
+Você está preparada para usar a aplicação. Qualquer dúvida, avise!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Versão 1.0 | Data: 20/05/2026 | Aplicação: Consolidador de Inadimplências

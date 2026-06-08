@@ -1,0 +1,14 @@
+ID,FASE,TAREFA,DESCRIÇÃO,RESPONSÁVEL,DATA INÍCIO,DATA FIM,STATUS,PRIORIDADE,DEPENDÊNCIAS
+1.1,Fase 1 - Diagnóstico,Consolidar plataformas de pagamento,Documentar todas as plataformas e integrações,EDILVO,19/05/2026,19/05/2026,Pendente,ALTA,
+1.2,Fase 1 - Diagnóstico,Analisar dados de inadimplência,Extrair relatórios históricos e padrões,Analista,19/05/2026,19/05/2026,Pendente,ALTA,1.1
+1.3,Fase 1 - Diagnóstico,Mapear processos de cobrança,Detalhar fluxo atual de cobranças,Analista,20/05/2026,20/05/2026,Pendente,ALTA,1.2
+1.4,Fase 1 - Diagnóstico,Identificar melhores dias de pagamento,Analisar padrão de recebimentos,Analista,20/05/2026,20/05/2026,Pendente,ALTA,1.3
+2.1,Fase 2 - Design,Definir régua de cobrança automática,Sequência de avisos 5d/10d/15d/30d,EDILVO,21/05/2026,21/05/2026,Pendente,ALTA,1.4
+2.2,Fase 2 - Design,Especificar integrações de APIs,Definir plataformas e fluxos técnicos,Desenvolvimento,21/05/2026,21/05/2026,Pendente,ALTA,1.4
+2.3,Fase 2 - Design,Planejar fluxo de negativação,Critérios legais e processo,Compliance,21/05/2026,21/05/2026,Pendente,ALTA,1.4
+3.1,Fase 3 - Implementação,Desenvolver automações de cobrança,Scripts e workflows automáticos,Desenvolvimento,22/05/2026,23/05/2026,Pendente,ALTA,2.1;2.2
+3.2,Fase 3 - Implementação,Testar fluxos e integrações,QA completo de todos os processos,QA,23/05/2026,24/05/2026,Pendente,ALTA,3.1
+3.3,Fase 3 - Implementação,Configurar dashboard de métricas,Visualização de inadimplência e recebimentos,Desenvolvimento,22/05/2026,23/05/2026,Pendente,MÉDIA,2.1
+4.1,Fase 4 - Validação,Validação com stakeholders,Apresentação e aprovação final,EDILVO,25/05/2026,25/05/2026,Pendente,ALTA,3.2
+4.2,Fase 4 - Validação,Deploy em produção,Colocar sistema em produção,Desenvolvimento,25/05/2026,25/05/2026,Pendente,ALTA,4.1
+4.3,Fase 4 - Validação,Treinamento de equipe,Documentação e treino,EDILVO,25/05/2026,25/05/2026,Pendente,MÉDIA,4.2
