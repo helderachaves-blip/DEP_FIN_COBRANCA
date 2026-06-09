@@ -70,9 +70,10 @@
         <select id="filtroCategoria" class="form-select form-select-sm">
           <option value="">Todas as categorias</option>
           <option value="Novos Inadimplentes">Novos Inadimplentes</option>
-          <option value="Régua">Vencidos 2-29d</option>
+          <option value="Inadimplentes Mês">Inadimplentes Mês (2-29d)</option>
           <option value="Acima 30 Dias">Acima de 30 Dias</option>
           {% if avencer_linhas %}
+          <option value="Vence Hoje">Vence Hoje</option>
           <option value="A Vencer">A Vencer</option>
           {% endif %}
         </select>
@@ -135,8 +136,8 @@
             <td class="text-center">
               {% if l.categoria == 'Novos Inadimplentes' %}
                 <span class="badge bg-success">Novo</span>
-              {% elif l.categoria == 'Régua' %}
-                <span class="badge bg-primary">Régua</span>
+              {% elif l.categoria == 'Inadimplentes Mês' %}
+                <span class="badge" style="background:#F57F17">Mês</span>
               {% else %}
                 <span class="badge bg-danger">+30d</span>
               {% endif %}
@@ -181,7 +182,7 @@
               <div class="collapse" id="expand-{{ idx }}">
                 <div class="p-3 bg-light border-start border-4
                   {% if l.categoria == 'Novos Inadimplentes' %}border-success
-                  {% elif l.categoria == 'Régua' %}border-primary
+                  {% elif l.categoria == 'Inadimplentes Mês' %}border-warning
                   {% else %}border-danger{% endif %}">
                   <div class="font-monospace text-dark" id="msgtext-{{ idx }}"
                        style="white-space:pre-wrap;font-size:.85rem;line-height:1.5">{{ l.mensagem }}</div>
@@ -207,9 +208,9 @@
 <!-- TABELA A VENCER -->
 {% if avencer_linhas %}
 <div class="card mb-4">
-  <div class="card-header text-white d-flex align-items-center gap-2" style="background:#E65100">
-    <i class="bi bi-bell"></i>
-    <span>Lembretes — A Vencer</span>
+  <div class="card-header text-white d-flex align-items-center gap-2" style="background:#AD1457">
+    <i class="bi bi-calendar-check"></i>
+    <span>Lembretes — Vencimentos</span>
     <span class="badge bg-white text-dark ms-1">{{ avencer_linhas|length }}</span>
   </div>
   <div class="card-body p-0">
@@ -220,6 +221,7 @@
             <th style="width:38px">#</th>
             <th>Nome</th>
             <th>Telefone</th>
+            <th class="text-center">Quando</th>
             <th>Vencimento</th>
             <th class="text-end text-nowrap">Valor</th>
             <th class="text-center" style="width:155px">Ações</th>
@@ -228,8 +230,8 @@
         <tbody>
           {% for l in avencer_linhas %}
           {% set idx = 'av' ~ loop.index %}
-          <tr class="wizard-row wizard-row-av {% if l.enviado %}table-success{% endif %} align-middle"
-              data-cat="A Vencer" data-nome="{{ l.nome|lower }} {{ l.telefone|lower }}"
+          <tr class="wizard-row wizard-row-av {% if l.enviado %}table-success{% elif l.categoria == 'Vence Hoje' %}table-warning{% endif %} align-middle"
+              data-cat="{{ l.categoria }}" data-nome="{{ l.nome|lower }} {{ l.telefone|lower }}"
               data-enviado="{{ 'true' if l.enviado else 'false' }}"
               style="cursor:pointer"
               data-bs-toggle="collapse" data-bs-target="#expand-{{ idx }}">
@@ -241,6 +243,13 @@
               {% endif %}
             </td>
             <td class="small text-muted">{{ l.telefone }}</td>
+            <td class="text-center">
+              {% if l.categoria == 'Vence Hoje' %}
+                <span class="badge" style="background:#AD1457">Hoje</span>
+              {% else %}
+                <span class="badge bg-secondary">Em breve</span>
+              {% endif %}
+            </td>
             <td class="small">{{ l.vencimento }}</td>
             <td class="text-end text-nowrap small fw-semibold">{{ l.valor }}</td>
             <td class="text-center" onclick="event.stopPropagation()">

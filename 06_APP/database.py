@@ -42,7 +42,7 @@ TEMPLATES_PADRAO = {
             ),
         },
         {
-            'categoria': 'Régua',
+            'categoria': 'Inadimplentes Mês',
             'titulo': 'Vencidos - 2 a 29 Dias',
             'dias_de': 2,
             'dias_ate': 29,
@@ -97,7 +97,7 @@ TEMPLATES_PADRAO = {
             ),
         },
         {
-            'categoria': 'Régua',
+            'categoria': 'Inadimplentes Mês',
             'titulo': 'Vencidos - 2 a 29 Dias',
             'dias_de': 2,
             'dias_ate': 29,
@@ -172,14 +172,14 @@ def init_db():
 
         # ── Migração Fase C: categorias A/B → novas nomenclaturas ──────────
         conn.execute(
-            "UPDATE templates SET categoria='Régua', titulo='Vencidos - 2 a 29 Dias' "
-            "WHERE categoria='A'"
+            "UPDATE templates SET categoria='Inadimplentes Mês', titulo='Vencidos - 2 a 29 Dias' "
+            "WHERE categoria='A' OR categoria='Régua'"
         )
         conn.execute(
             "UPDATE templates SET categoria='Acima 30 Dias', titulo='Cobranças Avançadas (Acima de 30 Dias)' "
             "WHERE categoria='B'"
         )
-        conn.execute("UPDATE inadimplentes SET categoria='Régua' WHERE categoria='A'")
+        conn.execute("UPDATE inadimplentes SET categoria='Inadimplentes Mês' WHERE categoria='A' OR categoria='Régua'")
         conn.execute("UPDATE inadimplentes SET categoria='Acima 30 Dias' WHERE categoria='B'")
 
         # ── Migração Fase D: adicionar coluna empresa ───────────────────────
@@ -239,7 +239,7 @@ def init_db():
         )
         conn.execute(
             "UPDATE templates SET dias_de=2, dias_ate=29 "
-            "WHERE categoria='Régua' AND dias_de IS NULL"
+            "WHERE categoria='Inadimplentes Mês' AND dias_de IS NULL"
         )
         conn.execute(
             "UPDATE templates SET dias_de=30 "
@@ -378,7 +378,10 @@ def carregar_base(empresa: str) -> pd.DataFrame:
     return df
 
 
-def salvar_base(novo_consolidado: pd.DataFrame, empresa: str) -> dict:
+def salvar_base(novo_consolidado: pd.DataFrame, empresa: str,
+                cpfs_avencer: set | None = None,
+                cpfs_pagos: set | None = None,
+                cpfs_cancelados: set | None = None) -> dict:
     hoje  = datetime.now().strftime('%d/%m/%Y')
     agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
@@ -397,9 +400,43 @@ def salvar_base(novo_consolidado: pd.DataFrame, empresa: str) -> dict:
     entrada_map = dict(zip(base_atual['cpf'], base_atual['data_entrada'])) if not base_atual.empty else {}
     status_map  = dict(zip(base_atual['cpf'], base_atual['status']))       if not base_atual.empty else {}
 
+    saidos_renegociados, saidos_quitados, saidos_cancelados = [], [], []
+
     with get_conn() as conn:
         for cpf in saidos_cpfs:
-            conn.execute("DELETE FROM inadimplentes WHERE cpf = ? AND empresa = ?", (cpf, empresa))
+            if cpfs_pagos is not None and cpf in cpfs_pagos:
+                # Confirmado como pago pelo relatório Synapta
+                conn.execute(
+                    "UPDATE inadimplentes SET status='QUITADO', data_atualizacao=? "
+                    "WHERE cpf=? AND empresa=?",
+                    (agora, cpf, empresa)
+                )
+                saidos_quitados.append(cpf)
+            elif cpfs_cancelados is not None and cpf in cpfs_cancelados:
+                # Confirmado como cancelado pelo relatório Synapta
+                conn.execute(
+                    "UPDATE inadimplentes SET status='CANCELADO', data_atualizacao=? "
+                    "WHERE cpf=? AND empresa=?",
+                    (agora, cpf, empresa)
+                )
+                saidos_cancelados.append(cpf)
+            elif cpfs_avencer and cpf in cpfs_avencer:
+                # Saiu dos vencidos mas tem boleto a vencer → renegociação
+                conn.execute(
+                    "UPDATE inadimplentes SET status='RENEGOCIADO', data_atualizacao=? "
+                    "WHERE cpf=? AND empresa=?",
+                    (agora, cpf, empresa)
+                )
+                saidos_renegociados.append(cpf)
+            elif cpfs_pagos is None:
+                # Sem relatório de pagos/cancelados: usa lógica de ausência (legado)
+                conn.execute(
+                    "UPDATE inadimplentes SET status='QUITADO', data_atualizacao=? "
+                    "WHERE cpf=? AND empresa=?",
+                    (agora, cpf, empresa)
+                )
+                saidos_quitados.append(cpf)
+            # else: relatório fornecido mas CPF não encontrado → situação indefinida, mantém status atual
 
         for _, row in novo_consolidado.iterrows():
             cpf          = str(row['CPF']).zfill(11)
@@ -449,10 +486,13 @@ def salvar_base(novo_consolidado: pd.DataFrame, empresa: str) -> dict:
         conn.commit()
 
     return {
-        'novos':    sorted(novos_cpfs),
-        'saidos':   sorted(saidos_cpfs),
-        'continuam': len(continuam_cpfs),
-        'total':    total_base,
+        'novos':               sorted(novos_cpfs),
+        'saidos':              sorted(saidos_cpfs),
+        'saidos_renegociados': sorted(saidos_renegociados),
+        'saidos_quitados':     sorted(saidos_quitados),
+        'saidos_cancelados':   sorted(saidos_cancelados),
+        'continuam':           len(continuam_cpfs),
+        'total':               total_base,
     }
 
 

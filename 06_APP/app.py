@@ -150,16 +150,17 @@ def _carregar_estado(empresa: str) -> tuple[
         avencer       = estado.get('avencer')
         stats_avencer = estado.get('stats_avencer')
 
-        # Migra categorias antigas (A/B)
-        if 'Categoria' in consolidado.columns and consolidado['Categoria'].isin(['A', 'B']).any():
+        # Migra categorias antigas (A/B/Régua)
+        cats_antigas = {'A', 'B', 'Régua'}
+        if 'Categoria' in consolidado.columns and consolidado['Categoria'].isin(cats_antigas).any():
             def _reclassificar(row):
                 d = row['Dias_Atraso']
-                if d <= 1: return 'Novos Inadimplentes'
-                if d < 30: return 'Régua'
+                if d == 1: return 'Novos Inadimplentes'
+                if d <= 29: return 'Inadimplentes Mês'
                 return 'Acima 30 Dias'
             consolidado['Categoria'] = consolidado.apply(_reclassificar, axis=1)
             stats['cat_novos']   = int((consolidado['Categoria'] == 'Novos Inadimplentes').sum())
-            stats['cat_regua']   = int((consolidado['Categoria'] == 'Régua').sum())
+            stats['cat_mes']     = int((consolidado['Categoria'] == 'Inadimplentes Mês').sum())
             stats['cat_acima30'] = int((consolidado['Categoria'] == 'Acima 30 Dias').sum())
             _salvar_estado(consolidado, stats, empresa, avencer, stats_avencer)
 
@@ -179,7 +180,7 @@ def _limpar_estado(empresa: str):
 # ---------------------------------------------------------------------------
 
 for _emp in db.EMPRESAS:
-    for _tipo in ('vencidos', 'avencer', 'alunos'):
+    for _tipo in ('vencidos', 'avencer', 'alunos', 'pagos_cancelados'):
         (UPLOADS_DIR / _emp / _tipo).mkdir(parents=True, exist_ok=True)
     (RELATORIOS / _emp).mkdir(parents=True, exist_ok=True)
 ESTADO_DIR.mkdir(parents=True, exist_ok=True)
@@ -198,9 +199,10 @@ def index():
     empresa = get_empresa()
     consolidado, stats, _, _ = _carregar_estado(empresa)
     auto = {
-        'alunos':   _detectar_arquivo('alunos',   empresa),
-        'vencidos': _detectar_arquivo('vencidos',  empresa),
-        'avencer':  _detectar_arquivo('avencer',   empresa),
+        'alunos':            _detectar_arquivo('alunos',            empresa),
+        'vencidos':          _detectar_arquivo('vencidos',           empresa),
+        'avencer':           _detectar_arquivo('avencer',            empresa),
+        'pagos_cancelados':  _detectar_arquivo('pagos_cancelados',   empresa),
     }
     base_info = db.status_base(empresa)
     return render_template(
@@ -216,7 +218,7 @@ def index():
 def upload():
     empresa = get_empresa()
     tipo    = request.form.get('tipo')
-    if tipo not in ('alunos', 'vencidos', 'avencer'):
+    if tipo not in ('alunos', 'vencidos', 'avencer', 'pagos_cancelados'):
         flash("Tipo de arquivo inválido.", "danger")
         return redirect(url_for('index'))
 
@@ -266,11 +268,11 @@ def consolidar():
 
         _salvar_estado(consolidado, stats, empresa, avencer, stats_avencer)
         _log(f"[{empresa}] Consolidação: {stats['total']} clientes | "
-             f"Novos={stats['cat_novos']} Régua={stats['cat_regua']} Acima30={stats['cat_acima30']}"
+             f"Novos={stats['cat_novos']} Mês={stats['cat_mes']} Acima30={stats['cat_acima30']}"
              + (f" | AVencer={stats_avencer['total']}" if stats_avencer else ""))
 
         msg = (f"✅ [{EMPRESA_LABELS[empresa]}] Consolidação concluída! {stats['total']} clientes — "
-               f"Novos: {stats['cat_novos']} | Régua (2-29d): {stats['cat_regua']} | "
+               f"Novos: {stats['cat_novos']} | Mês (2-29d): {stats['cat_mes']} | "
                f"Acima 30 Dias: {stats['cat_acima30']} | Total: {fmt_brl(stats['valor_total'])}")
         if stats_avencer and stats_avencer.get('total', 0) > 0:
             msg += f" | 🔔 A Vencer amanhã: {stats_avencer['total']}"
@@ -324,6 +326,7 @@ def resultado():
                 'valor':      fmt_brl(row['Total']),
                 'valor_raw':  float(row['Total']),
                 'vencimento': row['Proximo_Vencimento'].strftime('%d/%m/%Y'),
+                'categoria':  row.get('Categoria', 'A Vencer'),
             })
 
     return render_template('resultado.html', linhas=linhas, stats=stats,
@@ -404,14 +407,41 @@ def gerar_relatorio():
 @app.route('/atualizar-base', methods=['POST'])
 def atualizar_base():
     empresa = get_empresa()
-    consolidado, _, _, _ = _carregar_estado(empresa)
+    consolidado, _, avencer_atual, _ = _carregar_estado(empresa)
     if consolidado is None:
         flash("Consolide primeiro.", "warning")
         return redirect(url_for('index'))
 
+    # Usa TODOS os CPFs do A Vencer (não só janela 0-3 dias) para detectar renegociação.
+    # Caso: admin apaga fatura vencida e cria nova com data futura → aluno some dos vencidos
+    # mas ainda aparece no A Vencer além dos 3 dias → deve ser RENEGOCIADO, não QUITADO.
+    cpfs_avencer = set()
+    path_avencer = _detectar_arquivo('avencer', empresa)
+    if path_avencer:
+        try:
+            cpfs_avencer = proc.obter_cpfs_avencer(path_avencer)
+            _log(f"[{empresa}] A Vencer (todos): {len(cpfs_avencer)} CPFs para cruzamento de renegociação")
+        except Exception as e_av:
+            _log(f"[{empresa}] A Vencer CPFs ignorado: {e_av}")
+            # Fallback: usa o que foi processado na sessão (só 0-3 dias)
+            if avencer_atual is not None and not avencer_atual.empty and 'CPF' in avencer_atual.columns:
+                mask = avencer_atual['CPF'].astype(str).str.strip() != ''
+                cpfs_avencer = set(avencer_atual.loc[mask, 'CPF'].astype(str).str.zfill(11))
+
+    cpfs_pagos, cpfs_cancelados = None, None
+    path_pc = _detectar_arquivo('pagos_cancelados', empresa)
+    if path_pc:
+        try:
+            cpfs_pagos, cpfs_cancelados = proc.processar_pagos_cancelados(path_pc)
+            _log(f"[{empresa}] pagos_cancelados: {len(cpfs_pagos)} pagos, {len(cpfs_cancelados)} cancelados")
+        except Exception as e_pc:
+            _log(f"[{empresa}] pagos_cancelados ignorado: {e_pc}")
+            flash(f"⚠️ Relatório de Pagos/Cancelados não processado: {e_pc}", "warning")
+
     try:
         base_antes = db.carregar_base(empresa)
-        diff       = db.salvar_base(consolidado, empresa)
+        diff       = db.salvar_base(consolidado, empresa, cpfs_avencer=cpfs_avencer,
+                                    cpfs_pagos=cpfs_pagos, cpfs_cancelados=cpfs_cancelados)
 
         pasta    = _pasta_relatorio(empresa)
         data_str = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
@@ -433,10 +463,13 @@ def atualizar_base():
             gerados.append(f"{len(saidos_df)} saíram dos vencidos")
 
         _log(f"[{empresa}] Base atualizada: total={diff['total']} "
-             f"novos={len(diff['novos'])} saidos={len(diff['saidos'])}")
+             f"novos={len(diff['novos'])} saidos={len(diff['saidos'])} "
+             f"renegociados={len(diff['saidos_renegociados'])} quitados={len(diff['saidos_quitados'])} "
+             f"cancelados={len(diff['saidos_cancelados'])}")
         flash(
-            f"✅ Base atualizada! Total: {diff['total']} inadimplentes. "
-            f"Novos: {len(diff['novos'])} | Saíram: {len(diff['saidos'])} | "
+            f"✅ Base atualizada! Total: {diff['total']} registros. "
+            f"Novos: {len(diff['novos'])} | Em Renegociação: {len(diff['saidos_renegociados'])} | "
+            f"Pagos: {len(diff['saidos_quitados'])} | Cancelados: {len(diff['saidos_cancelados'])} | "
             f"Continuam: {diff['continuam']}",
             "success"
         )
@@ -456,11 +489,17 @@ def base():
     df      = db.carregar_base(empresa)
     info    = db.status_base(empresa)
 
-    _, _, avencer, _ = _carregar_estado(empresa)
-    cpfs_avencer = set()
+    _, _, avencer, stats_avencer = _carregar_estado(empresa)
+    cpfs_avencer     = set()
+    cpfs_vence_hoje  = set()
+    vence_hoje_count = 0
     if avencer is not None and not avencer.empty and 'CPF' in avencer.columns:
         mask = avencer['CPF'].astype(str).str.strip() != ''
         cpfs_avencer = set(avencer.loc[mask, 'CPF'].astype(str).str.zfill(11))
+        if 'Categoria' in avencer.columns:
+            mask_hoje = (avencer['Categoria'] == 'Vence Hoje') & mask
+            cpfs_vence_hoje  = set(avencer.loc[mask_hoje, 'CPF'].astype(str).str.zfill(11))
+            vence_hoje_count = int(mask_hoje.sum())
 
     alunos = []
     for _, row in df.iterrows():
@@ -479,8 +518,10 @@ def base():
             'entrada':         row['data_entrada'],
             'qtd_cobranca':    row['qtd_cobranca'] if row['qtd_cobranca'] else 0,
             'em_renegociacao': cpf in cpfs_avencer,
+            'vence_hoje':      cpf in cpfs_vence_hoje,
         })
-    return render_template('base.html', alunos=alunos, info=info)
+    return render_template('base.html', alunos=alunos, info=info,
+                           vence_hoje_count=vence_hoje_count)
 
 
 @app.route('/base/limpar', methods=['POST'])
@@ -498,7 +539,7 @@ def atualizar_status():
     empresa = get_empresa()
     cpf     = request.form.get('cpf')
     status  = request.form.get('status')
-    if cpf and status in ('INADIMPLENTE', 'QUITADO', 'RENEGOCIADO'):
+    if cpf and status in ('INADIMPLENTE', 'QUITADO', 'RENEGOCIADO', 'CANCELADO'):
         db.atualizar_status_aluno(cpf, status, empresa)
         flash(f"Status de {cpf} atualizado para {status}.", "success")
     return redirect(url_for('base'))
@@ -663,6 +704,7 @@ def envio_mensagens():
                     'tem_email': bool(email),
                     'valor':     fmt_brl(row['Total']),
                     'vencimento': row['Proximo_Vencimento'].strftime('%d/%m/%Y'),
+                    'categoria': row.get('Categoria', 'A Vencer'),
                     'template':  tmpl_av['titulo'],
                     'mensagem':  _formatar_mensagem_wizard(row, tmpl_av, 'Proximo_Vencimento'),
                     'enviado':   cpf in enviados_hoje,
@@ -757,10 +799,10 @@ def _enviar_email_smtp(config: dict, dest: str, assunto: str, mensagem: str):
 
 def _assunto_padrao(categoria: str, empresa_label: str) -> str:
     mapa = {
-        'A Vencer':           f'Seu boleto vence amanhã — {empresa_label}',
+        'A Vencer':            f'Seu boleto vence amanhã — {empresa_label}',
         'Novos Inadimplentes': f'Boleto em aberto — {empresa_label}',
-        'Régua':              f'Boleto em aberto — {empresa_label}',
-        'Acima 30 Dias':      f'Parcelas em aberto — {empresa_label}',
+        'Inadimplentes Mês':   f'Boleto em aberto — {empresa_label}',
+        'Acima 30 Dias':       f'Parcelas em aberto — {empresa_label}',
     }
     return mapa.get(categoria, f'Notificação financeira — {empresa_label}')
 

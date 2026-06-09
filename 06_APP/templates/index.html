@@ -46,7 +46,7 @@
       <div class="card-header"><i class="bi bi-folder2-open me-2"></i>Arquivos de Entrada</div>
       <div class="card-body">
 
-        {% for tipo, icone, label in [('vencidos','bi-exclamation-triangle','Faturas Vencidas'), ('avencer','bi-calendar-check','Faturas À Vencer')] %}
+        {% for tipo, icone, label in [('vencidos','bi-exclamation-triangle','Faturas Vencidas'), ('avencer','bi-calendar-check','Faturas À Vencer'), ('pagos_cancelados','bi-receipt','Pagos e Cancelados')] %}
         <div class="mb-3">
           <label class="form-label fw-semibold"><i class="bi {{ icone }} me-1"></i>{{ label }}</label>
           {% set arq = auto[tipo] %}
@@ -102,8 +102,8 @@
               <small class="text-muted">Novos</small>
             </div>
             <div class="col">
-              <div class="fw-bold text-primary fs-5">{{ stats.cat_regua }}</div>
-              <small class="text-muted">Régua</small>
+              <div class="fw-bold text-primary fs-5">{{ stats.cat_mes }}</div>
+              <small class="text-muted">Mês (2-29d)</small>
             </div>
             <div class="col">
               <div class="fw-bold text-danger fs-5">{{ stats.cat_acima30 }}</div>

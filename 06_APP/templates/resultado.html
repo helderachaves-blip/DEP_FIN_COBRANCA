@@ -19,13 +19,23 @@
 <!-- FILTROS POR CATEGORIA (clique para filtrar) -->
 <div class="row mb-2 g-3">
   {% if avencer_linhas %}
-  <div class="col-12 col-md-3">
-    <div class="stat-card" style="background:linear-gradient(135deg,#E65100,#FF9800)">
-      <div class="stat-num">{{ avencer_linhas|length }}</div>
-      <div class="stat-label"><i class="bi bi-bell me-1"></i>A Vencer Amanhã</div>
+  {% set cnt_vence_hoje = avencer_linhas | selectattr('categoria', 'equalto', 'Vence Hoje') | list | length %}
+  {% set cnt_a_vencer   = avencer_linhas | selectattr('categoria', 'equalto', 'A Vencer')   | list | length %}
+  <div class="col-12 col-md-2">
+    <div class="stat-card" style="background:linear-gradient(135deg,#AD1457,#EC407A)">
+      <div class="stat-num">{{ cnt_vence_hoje }}</div>
+      <div class="stat-label"><i class="bi bi-calendar-check me-1"></i>Vence Hoje</div>
     </div>
   </div>
-  <div class="col-12 col-md-3">
+  {% if cnt_a_vencer > 0 %}
+  <div class="col-12 col-md-2">
+    <div class="stat-card" style="background:linear-gradient(135deg,#E65100,#FF9800)">
+      <div class="stat-num">{{ cnt_a_vencer }}</div>
+      <div class="stat-label"><i class="bi bi-bell me-1"></i>A Vencer</div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-12 col-md-2">
   {% else %}
   <div class="col-12 col-md-4">
   {% endif %}
@@ -36,18 +46,18 @@
     </div>
   </div>
   {% if avencer_linhas %}
-  <div class="col-12 col-md-3">
+  <div class="col-12 col-md-2">
   {% else %}
   <div class="col-12 col-md-4">
   {% endif %}
-    <div class="stat-card stat-filtro" data-filtro="Régua"
-         style="background:linear-gradient(135deg,#1565C0,#42A5F5);cursor:pointer" title="Clique para filtrar">
-      <div class="stat-num">{{ stats.cat_regua }}</div>
-      <div class="stat-label">Vencidos - 2 à 29 Dias <i class="bi bi-funnel-fill" style="font-size:.7rem;opacity:.7"></i></div>
+    <div class="stat-card stat-filtro" data-filtro="Inadimplentes Mês"
+         style="background:linear-gradient(135deg,#F57F17,#FFB300);cursor:pointer" title="Clique para filtrar">
+      <div class="stat-num">{{ stats.cat_mes }}</div>
+      <div class="stat-label">Inadimplentes Mês (2-29d) <i class="bi bi-funnel-fill" style="font-size:.7rem;opacity:.7"></i></div>
     </div>
   </div>
   {% if avencer_linhas %}
-  <div class="col-12 col-md-3">
+  <div class="col-12 col-md-2">
   {% else %}
   <div class="col-12 col-md-4">
   {% endif %}
@@ -97,7 +107,7 @@
         <select id="filtroCategoria" class="form-select form-select-sm">
           <option value="">Todas as categorias</option>
           <option value="Novos Inadimplentes">Novos Inadimplentes</option>
-          <option value="Régua">Vencidos - 2 à 29 Dias</option>
+          <option value="Inadimplentes Mês">Inadimplentes Mês (2-29 dias)</option>
           <option value="Acima 30 Dias">Acima de 30 Dias</option>
         </select>
       </div>
@@ -134,7 +144,7 @@
         </thead>
         <tbody>
           {% for l in linhas %}
-          <tr class="{{ 'table-cat-a' if l.categoria == 'Novos Inadimplentes' else ('table-cat-a' if l.categoria == 'Régua' else 'table-cat-b') }}"
+          <tr class="{{ 'table-cat-novos' if l.categoria == 'Novos Inadimplentes' else ('table-cat-mes' if l.categoria == 'Inadimplentes Mês' else 'table-cat-b') }}"
               data-cat="{{ l.categoria }}" data-nome="{{ l.nome|lower }}" data-valor="{{ l.valor_raw }}">
             <td class="text-muted small">{{ loop.index }}</td>
             <td class="fw-semibold">{{ l.nome }}</td>
@@ -150,10 +160,10 @@
             <td>
               {% if l.categoria == 'Novos Inadimplentes' %}
                 <span class="badge bg-success">Novo</span>
-              {% elif l.categoria == 'Régua' %}
-                <span class="badge badge-cat-a">Régua</span>
+              {% elif l.categoria == 'Inadimplentes Mês' %}
+                <span class="badge" style="background:#F57F17">Mês</span>
               {% else %}
-                <span class="badge badge-cat-b">Acima 30d</span>
+                <span class="badge badge-cat-b">+30d</span>
               {% endif %}
             </td>
           </tr>
@@ -167,8 +177,8 @@
 <!-- TABELA A VENCER -->
 {% if avencer_linhas %}
 <div class="card mt-4">
-  <div class="card-header text-white" style="background:#E65100">
-    <i class="bi bi-bell me-2"></i>Lembretes — A Vencer Hoje / Amanhã
+  <div class="card-header text-white" style="background:#AD1457">
+    <i class="bi bi-calendar-check me-2"></i>Lembretes — Vencimentos
     <span class="badge bg-white text-dark ms-2">{{ avencer_linhas|length }}</span>
   </div>
   <div class="card-body p-0">
@@ -182,17 +192,25 @@
             <th class="text-center">Qtd Títulos</th>
             <th class="text-end text-nowrap">Valor</th>
             <th>Próx. Vencimento</th>
+            <th class="text-center">Quando</th>
           </tr>
         </thead>
         <tbody>
           {% for a in avencer_linhas %}
-          <tr>
+          <tr class="{{ 'table-warning' if a.categoria == 'Vence Hoje' else '' }}">
             <td class="text-muted small">{{ loop.index }}</td>
             <td class="fw-semibold">{{ a.nome }}</td>
             <td>{{ a.telefone }}</td>
             <td class="text-center">{{ a.qtd }}</td>
             <td class="text-end fw-semibold text-nowrap">{{ a.valor }}</td>
             <td>{{ a.vencimento }}</td>
+            <td class="text-center">
+              {% if a.categoria == 'Vence Hoje' %}
+                <span class="badge" style="background:#AD1457">Hoje</span>
+              {% else %}
+                <span class="badge bg-secondary">Em breve</span>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>

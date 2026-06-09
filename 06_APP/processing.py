@@ -125,22 +125,22 @@ def consolidar(path_vencidos: Path, path_alunos: Path) -> tuple[pd.DataFrame, di
     consolidado['Dias_Atraso'] = (hoje - consolidado['Ultimo_Vencimento']).dt.days
 
     def classificar(row):
-        if row['Dias_Atraso'] <= 1:
+        if row['Dias_Atraso'] == 1:
             return 'Novos Inadimplentes'
-        if row['Dias_Atraso'] < 30:
-            return 'Régua'
+        if row['Dias_Atraso'] <= 29:
+            return 'Inadimplentes Mês'
         return 'Acima 30 Dias'
 
     consolidado['Categoria'] = consolidado.apply(classificar, axis=1)
     consolidado = consolidado.sort_values('Ultimo_Vencimento').reset_index(drop=True)
 
     total_novos   = int((consolidado['Categoria'] == 'Novos Inadimplentes').sum())
-    total_regua   = int((consolidado['Categoria'] == 'Régua').sum())
+    total_mes     = int((consolidado['Categoria'] == 'Inadimplentes Mês').sum())
     total_acima30 = int((consolidado['Categoria'] == 'Acima 30 Dias').sum())
     stats = {
         'total': len(consolidado),
         'cat_novos':   total_novos,
-        'cat_regua':   total_regua,
+        'cat_mes':     total_mes,
         'cat_acima30': total_acima30,
         'valor_total': float(consolidado['Total'].sum()),
         'valor_medio': float(consolidado['Total'].mean()),
@@ -226,11 +226,11 @@ def gerar_txt(categoria: str, dados: pd.DataFrame, data_str: str,
         frequencia = "Enviar IMEDIATAMENTE — Adicionar tag INADIMPLENTE no CRM"
         template   = template_novos
         slug       = 'novos'
-    elif categoria == 'Régua':
+    elif categoria == 'Inadimplentes Mês':
         titulo     = "VENCIDOS — 2 A 29 DIAS"
         frequencia = "Enviar DIARIAMENTE"
         template   = template_regua
-        slug       = 'regua'
+        slug       = 'mes'
     else:
         titulo     = "COBRANÇAS AVANÇADAS — ACIMA DE 30 DIAS"
         frequencia = "Enviar 1X POR SEMANA"
@@ -291,8 +291,8 @@ def gerar_xlsx(categoria: str, dados: pd.DataFrame, data_str: str, pasta: Path) 
 
     if categoria == 'Novos Inadimplentes':
         slug = 'novos'
-    elif categoria == 'Régua':
-        slug = 'regua'
+    elif categoria == 'Inadimplentes Mês':
+        slug = 'mes'
     else:
         slug = 'acima30'
     arquivo = pasta / f"relatorio_{slug}_{data_str}.xlsx"
@@ -451,11 +451,16 @@ def consolidar_avencer(path_avencer: Path, path_alunos: Path,
             consolidado['Telefone'] = None
             consolidado['E-mail']   = None
 
-    consolidado['Categoria'] = 'A Vencer'
+    hoje_norm = pd.Timestamp.now().normalize()
+    consolidado['Categoria'] = consolidado['Proximo_Vencimento'].apply(
+        lambda v: 'Vence Hoje' if pd.Timestamp(v).normalize() == hoje_norm else 'A Vencer'
+    )
     consolidado = consolidado.sort_values('Proximo_Vencimento').reset_index(drop=True)
 
+    vence_hoje = int((consolidado['Categoria'] == 'Vence Hoje').sum())
     stats = {
         'total': len(consolidado),
+        'vence_hoje': vence_hoje,
         'com_telefone': int(consolidado['Telefone'].notna().sum())
         if 'Telefone' in consolidado.columns else 0,
         'dias_antecedencia': dias_antecedencia,
@@ -567,6 +572,39 @@ def _encontrar_template_crm(dias_atraso: int, templates: list) -> dict | None:
         and (t.get('dias_ate') is None or t['dias_ate'] >= dias_atraso)
     ]
     return max(candidatos, key=lambda t: t['dias_de']) if candidatos else None
+
+
+def obter_cpfs_avencer(path: Path) -> set:
+    """
+    Retorna TODOS os CPFs presentes no arquivo A Vencer, independente da data.
+    Usado para detectar renegociação: se o aluno saiu dos vencidos mas tem fatura futura.
+    """
+    df = _ler_csv(path, 'Aluno')
+    if df is None:
+        return set()
+    col_cpf = next((c for c in ['CPF sem mask', 'CPF'] if c in df.columns), None)
+    if not col_cpf:
+        return set()
+    mask = df[col_cpf].astype(str).str.strip() != ''
+    return set(df.loc[mask, col_cpf].astype(str).str.strip().str.zfill(11))
+
+
+def processar_pagos_cancelados(path: Path) -> tuple[set, set]:
+    """
+    Lê o relatório de pagos/cancelados do Synapta.
+    Retorna (cpfs_pagos, cpfs_cancelados).
+    """
+    df = _ler_csv(path, 'CPF sem mask')
+    if df is None:
+        raise ValueError(
+            f"Não consegui ler '{path.name}'. "
+            "Verifique se é o relatório de Pagos e Cancelados exportado do Synapta."
+        )
+    df['CPF sem mask'] = df['CPF sem mask'].astype(str).str.strip().str.zfill(11)
+    df['Status'] = df['Status'].astype(str).str.strip()
+    cpfs_pagos      = set(df.loc[df['Status'] == 'Pago',      'CPF sem mask'])
+    cpfs_cancelados = set(df.loc[df['Status'] == 'Cancelado', 'CPF sem mask'])
+    return cpfs_pagos, cpfs_cancelados
 
 
 def gerar_planilha_crm(consolidado: pd.DataFrame, base_df: pd.DataFrame,

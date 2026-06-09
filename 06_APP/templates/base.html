@@ -28,39 +28,62 @@
   </div>
 {% else %}
 
-{% set cnt_novos    = alunos | selectattr('categoria', 'equalto', 'Novos Inadimplentes') | list | length %}
-{% set cnt_reneg    = alunos | selectattr('em_renegociacao') | list | length %}
-{% set cnt_gerais   = alunos | selectattr('status', 'equalto', 'INADIMPLENTE') | rejectattr('categoria', 'equalto', 'Novos Inadimplentes') | list | length %}
-{% set cnt_quitados = alunos | selectattr('status', 'equalto', 'QUITADO') | list | length %}
+{% set cnt_novos     = alunos | selectattr('status','equalto','INADIMPLENTE') | selectattr('categoria','equalto','Novos Inadimplentes') | list | length %}
+{% set cnt_mes       = alunos | selectattr('status','equalto','INADIMPLENTE') | selectattr('categoria','equalto','Inadimplentes Mês') | list | length %}
+{% set cnt_acima30   = alunos | selectattr('status','equalto','INADIMPLENTE') | selectattr('categoria','equalto','Acima 30 Dias') | list | length %}
+{% set cnt_reneg     = alunos | selectattr('status','equalto','RENEGOCIADO') | list | length %}
+{% set cnt_pagos     = alunos | selectattr('status','equalto','QUITADO') | list | length %}
+{% set cnt_cancelado = alunos | selectattr('status','equalto','CANCELADO') | list | length %}
 
 <!-- FILTROS RÁPIDOS -->
 <div class="row g-2 mb-3">
-  <div class="col-6 col-md-3">
-    <div class="stat-card stat-filtro-base" data-filtro="novos"
-         style="background:linear-gradient(135deg,#2E7D32,#66BB6A);cursor:pointer" title="Novos Inadimplentes">
-      <div class="stat-num">{{ cnt_novos }}</div>
-      <div class="stat-label"><i class="bi bi-person-plus me-1"></i>Novos Inadimplentes</div>
+  <div class="col-6 col-md">
+    <div class="stat-card stat-filtro-base" data-filtro="vence_hoje"
+         style="background:linear-gradient(135deg,#AD1457,#EC407A);cursor:pointer" title="Clique para filtrar boletos vencendo hoje">
+      <div class="stat-num">{{ vence_hoje_count }}</div>
+      <div class="stat-label"><i class="bi bi-calendar-check me-1"></i>Vence Hoje</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md">
+    <div class="stat-card stat-filtro-base" data-filtro="novos"
+         style="background:linear-gradient(135deg,#2E7D32,#66BB6A);cursor:pointer" title="Inadimplentes Novos">
+      <div class="stat-num">{{ cnt_novos }}</div>
+      <div class="stat-label"><i class="bi bi-person-plus me-1"></i>Inadimplentes Novos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md">
+    <div class="stat-card stat-filtro-base" data-filtro="mes"
+         style="background:linear-gradient(135deg,#F57F17,#FFB300);cursor:pointer" title="Inadimplentes Mês (2-29 dias)">
+      <div class="stat-num">{{ cnt_mes }}</div>
+      <div class="stat-label"><i class="bi bi-calendar-month me-1"></i>Inadimplentes Mês</div>
+    </div>
+  </div>
+  <div class="col-6 col-md">
+    <div class="stat-card stat-filtro-base" data-filtro="acima30"
+         style="background:linear-gradient(135deg,#b71c1c,#ef5350);cursor:pointer" title="Acima de 30 Dias">
+      <div class="stat-num">{{ cnt_acima30 }}</div>
+      <div class="stat-label"><i class="bi bi-exclamation-circle me-1"></i>Acima 30 Dias</div>
+    </div>
+  </div>
+  <div class="col-6 col-md">
     <div class="stat-card stat-filtro-base" data-filtro="renegociacao"
          style="background:linear-gradient(135deg,#e65100,#ffa726);cursor:pointer" title="Em Renegociação">
       <div class="stat-num">{{ cnt_reneg }}</div>
       <div class="stat-label"><i class="bi bi-arrow-repeat me-1"></i>Em Renegociação</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card stat-filtro-base" data-filtro="gerais"
-         style="background:linear-gradient(135deg,#b71c1c,#ef5350);cursor:pointer" title="Inadimplentes Gerais">
-      <div class="stat-num">{{ cnt_gerais }}</div>
-      <div class="stat-label"><i class="bi bi-exclamation-circle me-1"></i>Inadimplentes Gerais</div>
+  <div class="col-6 col-md">
+    <div class="stat-card stat-filtro-base" data-filtro="pagos"
+         style="background:linear-gradient(135deg,#1565C0,#42A5F5);cursor:pointer" title="Inadimplentes Pagos">
+      <div class="stat-num">{{ cnt_pagos }}</div>
+      <div class="stat-label"><i class="bi bi-check-circle me-1"></i>Inadimplentes Pagos</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card stat-filtro-base" data-filtro="quitados"
-         style="background:linear-gradient(135deg,#1565C0,#42A5F5);cursor:pointer" title="Inadimplentes Quitados">
-      <div class="stat-num">{{ cnt_quitados }}</div>
-      <div class="stat-label"><i class="bi bi-check-circle me-1"></i>Inadimplentes Quitados</div>
+  <div class="col-6 col-md">
+    <div class="stat-card stat-filtro-base" data-filtro="cancelado"
+         style="background:linear-gradient(135deg,#37474F,#78909C);cursor:pointer" title="Cancelados">
+      <div class="stat-num">{{ cnt_cancelado }}</div>
+      <div class="stat-label"><i class="bi bi-x-circle me-1"></i>Cancelados</div>
     </div>
   </div>
 </div>
@@ -76,13 +99,14 @@
           <option value="INADIMPLENTE">INADIMPLENTE</option>
           <option value="QUITADO">QUITADO</option>
           <option value="RENEGOCIADO">RENEGOCIADO</option>
+          <option value="CANCELADO">CANCELADO</option>
         </select>
       </div>
       <div class="col-auto">
         <select id="filtroCategoria" class="form-select form-select-sm">
           <option value="">Todas as categorias</option>
           <option value="Novos Inadimplentes">Novos Inadimplentes</option>
-          <option value="Régua">Vencidos - 2 à 29 Dias</option>
+          <option value="Inadimplentes Mês">Inadimplentes Mês (2-29 dias)</option>
           <option value="Acima 30 Dias">Acima de 30 Dias</option>
         </select>
       </div>
@@ -122,7 +146,7 @@
         </thead>
         <tbody>
           {% for a in alunos %}
-          <tr data-status="{{ a.status }}" data-cat="{{ a.categoria }}" data-ren="{{ 'true' if a.em_renegociacao else '' }}" data-nome="{{ a.aluno|lower }}">
+          <tr data-status="{{ a.status }}" data-cat="{{ a.categoria }}" data-ren="{{ 'true' if a.em_renegociacao else '' }}" data-nome="{{ a.aluno|lower }}" data-vence-hoje="{{ 'true' if a.vence_hoje else '' }}">
             <td class="text-muted small">{{ loop.index }}</td>
             <td class="fw-semibold">{{ a.aluno }}</td>
             <td class="small text-muted">{{ a.cpf }}</td>
@@ -138,10 +162,14 @@
             <td>
               {% if a.categoria == 'Novos Inadimplentes' %}
                 <span class="badge bg-success">Novo</span>
-              {% elif a.categoria == 'Régua' %}
-                <span class="badge badge-cat-a">Régua</span>
+              {% elif a.categoria == 'Inadimplentes Mês' %}
+                <span class="badge" style="background:#F57F17">Mês</span>
+              {% elif a.categoria == 'Acima 30 Dias' %}
+                <span class="badge badge-cat-b">+30d</span>
+              {% elif a.categoria %}
+                <span class="badge bg-secondary">{{ a.categoria }}</span>
               {% else %}
-                <span class="badge badge-cat-b">Acima 30d</span>
+                <span class="text-muted">—</span>
               {% endif %}
             </td>
             <td class="text-center">
@@ -153,6 +181,9 @@
             </td>
             <td>
               <span class="badge badge-{{ a.status|lower }}">{{ a.status }}</span>
+              {% if a.status == 'CANCELADO' %}
+              <i class="bi bi-x-circle text-muted ms-1" style="font-size:.75rem" title="Cancelado pelo relatório Synapta"></i>
+              {% endif %}
             </td>
             <td class="small text-muted">{{ a.entrada }}</td>
             <td>
@@ -196,6 +227,10 @@
               <input class="form-check-input" type="radio" name="status" value="RENEGOCIADO" id="s3">
               <label class="form-check-label badge-renegociado badge fs-6" for="s3">RENEGOCIADO</label>
             </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="status" value="CANCELADO" id="s4">
+              <label class="form-check-label badge-cancelado badge fs-6" for="s4">CANCELADO</label>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -231,11 +266,13 @@ function cardMatchRow(tr, card) {
   if (!card) return true;
   const st  = tr.dataset.status;
   const cat = tr.dataset.cat;
-  const ren = tr.dataset.ren;
-  if (card === 'novos')        return cat === 'Novos Inadimplentes';
-  if (card === 'renegociacao') return ren === 'true';
-  if (card === 'gerais')       return st === 'INADIMPLENTE' && cat !== 'Novos Inadimplentes';
-  if (card === 'quitados')     return st === 'QUITADO';
+  if (card === 'vence_hoje')   return tr.dataset.venceHoje === 'true';
+  if (card === 'novos')        return st === 'INADIMPLENTE' && cat === 'Novos Inadimplentes';
+  if (card === 'mes')          return st === 'INADIMPLENTE' && cat === 'Inadimplentes Mês';
+  if (card === 'acima30')      return st === 'INADIMPLENTE' && cat === 'Acima 30 Dias';
+  if (card === 'renegociacao') return st === 'RENEGOCIADO';
+  if (card === 'pagos')        return st === 'QUITADO';
+  if (card === 'cancelado')    return st === 'CANCELADO';
   return true;
 }
 
