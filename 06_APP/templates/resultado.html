@@ -8,37 +8,12 @@
 {% else %}
 
 <!-- AÇÕES -->
-<div class="row g-2 mb-3">
-  <div class="col-12 col-sm-6 col-md-3">
-    <form action="/gerar-relatorio" method="post" class="h-100">
-      <button type="submit" class="btn btn-success w-100 h-100">
-        <i class="bi bi-file-earmark-text me-1"></i>Gerar Relatórios
-      </button>
-    </form>
-  </div>
-  <div class="col-12 col-sm-6 col-md-3">
-    <a href="/wizard-whatsapp" class="btn btn-outline-success w-100 h-100 d-flex align-items-center justify-content-center">
-      <i class="bi bi-whatsapp me-1"></i>Envio de Mensagens
-    </a>
-  </div>
-  <div class="col-12 col-sm-6 col-md-3">
-    <form action="/atualizar-base" method="post" class="h-100">
-      <button type="submit" class="btn btn-warning text-dark w-100 h-100">
-        <i class="bi bi-database-up me-1"></i>Atualizar Base
-      </button>
-    </form>
-  </div>
-  <div class="col-6 col-md-2">
-    <a href="/abrir-relatorios" class="btn btn-outline-secondary w-100 h-100 d-flex align-items-center justify-content-center">
-      <i class="bi bi-folder-symlink me-1"></i>Relatórios
-    </a>
-  </div>
-  <div class="col-6 col-md-1">
-    <a href="/limpar" class="btn btn-outline-danger w-100 h-100 d-flex align-items-center justify-content-center"
-       title="Limpar consolidação">
-      <i class="bi bi-trash"></i>
-    </a>
-  </div>
+<div class="mb-3">
+  <form action="/gerar-relatorio" method="post" class="d-inline">
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-file-earmark-text me-1"></i>Gerar Relatórios
+    </button>
+  </form>
 </div>
 
 <!-- FILTROS POR CATEGORIA (clique para filtrar) -->

@@ -556,3 +556,59 @@ def gerar_relatorio_saidos(dados: pd.DataFrame, data_str: str, pasta: Path) -> t
     arq_xlsx = pasta / f"SAIDOS_VENCIDOS_{data_str}.xlsx"
     df.to_excel(arq_xlsx, index=False, sheet_name='Saíram dos Vencidos')
     return arq_txt, arq_xlsx
+
+
+def _encontrar_template_crm(dias_atraso: int, templates: list) -> dict | None:
+    candidatos = [
+        t for t in templates
+        if t.get('dias_de') is not None
+        and t['dias_de'] >= 0
+        and t['dias_de'] <= dias_atraso
+        and (t.get('dias_ate') is None or t['dias_ate'] >= dias_atraso)
+    ]
+    return max(candidatos, key=lambda t: t['dias_de']) if candidatos else None
+
+
+def gerar_planilha_crm(consolidado: pd.DataFrame, base_df: pd.DataFrame,
+                        templates_list: list, pasta: Path,
+                        data_str: str, empresa: str) -> Path:
+    """Planilha CRM com 2 abas: Inadimplentes (com tag) + Saídos/Quitados."""
+    inad_rows = []
+    for _, row in consolidado.iterrows():
+        tmpl = _encontrar_template_crm(int(row['Dias_Atraso']), templates_list)
+        tag  = (tmpl.get('tag_crm') or '') if tmpl else ''
+        inad_rows.append({
+            'Nome':        row['Aluno'],
+            'CPF':         str(row['CPF']).zfill(11),
+            'Telefone':    str(row.get('Telefone') or ''),
+            'E-mail':      str(row.get('E-mail') or ''),
+            'Categoria':   row['Categoria'],
+            'Dias Atraso': int(row['Dias_Atraso']),
+            'Valor (R$)':  float(row['Total']),
+            'Tag CRM':     tag,
+        })
+
+    cpfs_consolidado = set(consolidado['CPF'].astype(str).str.zfill(11))
+    saidos_rows = []
+    if not base_df.empty:
+        for _, row in base_df.iterrows():
+            cpf = str(row['cpf'])
+            if cpf not in cpfs_consolidado or row.get('status', '') in ('QUITADO', 'RENEGOCIADO'):
+                saidos_rows.append({
+                    'Nome':     row['aluno'],
+                    'CPF':      cpf,
+                    'Telefone': str(row.get('telefone') or ''),
+                    'E-mail':   str(row.get('email') or ''),
+                    'Status':   row.get('status', ''),
+                    'Ação CRM': 'REMOVER_TAG',
+                })
+
+    df_inad   = pd.DataFrame(inad_rows)   if inad_rows   else pd.DataFrame()
+    df_saidos = pd.DataFrame(saidos_rows) if saidos_rows else pd.DataFrame()
+
+    nome_arq = pasta / f"CRM_{empresa}_{data_str}.xlsx"
+    with pd.ExcelWriter(nome_arq, engine='openpyxl') as writer:
+        df_inad.to_excel(writer,   sheet_name='Inadimplentes',    index=False)
+        df_saidos.to_excel(writer, sheet_name='Saídos_Quitados',  index=False)
+
+    return nome_arq

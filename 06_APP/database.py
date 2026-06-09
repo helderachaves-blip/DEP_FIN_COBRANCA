@@ -292,6 +292,11 @@ def init_db():
         if 'assunto_email' not in cols_t3:
             conn.execute("ALTER TABLE templates ADD COLUMN assunto_email TEXT")
 
+        # Coluna tag_crm nos templates (Mudança 4 — planilha CRM)
+        cols_t4 = [r[1] for r in conn.execute("PRAGMA table_info(templates)").fetchall()]
+        if 'tag_crm' not in cols_t4:
+            conn.execute("ALTER TABLE templates ADD COLUMN tag_crm TEXT")
+
         conn.commit()
 
 
@@ -317,12 +322,13 @@ def get_templates_completo(empresa: str) -> list[dict]:
 
 
 def criar_template(titulo: str, conteudo: str, empresa: str,
-                   dias_de: int | None, dias_ate: int | None) -> int:
+                   dias_de: int | None, dias_ate: int | None,
+                   tag_crm: str = '') -> int:
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO templates (categoria, titulo, conteudo, empresa, dias_de, dias_ate) "
-            "VALUES ('Custom',?,?,?,?,?)",
-            (titulo, conteudo, empresa, dias_de, dias_ate)
+            "INSERT INTO templates (categoria, titulo, conteudo, empresa, dias_de, dias_ate, tag_crm) "
+            "VALUES ('Custom',?,?,?,?,?,?)",
+            (titulo, conteudo, empresa, dias_de, dias_ate, tag_crm or None)
         )
         conn.commit()
         return cur.lastrowid
@@ -350,12 +356,13 @@ def incrementar_cobrancas(cpfs: list, empresa: str):
 
 
 def salvar_template(template_id: int, titulo: str, conteudo: str, empresa: str,
-                    dias_de: int | None = None, dias_ate: int | None = None):
+                    dias_de: int | None = None, dias_ate: int | None = None,
+                    tag_crm: str = ''):
     with get_conn() as conn:
         conn.execute(
-            "UPDATE templates SET titulo=?, conteudo=?, dias_de=?, dias_ate=? "
+            "UPDATE templates SET titulo=?, conteudo=?, dias_de=?, dias_ate=?, tag_crm=? "
             "WHERE id=? AND empresa=?",
-            (titulo, conteudo, dias_de, dias_ate, template_id, empresa)
+            (titulo, conteudo, dias_de, dias_ate, tag_crm or None, template_id, empresa)
         )
         conn.commit()
 

@@ -108,6 +108,7 @@
                       data-dias-de="{{ t.dias_de if t.dias_de is not none else '' }}"
                       data-dias-ate="{{ t.dias_ate if t.dias_ate is not none else '' }}"
                       data-conteudo="{{ t.conteudo | e }}"
+                      data-tag-crm="{{ t.tag_crm or '' }}"
                       data-is-avencer="{{ 'true' if t.categoria == 'A Vencer' else 'false' }}">
                 <i class="bi bi-pencil"></i>
               </button>
@@ -122,6 +123,11 @@
 
           <div class="card-body py-2">
             <div class="font-monospace text-secondary" style="white-space:pre-wrap; font-size:.82rem">{{ t.conteudo.replace('{TRATAMENTO}','Sra.').replace('{NOME}','Maria').replace('{DATA_VENCIMENTO}','15/06/2026').replace('{LINK_PAGAMENTO}','[LINK]') }}</div>
+            {% if t.tag_crm %}
+            <div class="mt-2">
+              <span class="badge bg-warning text-dark"><i class="bi bi-tag me-1"></i>Tag CRM: {{ t.tag_crm }}</span>
+            </div>
+            {% endif %}
           </div>
         </div>
         {% endfor %}
@@ -359,10 +365,10 @@
 
         <div class="alert alert-info mb-0">
           <i class="bi bi-info-circle-fill me-2"></i>
-          <strong>Como usar:</strong> na tela <a href="/wizard-whatsapp">Envio de Mensagens</a>,
+          <strong>Como usar:</strong> na tela <a href="/envio-mensagens">Envio de Mensagens</a>,
           cada aluno com e-mail cadastrado terá o botão <i class="bi bi-envelope"></i>.
           Clique para enviar individualmente, ou use o botão
-          <strong>Enviar E-mail para Todos</strong> no topo da tela de envio para envio em lote.
+          <strong>Enviar E-mail para Todos</strong> no topo da tela de <a href="/envio-mensagens">Envio de Mensagens</a> para envio em lote.
           Todos os envios ficam registrados no banco de dados.
         </div>
 
@@ -433,6 +439,14 @@
               <code>{DATA_VENCIMENTO}</code>, <code>{LINK_PAGAMENTO}</code>
             </div>
           </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-tag me-1 text-muted"></i>Tag CRM
+              <small class="text-muted fw-normal">(opcional — aparece na planilha CRM)</small>
+            </label>
+            <input type="text" class="form-control" name="tag_crm" id="editTagCrm"
+                   placeholder="Ex: INICIAR_COBRANCA">
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
@@ -486,6 +500,14 @@
               Variáveis: <code>{TRATAMENTO}</code>, <code>{NOME}</code>,
               <code>{DATA_VENCIMENTO}</code>, <code>{LINK_PAGAMENTO}</code>
             </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-tag me-1 text-muted"></i>Tag CRM
+              <small class="text-muted fw-normal">(opcional)</small>
+            </label>
+            <input type="text" class="form-control" name="tag_crm"
+                   placeholder="Ex: INICIAR_COBRANCA">
           </div>
         </div>
         <div class="modal-footer">
@@ -574,6 +596,7 @@ document.getElementById('modalEditarMsg').addEventListener('show.bs.modal', func
   document.getElementById('editDiasDe').value   = btn.getAttribute('data-dias-de');
   document.getElementById('editDiasAte').value  = btn.getAttribute('data-dias-ate');
   document.getElementById('editConteudo').value = btn.getAttribute('data-conteudo');
+  document.getElementById('editTagCrm').value   = btn.getAttribute('data-tag-crm') || '';
 
   const diasRow = document.getElementById('editDiasRow');
   if (isAvencer) {

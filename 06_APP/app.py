@@ -398,7 +398,7 @@ def gerar_relatorio():
         _log(f"[{empresa}] ERRO gerar-relatorio: {e}")
         flash(f"Erro ao gerar relatórios: {e}", "danger")
 
-    return redirect(url_for('wizard_whatsapp'))
+    return redirect(url_for('resultado'))
 
 
 @app.route('/atualizar-base', methods=['POST'])
@@ -533,8 +533,9 @@ def template_novo():
     conteudo = request.form.get('conteudo', '').strip()
     dias_de  = _parse_dia(request.form.get('dias_de',  ''))
     dias_ate = _parse_dia(request.form.get('dias_ate', ''))
+    tag_crm  = request.form.get('tag_crm', '').strip()
     if titulo and conteudo:
-        db.criar_template(titulo, conteudo, empresa, dias_de, dias_ate)
+        db.criar_template(titulo, conteudo, empresa, dias_de, dias_ate, tag_crm)
         flash(f"✅ Mensagem '{titulo}' criada com sucesso!", "success")
     else:
         flash("Título e mensagem são obrigatórios.", "warning")
@@ -548,8 +549,9 @@ def template_editar(tid: int):
     conteudo = request.form.get('conteudo', '').strip()
     dias_de  = _parse_dia(request.form.get('dias_de',  ''))
     dias_ate = _parse_dia(request.form.get('dias_ate', ''))
+    tag_crm  = request.form.get('tag_crm', '').strip()
     if titulo and conteudo:
-        db.salvar_template(tid, titulo, conteudo, empresa, dias_de, dias_ate)
+        db.salvar_template(tid, titulo, conteudo, empresa, dias_de, dias_ate, tag_crm)
         flash(f"✅ Mensagem '{titulo}' atualizada com sucesso!", "success")
     else:
         flash("Título e mensagem são obrigatórios.", "warning")
@@ -596,8 +598,8 @@ def _formatar_mensagem_wizard(row, tmpl: dict, col_venc: str = 'Ultimo_Venciment
     ))
 
 
-@app.route('/wizard-whatsapp')
-def wizard_whatsapp():
+@app.route('/envio-mensagens')
+def envio_mensagens():
     empresa = get_empresa()
     consolidado, stats, avencer, stats_avencer = _carregar_estado(empresa)
     if consolidado is None:
@@ -664,7 +666,7 @@ def wizard_whatsapp():
     pct = int(total_enviados / total_todos * 100) if total_todos > 0 else 0
 
     return render_template(
-        'wizard_whatsapp.html',
+        'envio_mensagens.html',
         linhas=linhas,
         avencer_linhas=avencer_linhas,
         stats=stats,
@@ -708,7 +710,7 @@ def whatsapp_marcar_todos():
                     if cpf:
                         db.registrar_envio(cpf, empresa, 'whatsapp', tmpl_av['titulo'])
     flash("✅ Todos os clientes marcados como enviados no WhatsApp.", "success")
-    return redirect(url_for('wizard_whatsapp'))
+    return redirect(url_for('envio_mensagens'))
 
 
 # ---------------------------------------------------------------------------
@@ -874,7 +876,7 @@ def email_enviar_todos():
 
     if not config or not config.get('smtp_host'):
         flash("Configure o servidor SMTP em Configurações → E-mail.", "warning")
-        return redirect(url_for('wizard_whatsapp'))
+        return redirect(url_for('envio_mensagens'))
 
     consolidado, _, avencer, _ = _carregar_estado(empresa)
     if consolidado is None:
@@ -896,7 +898,7 @@ def email_enviar_todos():
         srv.login(config['smtp_usuario'], config['smtp_senha'])
     except Exception as e:
         flash(f"❌ Falha ao conectar no SMTP: {e}", "danger")
-        return redirect(url_for('wizard_whatsapp'))
+        return redirect(url_for('envio_mensagens'))
 
     from_name = config.get('smtp_from_name') or 'Cobranças'
     remetente = f"{from_name} <{config['smtp_usuario']}>"
@@ -958,7 +960,42 @@ def email_enviar_todos():
     if not enviados and not erros:
         flash("Nenhum e-mail novo para enviar (todos já enviados hoje ou sem e-mail cadastrado).", "info")
 
-    return redirect(url_for('wizard_whatsapp'))
+    return redirect(url_for('envio_mensagens'))
+
+
+# ---------------------------------------------------------------------------
+# Fase H — Planilha CRM
+# ---------------------------------------------------------------------------
+
+CRM_PASTA = DATA_DIR / 'crm-exports'
+
+
+@app.route('/crm/gerar-planilha', methods=['POST'])
+def crm_gerar_planilha():
+    empresa = get_empresa()
+    consolidado, _, _, _ = _carregar_estado(empresa)
+    if consolidado is None:
+        flash("Consolide primeiro para gerar a planilha CRM.", "warning")
+        return redirect(url_for('envio_mensagens'))
+
+    templates_list = db.get_templates_completo(empresa)
+    base_df        = db.carregar_base(empresa)
+
+    CRM_PASTA.mkdir(parents=True, exist_ok=True)
+    data_str = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
+
+    try:
+        nome_arq = proc.gerar_planilha_crm(
+            consolidado, base_df, templates_list, CRM_PASTA, data_str, empresa
+        )
+        _log(f"[{empresa}] Planilha CRM gerada: {nome_arq}")
+        os.startfile(str(CRM_PASTA))
+        flash(f"✅ Planilha CRM gerada: {nome_arq.name} — pasta aberta automaticamente.", "success")
+    except Exception as e:
+        _log(f"[{empresa}] ERRO CRM: {e}")
+        flash(f"Erro ao gerar planilha CRM: {e}", "danger")
+
+    return redirect(url_for('envio_mensagens'))
 
 
 # ---------------------------------------------------------------------------

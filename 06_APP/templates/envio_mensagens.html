@@ -1,0 +1,466 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<!-- CABEÇALHO -->
+<div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-0">
+      <i class="bi bi-whatsapp text-success me-2"></i>Envio de Mensagens
+    </h4>
+    <p class="text-muted small mb-0">
+      Copie cada mensagem e envie pelo WhatsApp. Marque como enviado conforme for avançando.
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if tem_email_cfg %}
+    <form action="/email/enviar-todos" method="post">
+      <button type="submit" class="btn btn-outline-info btn-sm"
+              onclick="return confirm('Enviar e-mail para todos os clientes com e-mail cadastrado que ainda não receberam hoje?')">
+        <i class="bi bi-envelope-check me-1"></i>Enviar E-mail para Todos
+      </button>
+    </form>
+    {% else %}
+    <a href="/configuracoes#tab-email" class="btn btn-outline-secondary btn-sm"
+       title="Configure o SMTP para habilitar envio de e-mail">
+      <i class="bi bi-envelope-exclamation me-1"></i>Configurar E-mail
+    </a>
+    {% endif %}
+    <form action="/crm/gerar-planilha" method="post">
+      <button type="submit" class="btn btn-outline-warning btn-sm"
+              onclick="return confirm('Gerar planilha CRM com todos os inadimplentes e tags?')">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Planilha CRM
+      </button>
+    </form>
+    <form action="/whatsapp/marcar-todos" method="post">
+      <button type="submit" class="btn btn-outline-success btn-sm"
+              onclick="return confirm('Marcar todos como enviados pelo WhatsApp?')">
+        <i class="bi bi-check2-all me-1"></i>Marcar Todos Enviados
+      </button>
+    </form>
+    <a href="/resultado" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Resultado
+    </a>
+  </div>
+</div>
+
+<!-- PROGRESSO -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex align-items-center gap-3">
+      <i class="bi bi-send-check-fill text-success" style="font-size:1.2rem"></i>
+      <div class="flex-grow-1">
+        <div class="progress" style="height:10px;border-radius:6px">
+          <div class="progress-bar bg-success" id="progressBar"
+               style="width:{{ pct }}%;transition:width .4s" role="progressbar"></div>
+        </div>
+      </div>
+      <span id="progressTxt" class="fw-semibold text-success" style="min-width:90px;text-align:right">
+        {{ total_enviados }}/{{ total_todos }} enviados
+      </span>
+      <span id="pctTxt" class="badge bg-success" style="font-size:.85rem">{{ pct }}%</span>
+    </div>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <select id="filtroCategoria" class="form-select form-select-sm">
+          <option value="">Todas as categorias</option>
+          <option value="Novos Inadimplentes">Novos Inadimplentes</option>
+          <option value="Régua">Vencidos 2-29d</option>
+          <option value="Acima 30 Dias">Acima de 30 Dias</option>
+          {% if avencer_linhas %}
+          <option value="A Vencer">A Vencer</option>
+          {% endif %}
+        </select>
+      </div>
+      <div class="col">
+        <input type="text" id="filtroNome" class="form-control form-control-sm"
+               placeholder="Buscar por nome ou telefone...">
+      </div>
+      <div class="col-auto">
+        <div class="form-check form-switch mb-0 ms-1">
+          <input class="form-check-input" type="checkbox" id="ocultarEnviados">
+          <label class="form-check-label small" for="ocultarEnviados">Ocultar enviados</label>
+        </div>
+      </div>
+      <div class="col-auto">
+        <span id="contadorFiltro" class="text-muted small">{{ (linhas|length) + (avencer_linhas|length) }} clientes</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TABELA VENCIDOS -->
+{% if linhas %}
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-whatsapp text-success"></i>
+    <span>Mensagens WhatsApp — Inadimplentes</span>
+    <span class="badge bg-secondary ms-1">{{ linhas|length }}</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="tabelaWizard">
+        <thead class="table-dark">
+          <tr>
+            <th style="width:38px">#</th>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th class="text-center">Categoria</th>
+            <th class="text-center">Dias</th>
+            <th class="text-end text-nowrap">Valor</th>
+            <th class="text-center" style="width:155px">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in linhas %}
+          {% set idx = loop.index %}
+          <tr class="wizard-row {% if l.enviado %}table-success{% endif %} align-middle"
+              data-cat="{{ l.categoria }}" data-nome="{{ l.nome|lower }} {{ l.telefone|lower }}"
+              data-enviado="{{ 'true' if l.enviado else 'false' }}"
+              style="cursor:pointer"
+              data-bs-toggle="collapse" data-bs-target="#expand-{{ idx }}">
+            <td class="text-muted small">{{ idx }}</td>
+            <td class="fw-semibold">
+              {{ l.nome }}
+              {% if l.tem_email %}
+              <i class="bi bi-envelope text-info" title="{{ l.email }}" style="font-size:.75rem;opacity:.7"></i>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ l.telefone }}</td>
+            <td class="text-center">
+              {% if l.categoria == 'Novos Inadimplentes' %}
+                <span class="badge bg-success">Novo</span>
+              {% elif l.categoria == 'Régua' %}
+                <span class="badge bg-primary">Régua</span>
+              {% else %}
+                <span class="badge bg-danger">+30d</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <span class="badge {{ 'bg-danger' if l.dias > 30 else 'bg-warning text-dark' }}">{{ l.dias }}d</span>
+            </td>
+            <td class="text-end text-nowrap small fw-semibold">{{ l.valor }}</td>
+            <td class="text-center" onclick="event.stopPropagation()">
+              <div class="d-flex gap-1 justify-content-center flex-wrap">
+                <button class="btn btn-outline-primary btn-sm btn-copiar"
+                        data-texto="{{ l.mensagem | e }}" title="Copiar mensagem para área de transferência">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+                {% if l.tem_email %}
+                <button class="btn {% if l.email_enviado %}btn-info{% else %}btn-outline-info{% endif %} btn-sm btn-email"
+                        data-cpf="{{ l.cpf }}" data-idx="{{ idx }}"
+                        title="{% if l.email_enviado %}E-mail já enviado hoje{% else %}Enviar e-mail para {{ l.email }}{% endif %}"
+                        {% if l.email_enviado %}disabled{% endif %}>
+                  <i class="bi bi-envelope{% if l.email_enviado %}-check{% endif %}"></i>
+                </button>
+                {% endif %}
+                <span id="btn-status-{{ idx }}">
+                  {% if l.enviado %}
+                  <span class="badge bg-success py-2 px-2" title="Enviado hoje"><i class="bi bi-check2-all"></i></span>
+                  {% else %}
+                  <button class="btn btn-outline-success btn-sm btn-marcar"
+                          data-cpf="{{ l.cpf }}" data-template="{{ l.template | e }}" data-idx="{{ idx }}"
+                          title="Marcar como enviado">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  {% endif %}
+                </span>
+              </div>
+            </td>
+          </tr>
+          <!-- Linha expandida: mensagem -->
+          <tr class="wizard-expand {% if l.enviado %}table-success{% endif %}"
+              data-cat="{{ l.categoria }}" data-nome="{{ l.nome|lower }} {{ l.telefone|lower }}"
+              data-enviado="{{ 'true' if l.enviado else 'false' }}">
+            <td colspan="7" class="p-0 border-top-0">
+              <div class="collapse" id="expand-{{ idx }}">
+                <div class="p-3 bg-light border-start border-4
+                  {% if l.categoria == 'Novos Inadimplentes' %}border-success
+                  {% elif l.categoria == 'Régua' %}border-primary
+                  {% else %}border-danger{% endif %}">
+                  <div class="font-monospace text-dark" id="msgtext-{{ idx }}"
+                       style="white-space:pre-wrap;font-size:.85rem;line-height:1.5">{{ l.mensagem }}</div>
+                  <div class="mt-2 d-flex gap-2">
+                    <button class="btn btn-primary btn-sm btn-copiar-inline"
+                            data-target="msgtext-{{ idx }}">
+                      <i class="bi bi-clipboard me-1"></i>Copiar Mensagem
+                    </button>
+                    <small class="text-muted align-self-center">{{ l.template }}</small>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- TABELA A VENCER -->
+{% if avencer_linhas %}
+<div class="card mb-4">
+  <div class="card-header text-white d-flex align-items-center gap-2" style="background:#E65100">
+    <i class="bi bi-bell"></i>
+    <span>Lembretes — A Vencer</span>
+    <span class="badge bg-white text-dark ms-1">{{ avencer_linhas|length }}</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="tabelaAvencer">
+        <thead class="table-dark">
+          <tr>
+            <th style="width:38px">#</th>
+            <th>Nome</th>
+            <th>Telefone</th>
+            <th>Vencimento</th>
+            <th class="text-end text-nowrap">Valor</th>
+            <th class="text-center" style="width:155px">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in avencer_linhas %}
+          {% set idx = 'av' ~ loop.index %}
+          <tr class="wizard-row wizard-row-av {% if l.enviado %}table-success{% endif %} align-middle"
+              data-cat="A Vencer" data-nome="{{ l.nome|lower }} {{ l.telefone|lower }}"
+              data-enviado="{{ 'true' if l.enviado else 'false' }}"
+              style="cursor:pointer"
+              data-bs-toggle="collapse" data-bs-target="#expand-{{ idx }}">
+            <td class="text-muted small">{{ loop.index }}</td>
+            <td class="fw-semibold">
+              {{ l.nome }}
+              {% if l.tem_email %}
+              <i class="bi bi-envelope text-info" title="{{ l.email }}" style="font-size:.75rem;opacity:.7"></i>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ l.telefone }}</td>
+            <td class="small">{{ l.vencimento }}</td>
+            <td class="text-end text-nowrap small fw-semibold">{{ l.valor }}</td>
+            <td class="text-center" onclick="event.stopPropagation()">
+              <div class="d-flex gap-1 justify-content-center flex-wrap">
+                <button class="btn btn-outline-primary btn-sm btn-copiar"
+                        data-texto="{{ l.mensagem | e }}" title="Copiar mensagem">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+                {% if l.tem_email %}
+                <button class="btn {% if l.email_enviado %}btn-info{% else %}btn-outline-info{% endif %} btn-sm btn-email"
+                        data-cpf="{{ l.cpf }}" data-idx="{{ idx }}"
+                        title="{% if l.email_enviado %}E-mail já enviado hoje{% else %}Enviar e-mail para {{ l.email }}{% endif %}"
+                        {% if l.email_enviado %}disabled{% endif %}>
+                  <i class="bi bi-envelope{% if l.email_enviado %}-check{% endif %}"></i>
+                </button>
+                {% endif %}
+                <span id="btn-status-{{ idx }}">
+                  {% if l.enviado %}
+                  <span class="badge bg-success py-2 px-2"><i class="bi bi-check2-all"></i></span>
+                  {% else %}
+                  <button class="btn btn-outline-success btn-sm btn-marcar"
+                          data-cpf="{{ l.cpf }}" data-template="{{ l.template | e }}" data-idx="{{ idx }}"
+                          title="Marcar como enviado">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  {% endif %}
+                </span>
+              </div>
+            </td>
+          </tr>
+          <tr class="wizard-expand wizard-expand-av {% if l.enviado %}table-success{% endif %}"
+              data-cat="A Vencer" data-nome="{{ l.nome|lower }} {{ l.telefone|lower }}"
+              data-enviado="{{ 'true' if l.enviado else 'false' }}">
+            <td colspan="6" class="p-0 border-top-0">
+              <div class="collapse" id="expand-{{ idx }}">
+                <div class="p-3 bg-light border-start border-4 border-warning">
+                  <div class="font-monospace text-dark" id="msgtext-{{ idx }}"
+                       style="white-space:pre-wrap;font-size:.85rem;line-height:1.5">{{ l.mensagem }}</div>
+                  <div class="mt-2 d-flex gap-2">
+                    <button class="btn btn-primary btn-sm btn-copiar-inline"
+                            data-target="msgtext-{{ idx }}">
+                      <i class="bi bi-clipboard me-1"></i>Copiar Mensagem
+                    </button>
+                    <small class="text-muted align-self-center">{{ l.template }}</small>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if not linhas and not avencer_linhas %}
+<div class="alert alert-warning">
+  Nenhum cliente com template disponível. <a href="/configuracoes#tab-mensagens">Verifique as mensagens</a>.
+</div>
+{% endif %}
+
+<!-- TOAST de feedback -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:2000">
+  <div id="toastFeedback" class="toast align-items-center text-white border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-semibold" id="toastMsg">—</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let totalEnviados = {{ total_enviados }};
+const totalTodos  = {{ total_todos }};
+
+// ── Progresso ──────────────────────────────────────────────────────────────
+function atualizarProgresso() {
+  const pct = totalTodos > 0 ? Math.round(totalEnviados / totalTodos * 100) : 0;
+  document.getElementById('progressBar').style.width  = pct + '%';
+  document.getElementById('progressTxt').textContent  = totalEnviados + '/' + totalTodos + ' enviados';
+  document.getElementById('pctTxt').textContent        = pct + '%';
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+const toastEl  = document.getElementById('toastFeedback');
+const toastObj = new bootstrap.Toast(toastEl, { delay: 2500 });
+function mostrarToast(msg, cor) {
+  toastEl.className = `toast align-items-center text-white border-0 bg-${cor}`;
+  document.getElementById('toastMsg').textContent = msg;
+  toastObj.show();
+}
+
+// ── Copiar (botão rápido) ──────────────────────────────────────────────────
+document.querySelectorAll('.btn-copiar').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const texto = btn.getAttribute('data-texto');
+    navigator.clipboard.writeText(texto).then(() => {
+      mostrarToast('✓ Mensagem copiada!', 'primary');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-check2"></i>';
+      setTimeout(() => { btn.innerHTML = orig; }, 1600);
+    }).catch(() => mostrarToast('Erro ao copiar', 'danger'));
+  });
+});
+
+// ── Copiar (botão inline na expansão) ─────────────────────────────────────
+document.querySelectorAll('.btn-copiar-inline').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const texto = document.getElementById(btn.dataset.target).innerText;
+    navigator.clipboard.writeText(texto).then(() => {
+      mostrarToast('✓ Mensagem copiada!', 'primary');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copiado!';
+      btn.classList.replace('btn-primary', 'btn-success');
+      setTimeout(() => {
+        btn.innerHTML = orig;
+        btn.classList.replace('btn-success', 'btn-primary');
+      }, 1800);
+    });
+  });
+});
+
+// ── Marcar como enviado (WhatsApp) ─────────────────────────────────────────
+document.querySelectorAll('.btn-marcar').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const cpf  = btn.dataset.cpf;
+    const tmpl = btn.dataset.template;
+    const idx  = btn.dataset.idx;
+    const fd   = new FormData();
+    fd.append('cpf', cpf); fd.append('template', tmpl);
+
+    try {
+      await fetch('/whatsapp/marcar-enviado', { method: 'POST', body: fd });
+      document.getElementById('btn-status-' + idx).innerHTML =
+        '<span class="badge bg-success py-2 px-2"><i class="bi bi-check2-all"></i></span>';
+      document.querySelectorAll('[data-bs-target="#expand-' + idx + '"]').forEach(tr => {
+        tr.classList.add('table-success');
+        tr.dataset.enviado = 'true';
+      });
+      document.querySelectorAll('#expand-' + idx).forEach(el => {
+        const parentTr = el.closest('tr');
+        if (parentTr) { parentTr.classList.add('table-success'); parentTr.dataset.enviado = 'true'; }
+      });
+      totalEnviados++;
+      atualizarProgresso();
+      mostrarToast('✓ Marcado como enviado!', 'success');
+    } catch(e) {
+      mostrarToast('Erro ao marcar', 'danger');
+    }
+  });
+});
+
+// ── Enviar e-mail individual ───────────────────────────────────────────────
+document.querySelectorAll('.btn-email').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const cpf = btn.dataset.cpf;
+    const idx = btn.dataset.idx;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    const fd = new FormData();
+    fd.append('cpf', cpf);
+
+    try {
+      const res  = await fetch('/email/enviar-aluno', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.ok) {
+        btn.innerHTML = '<i class="bi bi-envelope-check"></i>';
+        btn.classList.replace('btn-outline-info', 'btn-info');
+        mostrarToast('✓ E-mail enviado!', 'info');
+      } else {
+        btn.innerHTML = orig;
+        btn.disabled  = false;
+        mostrarToast('Erro: ' + (data.erro || 'Falha ao enviar e-mail'), 'danger');
+      }
+    } catch(e) {
+      btn.innerHTML = orig;
+      btn.disabled  = false;
+      mostrarToast('Erro de conexão', 'danger');
+    }
+  });
+});
+
+// ── Filtro ─────────────────────────────────────────────────────────────────
+const filtroCategoria  = document.getElementById('filtroCategoria');
+const filtroNome       = document.getElementById('filtroNome');
+const ocultarEnviados  = document.getElementById('ocultarEnviados');
+const contadorFiltro   = document.getElementById('contadorFiltro');
+
+function aplicarFiltro() {
+  const cat    = filtroCategoria.value;
+  const busca  = filtroNome.value.toLowerCase();
+  const ocultar = ocultarEnviados.checked;
+  let vis = 0;
+
+  document.querySelectorAll('.wizard-row').forEach(tr => {
+    const catOk     = !cat   || tr.dataset.cat === cat;
+    const nomeOk    = !busca || tr.dataset.nome.includes(busca);
+    const envOk     = !ocultar || tr.dataset.enviado !== 'true';
+    const show      = catOk && nomeOk && envOk;
+    tr.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  document.querySelectorAll('.wizard-expand').forEach(tr => {
+    const catOk  = !cat   || tr.dataset.cat === cat;
+    const nomeOk = !busca || tr.dataset.nome.includes(busca);
+    const envOk  = !ocultar || tr.dataset.enviado !== 'true';
+    tr.style.display = (catOk && nomeOk && envOk) ? '' : 'none';
+  });
+  contadorFiltro.textContent = vis + ' cliente' + (vis !== 1 ? 's' : '');
+}
+
+filtroCategoria.addEventListener('change', aplicarFiltro);
+filtroNome.addEventListener('input', aplicarFiltro);
+ocultarEnviados.addEventListener('change', aplicarFiltro);
+</script>
+{% endblock %}

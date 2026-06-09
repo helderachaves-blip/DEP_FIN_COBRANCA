@@ -28,6 +28,42 @@
   </div>
 {% else %}
 
+{% set cnt_inad = alunos | selectattr('status', 'equalto', 'INADIMPLENTE') | list | length %}
+{% set cnt_quit = alunos | selectattr('status', 'equalto', 'QUITADO')      | list | length %}
+{% set cnt_ren  = alunos | selectattr('status', 'equalto', 'RENEGOCIADO')  | list | length %}
+
+<!-- FILTROS RÁPIDOS -->
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-filtro-base" data-status=""
+         style="background:linear-gradient(135deg,#1565C0,#42A5F5);cursor:pointer" title="Todos">
+      <div class="stat-num">{{ alunos|length }}</div>
+      <div class="stat-label"><i class="bi bi-people me-1"></i>Total na Base</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-filtro-base" data-status="INADIMPLENTE"
+         style="background:linear-gradient(135deg,#b71c1c,#ef5350);cursor:pointer" title="Filtrar INADIMPLENTE">
+      <div class="stat-num">{{ cnt_inad }}</div>
+      <div class="stat-label"><i class="bi bi-exclamation-circle me-1"></i>Inadimplentes</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-filtro-base" data-status="QUITADO"
+         style="background:linear-gradient(135deg,#2e7d32,#66bb6a);cursor:pointer" title="Filtrar QUITADO">
+      <div class="stat-num">{{ cnt_quit }}</div>
+      <div class="stat-label"><i class="bi bi-check-circle me-1"></i>Quitados</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-filtro-base" data-status="RENEGOCIADO"
+         style="background:linear-gradient(135deg,#e65100,#ffa726);cursor:pointer" title="Filtrar RENEGOCIADO">
+      <div class="stat-num">{{ cnt_ren }}</div>
+      <div class="stat-label"><i class="bi bi-handshake me-1"></i>Renegociados</div>
+    </div>
+  </div>
+</div>
+
 <!-- FILTROS -->
 <div class="card mb-3">
   <div class="card-body py-2">
@@ -206,5 +242,19 @@ function filtrar() {
 if (filtroStatus)   filtroStatus.addEventListener('change', filtrar);
 if (filtroCategoria) filtroCategoria.addEventListener('change', filtrar);
 if (filtroBusca)    filtroBusca.addEventListener('input', filtrar);
+
+// Clique nos cards de filtro rápido
+document.querySelectorAll('.stat-filtro-base').forEach(card => {
+  card.addEventListener('click', () => {
+    if (filtroStatus) filtroStatus.value = card.dataset.status;
+    filtrar();
+    document.querySelectorAll('.stat-filtro-base').forEach(c => {
+      const ativo = c.dataset.status === card.dataset.status;
+      c.style.outline   = ativo ? '3px solid rgba(255,255,255,.9)' : '';
+      c.style.boxShadow = ativo ? '0 0 0 3px rgba(255,255,255,.4)' : '';
+      c.style.opacity   = (!card.dataset.status || ativo) ? '1' : '0.55';
+    });
+  });
+});
 </script>
 {% endblock %}
