@@ -28,38 +28,39 @@
   </div>
 {% else %}
 
-{% set cnt_inad = alunos | selectattr('status', 'equalto', 'INADIMPLENTE') | list | length %}
-{% set cnt_quit = alunos | selectattr('status', 'equalto', 'QUITADO')      | list | length %}
-{% set cnt_ren  = alunos | selectattr('status', 'equalto', 'RENEGOCIADO')  | list | length %}
+{% set cnt_novos    = alunos | selectattr('categoria', 'equalto', 'Novos Inadimplentes') | list | length %}
+{% set cnt_reneg    = alunos | selectattr('em_renegociacao') | list | length %}
+{% set cnt_gerais   = alunos | selectattr('status', 'equalto', 'INADIMPLENTE') | rejectattr('categoria', 'equalto', 'Novos Inadimplentes') | list | length %}
+{% set cnt_quitados = alunos | selectattr('status', 'equalto', 'QUITADO') | list | length %}
 
 <!-- FILTROS RÁPIDOS -->
 <div class="row g-2 mb-3">
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-filtro-base" data-status=""
-         style="background:linear-gradient(135deg,#1565C0,#42A5F5);cursor:pointer" title="Todos">
-      <div class="stat-num">{{ alunos|length }}</div>
-      <div class="stat-label"><i class="bi bi-people me-1"></i>Total na Base</div>
+    <div class="stat-card stat-filtro-base" data-filtro="novos"
+         style="background:linear-gradient(135deg,#2E7D32,#66BB6A);cursor:pointer" title="Novos Inadimplentes">
+      <div class="stat-num">{{ cnt_novos }}</div>
+      <div class="stat-label"><i class="bi bi-person-plus me-1"></i>Novos Inadimplentes</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-filtro-base" data-status="INADIMPLENTE"
-         style="background:linear-gradient(135deg,#b71c1c,#ef5350);cursor:pointer" title="Filtrar INADIMPLENTE">
-      <div class="stat-num">{{ cnt_inad }}</div>
-      <div class="stat-label"><i class="bi bi-exclamation-circle me-1"></i>Inadimplentes</div>
+    <div class="stat-card stat-filtro-base" data-filtro="renegociacao"
+         style="background:linear-gradient(135deg,#e65100,#ffa726);cursor:pointer" title="Em Renegociação">
+      <div class="stat-num">{{ cnt_reneg }}</div>
+      <div class="stat-label"><i class="bi bi-arrow-repeat me-1"></i>Em Renegociação</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-filtro-base" data-status="QUITADO"
-         style="background:linear-gradient(135deg,#2e7d32,#66bb6a);cursor:pointer" title="Filtrar QUITADO">
-      <div class="stat-num">{{ cnt_quit }}</div>
-      <div class="stat-label"><i class="bi bi-check-circle me-1"></i>Quitados</div>
+    <div class="stat-card stat-filtro-base" data-filtro="gerais"
+         style="background:linear-gradient(135deg,#b71c1c,#ef5350);cursor:pointer" title="Inadimplentes Gerais">
+      <div class="stat-num">{{ cnt_gerais }}</div>
+      <div class="stat-label"><i class="bi bi-exclamation-circle me-1"></i>Inadimplentes Gerais</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-filtro-base" data-status="RENEGOCIADO"
-         style="background:linear-gradient(135deg,#e65100,#ffa726);cursor:pointer" title="Filtrar RENEGOCIADO">
-      <div class="stat-num">{{ cnt_ren }}</div>
-      <div class="stat-label"><i class="bi bi-handshake me-1"></i>Renegociados</div>
+    <div class="stat-card stat-filtro-base" data-filtro="quitados"
+         style="background:linear-gradient(135deg,#1565C0,#42A5F5);cursor:pointer" title="Inadimplentes Quitados">
+      <div class="stat-num">{{ cnt_quitados }}</div>
+      <div class="stat-label"><i class="bi bi-check-circle me-1"></i>Inadimplentes Quitados</div>
     </div>
   </div>
 </div>
@@ -121,7 +122,7 @@
         </thead>
         <tbody>
           {% for a in alunos %}
-          <tr data-status="{{ a.status }}" data-cat="{{ a.categoria }}" data-nome="{{ a.aluno|lower }}">
+          <tr data-status="{{ a.status }}" data-cat="{{ a.categoria }}" data-ren="{{ 'true' if a.em_renegociacao else '' }}" data-nome="{{ a.aluno|lower }}">
             <td class="text-muted small">{{ loop.index }}</td>
             <td class="fw-semibold">{{ a.aluno }}</td>
             <td class="small text-muted">{{ a.cpf }}</td>
@@ -218,41 +219,57 @@ function abrirModal(cpf, nome, statusAtual) {
   new bootstrap.Modal(document.getElementById('modalStatus')).show();
 }
 
-const filtroStatus   = document.getElementById('filtroStatus');
+const filtroStatus    = document.getElementById('filtroStatus');
 const filtroCategoria = document.getElementById('filtroCategoria');
-const filtroBusca    = document.getElementById('filtroBusca');
-const contador       = document.getElementById('contador');
-const linhas         = document.querySelectorAll('#tabelaBase tbody tr');
+const filtroBusca     = document.getElementById('filtroBusca');
+const contador        = document.getElementById('contador');
+const linhas          = document.querySelectorAll('#tabelaBase tbody tr');
+
+let filtroCard = '';
+
+function cardMatchRow(tr, card) {
+  if (!card) return true;
+  const st  = tr.dataset.status;
+  const cat = tr.dataset.cat;
+  const ren = tr.dataset.ren;
+  if (card === 'novos')        return cat === 'Novos Inadimplentes';
+  if (card === 'renegociacao') return ren === 'true';
+  if (card === 'gerais')       return st === 'INADIMPLENTE' && cat !== 'Novos Inadimplentes';
+  if (card === 'quitados')     return st === 'QUITADO';
+  return true;
+}
 
 function filtrar() {
-  const st   = filtroStatus ? filtroStatus.value : '';
+  const st    = filtroStatus    ? filtroStatus.value    : '';
   const cat   = filtroCategoria ? filtroCategoria.value : '';
-  const busca = filtroBusca ? filtroBusca.value.toLowerCase() : '';
+  const busca = filtroBusca     ? filtroBusca.value.toLowerCase() : '';
   let vis = 0;
   linhas.forEach(tr => {
-    const stOk  = !st   || tr.dataset.status === st;
-    const catOk = !cat  || tr.dataset.cat    === cat;
+    const cardOk = cardMatchRow(tr, filtroCard);
+    const stOk   = !st   || tr.dataset.status === st;
+    const catOk  = !cat  || tr.dataset.cat    === cat;
     const nomeOk = !busca || tr.dataset.nome.includes(busca);
-    tr.style.display = (stOk && catOk && nomeOk) ? '' : 'none';
-    if (stOk && catOk && nomeOk) vis++;
+    const show   = cardOk && stOk && catOk && nomeOk;
+    tr.style.display = show ? '' : 'none';
+    if (show) vis++;
   });
   if (contador) contador.textContent = vis + ' cliente' + (vis !== 1 ? 's' : '');
 }
 
-if (filtroStatus)   filtroStatus.addEventListener('change', filtrar);
+if (filtroStatus)    filtroStatus.addEventListener('change', filtrar);
 if (filtroCategoria) filtroCategoria.addEventListener('change', filtrar);
-if (filtroBusca)    filtroBusca.addEventListener('input', filtrar);
+if (filtroBusca)     filtroBusca.addEventListener('input', filtrar);
 
 // Clique nos cards de filtro rápido
 document.querySelectorAll('.stat-filtro-base').forEach(card => {
   card.addEventListener('click', () => {
-    if (filtroStatus) filtroStatus.value = card.dataset.status;
+    filtroCard = filtroCard === card.dataset.filtro ? '' : card.dataset.filtro;
     filtrar();
     document.querySelectorAll('.stat-filtro-base').forEach(c => {
-      const ativo = c.dataset.status === card.dataset.status;
+      const ativo = c.dataset.filtro === filtroCard && filtroCard !== '';
       c.style.outline   = ativo ? '3px solid rgba(255,255,255,.9)' : '';
       c.style.boxShadow = ativo ? '0 0 0 3px rgba(255,255,255,.4)' : '';
-      c.style.opacity   = (!card.dataset.status || ativo) ? '1' : '0.55';
+      c.style.opacity   = (!filtroCard || ativo) ? '1' : '0.55';
     });
   });
 });

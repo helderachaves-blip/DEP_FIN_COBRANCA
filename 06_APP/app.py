@@ -455,21 +455,30 @@ def base():
     empresa = get_empresa()
     df      = db.carregar_base(empresa)
     info    = db.status_base(empresa)
-    alunos  = []
+
+    _, _, avencer, _ = _carregar_estado(empresa)
+    cpfs_avencer = set()
+    if avencer is not None and not avencer.empty and 'CPF' in avencer.columns:
+        mask = avencer['CPF'].astype(str).str.strip() != ''
+        cpfs_avencer = set(avencer.loc[mask, 'CPF'].astype(str).str.zfill(11))
+
+    alunos = []
     for _, row in df.iterrows():
+        cpf = str(row['cpf']).zfill(11)
         alunos.append({
-            'cpf':          row['cpf'],
-            'aluno':        row['aluno'],
-            'telefone':     row['telefone'] or '-',
-            'email':        row['email'] or '-',
-            'qtd':          row['qtd_boletos'],
-            'total':        fmt_brl(float(row['total'])),
-            'vencimento':   row['ultimo_vencimento'],
-            'dias':         row['dias_atraso'],
-            'categoria':    row['categoria'],
-            'status':       row['status'],
-            'entrada':      row['data_entrada'],
-            'qtd_cobranca': row['qtd_cobranca'] if row['qtd_cobranca'] else 0,
+            'cpf':             cpf,
+            'aluno':           row['aluno'],
+            'telefone':        row['telefone'] or '-',
+            'email':           row['email'] or '-',
+            'qtd':             row['qtd_boletos'],
+            'total':           fmt_brl(float(row['total'])),
+            'vencimento':      row['ultimo_vencimento'],
+            'dias':            row['dias_atraso'],
+            'categoria':       row['categoria'],
+            'status':          row['status'],
+            'entrada':         row['data_entrada'],
+            'qtd_cobranca':    row['qtd_cobranca'] if row['qtd_cobranca'] else 0,
+            'em_renegociacao': cpf in cpfs_avencer,
         })
     return render_template('base.html', alunos=alunos, info=info)
 
