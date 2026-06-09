@@ -1,0 +1,110 @@
+# PLANO DE AÇÃO — MAT-INE Inadimplência 2026
+
+> Sprint atual e próximos passos. Atualizar a cada sessão.
+> Quando um item é entregue: marca ✅ aqui e registra no ROADMAP.md.
+> Última atualização: 08/06/2026
+
+---
+
+## Estado Atual
+
+- **Branch:** `homologacao`
+- **Fase do produto:** Fases A–G concluídas. Em Sprint Zero (EPIC-01) antes de avançar para Fase H.
+- **Último commit:** `bd93473` — fix M5 (cards de filtro da aba Base)
+- **Sessão 08–09/06/2026:** Correção dos cards M5 (✅ commitada) + reorganização da documentação em 3 arquivos de gestão.
+
+---
+
+## O Que Está Pendente de Commit
+
+Nada pendente. Correção M5 e organização de arquivos commitadas nesta sessão.
+
+---
+
+## EPIC-01 — Sprint Zero (Pré-Fase H)
+
+Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcionalidade de integração (WhatsApp automático, Kommo, Synapta API) deve ser iniciada antes do EPIC-01 estar completo.
+
+| Story | Título | Esforço | Status |
+|-------|--------|---------|--------|
+| 01-01 | Quick Wins — encoding, cores, títulos, confirmações, secret key | ~7h | Draft |
+| 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | Draft |
+| 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | Draft |
+| 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Draft |
+| 01-05 | Schema migrations + índices + WAL mode | ~12h | Draft |
+| 01-06 | Autenticação Flask-Login (MVP — usuário único) | ~6h | Draft |
+
+**Total estimado: ~37h**
+
+---
+
+## Detalhe das Stories
+
+### STORY-01-01 — Quick Wins (~7h)
+- Encoding UTF-8 no `layout.html` (sem BOM)
+- Cores semânticas por categoria em `resultado.html` e `envio_mensagens.html`
+- Título dinâmico por página (`{% block title %}`)
+- Confirmação modal antes de "Limpar Sessão"
+- `secret_key` Flask via `.env` (gerada uma vez, persistida)
+
+### STORY-01-02 — Indicadores de Empresa (~3h)
+- Nome da empresa em texto na topbar (azul = Ineprotec, verde = Mat. EaD)
+- Banner persistente no topo do wizard de envio: "Enviando para: [EMPRESA]"
+- Confirmação ao trocar empresa com sessão ativa
+
+### STORY-01-03 — Loading States (~5h)
+- Spinner + botão desabilitado em todos os form POST síncronos: Consolidar, Gerar Relatório, Atualizar Base, Importar Alunos, Salvar SMTP, Testar SMTP
+- Modal de confirmação antes de "Comparar e Atualizar Base"
+- Flash message com contagem de mensagens após "Gerar Relatórios"
+
+### STORY-01-04 — Senha SMTP Segura (~4h)
+- Migrar senha SMTP do SQLite para Python Keyring
+- Remover campo `senha` da tabela `config_email`
+- UI de Configurações: campo senha permanece mas não é lido do banco
+
+### STORY-01-05 — Schema Migrations (~12h)
+- Tabela `schema_migrations` para controle de versão do banco
+- Índices: `(empresa, status)`, `(empresa, categoria)`, `(cpf, empresa)`
+- WAL mode habilitado no `init_db()`
+- Migration automática na inicialização
+
+### STORY-01-06 — Autenticação Flask-Login (~6h)
+- Tabela `usuarios` com usuário admin único
+- Login/logout com Flask-Login
+- Proteção de todas as rotas com `@login_required`
+- Tela de login minimalista
+
+---
+
+## Ordem de Implementação Recomendada
+
+```
+01-01 → 01-02 → 01-03   (independentes, UX — fazer em sequência)
+01-05                    (banco — fazer antes de 01-04 e 01-06)
+01-04 → 01-06            (segurança — após migrations)
+```
+
+---
+
+## Próxima Sessão
+
+1. Commitar correção M5 (aba Base — cards corretos)
+2. Iniciar STORY-01-01 (Quick Wins — menor risco, impacto imediato)
+3. Sequência natural: 01-01 → 01-02 → 01-03 → 01-05 → 01-04 → 01-06
+
+---
+
+## Bloqueios
+
+Nenhum bloqueio ativo.
+
+---
+
+## Fase H — Após EPIC-01
+
+| Item | Dependência |
+|------|------------|
+| WhatsApp automático (WAHA / Evolution API / Z-API / Twilio) | EPIC-01 completo |
+| Link de pagamento dinâmico por aluno (API Synapta) | EPIC-01 completo |
+| Kommo CRM — tagging automático via API | EPIC-01 + autenticação |
+| Agendamento diário/semanal | EPIC-01 + WhatsApp |

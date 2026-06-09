@@ -1,14 +1,14 @@
-# Roadmap de Ajustes — Consolidador Web MAT-INE
+# ROADMAP — MAT-INE Inadimplência 2026
 
-> Histórico de entregas e próximas fases.
-> ✅ = concluído · 🔲 = pendente
+> Linha do tempo completa. Itens entregues nunca são deletados — apenas marcados ✅.
+> Última atualização: 08/06/2026
 
 ---
 
 ## ✅ FASE A — UX Rápidos (03/06/2026)
 
 - [x] Alinhamento `text-end` + `text-nowrap` nas colunas de valores
-- [x] Mover importação de Alunos para Configurações
+- [x] Importação de Alunos movida para Configurações
 - [x] Botão "Limpar Base" com modal de confirmação (digitar "LIMPAR")
 - [x] Aviso de alunos sem cadastro após consolidação (flash warning)
 - [x] Pastas de mês com nome por extenso: `01-Janeiro` … `12-Dezembro`
@@ -19,15 +19,14 @@
 
 - [x] Sidebar escura (`#1a1a2e`) substituindo navbar horizontal
 - [x] "Cobranças INE-MAT" no topo da sidebar
-- [x] Topbar mesma cor com logos Ineprotec (esq) e Matrícula EaD (dir) — RGBA transparente
+- [x] Topbar com logos Ineprotec (esq) e Matrícula EaD (dir) com opacidade dinâmica
 
 ---
 
-## ✅ FASE C — Reformulação das Categorias + Filtros Dinâmicos (03/06/2026)
+## ✅ FASE C — Categorias + Filtros Dinâmicos (03/06/2026)
 
-- [x] 3 categorias por dias de atraso: Novos Inadimplentes (1d) · Régua (2-29d) · Acima 30 Dias (30d+)
-- [x] Cards de filtro clicáveis em Resultado (JS filtra tabela + atualiza totalizadores)
-- [x] Totalizadores dinâmicos: "Total de Inadimplentes" e "Total em Atraso"
+- [x] 3 categorias por dias de atraso: Novos (1d) · Régua (2–29d) · Acima 30 Dias (30d+)
+- [x] Cards de filtro clicáveis em Resultado (JS filtra + atualiza totalizadores)
 - [x] Migração automática de estado pickle com categorias antigas (A/B)
 
 ---
@@ -35,74 +34,113 @@
 ## ✅ FASE D — Multi-empresa (03/06/2026)
 
 - [x] Toggle `[Ineprotec | Mat. EaD]` na topbar
-- [x] Tabela `inadimplentes` recriada com PK composta `(cpf, empresa)`
-- [x] Colunas `empresa` adicionadas em `templates` e `historico_atualizacoes`
-- [x] Migração automática: dados existentes preservados como `INEPROTEC`
+- [x] PK composta `(cpf, empresa)` na tabela `inadimplentes`
 - [x] Templates padrão duplicados por empresa
-- [x] Pastas separadas para uploads e relatórios por empresa
+- [x] Uploads e relatórios separados por empresa
+- [x] Migração automática: dados existentes preservados como INEPROTEC
 
 ---
 
-## ✅ FASE E — Régua de Cobranças + Padrão de Projeto (04/06/2026)
+## ✅ FASE E — Régua de Cobranças + Arquivo À Vencer (04/06/2026)
 
 - [x] Processamento do arquivo AVENCER — card laranja + tabela "A Vencer" em Resultado
-- [x] Placeholder `{LINK_PAGAMENTO}` nos templates (mantido no TXT para preenchimento manual)
+- [x] Placeholder `{LINK_PAGAMENTO}` nos templates (preenchimento manual no TXT)
 - [x] Campo `qtd_cobranca` no banco — incrementa a cada relatório gerado
 - [x] Coluna "Cobr." na tela Base
-- [x] Nova aba "Régua" em Configurações (tabs: Mensagens / Régua / Alunos / Zona de Risco)
-- [x] **Padrão de estrutura em `C:\MATINE\`** — criada automaticamente no startup
-  - `uploads/{EMPRESA}/{tipo}/` — detecção por pasta, nome livre
-  - `relatorios/{EMPRESA}/{ano}/{mes}/{dia}/` — relatórios datados
-  - `banco/inadimplencia.db` · `estado/` · `logs/`
-- [x] **Submenu de Configurações na sidebar** — Mensagens · Régua · Alunos · Zona de Risco
+- [x] Nova aba "Régua" em Configurações
+- [x] Estrutura `C:\MATINE\` criada automaticamente no startup
+- [x] Submenu de Configurações na sidebar
 
 ---
 
 ## ✅ FASE F — Wizard de Envio WhatsApp (04/06/2026)
 
-- [x] Tela `/wizard-whatsapp` — aberta automaticamente após gerar relatório
-- [x] Tabela com todas as mensagens formatadas por aluno + botão "Copiar" por linha
-- [x] Expansão por clique: mostra mensagem inline + botão "Copiar Mensagem"
+- [x] Tela `/envio-mensagens` com todas as mensagens formatadas
+- [x] Botão "Copiar" por linha + expansão inline da mensagem
 - [x] Barra de progresso: X/Y enviados + percentual
-- [x] Marcar enviado por aluno (AJAX, sem reload de página)
+- [x] Marcar enviado por aluno (AJAX, sem reload)
 - [x] Botão "Marcar Todos Enviados"
-- [x] Tabela `envios` no banco — rastreia envios por canal/dia/empresa (base Fase H)
+- [x] Tabela `envios` no banco (base para rastreamento por canal)
 - [x] Filtro por categoria + busca por nome/telefone + ocultar enviados
-- [x] Link "Wizard de Envio" na sidebar + botão na tela Resultado
-
-**Arquivos alterados:**
-- `06_APP/app.py` — rotas `/wizard-whatsapp`, `/whatsapp/marcar-enviado`, `/whatsapp/marcar-todos`
-- `06_APP/database.py` — tabela `envios`, funções `registrar_envio()`, `get_envios_hoje()`
-- `06_APP/templates/wizard_whatsapp.html` — nova tela
-- `06_APP/templates/resultado.html` — botão "Wizard de Envio"
-- `06_APP/templates/layout.html` — link na sidebar
 
 ---
 
 ## ✅ FASE G — Cobranças por E-mail (04/06/2026)
 
-- [x] Configuração SMTP por empresa (host, port, usuário, senha, from_name, TLS)
+- [x] Configuração SMTP por empresa (host, port, usuário, senha, TLS)
 - [x] Teste de conexão SMTP na tela de Configurações
-- [x] Envio de e-mail individual por aluno (AJAX no Wizard de Envio)
-- [x] Envio em lote para todos com e-mail cadastrado (sessão SMTP única)
-- [x] Coluna `assunto_email` nos templates — assunto configurável por mensagem
-- [x] Fallback de assunto padrão por categoria
-- [x] Registro de todos os envios na tabela `envios` (canal='email')
-- [x] Aba "E-mail" em Configurações — SMTP + assuntos por template
-- [x] Botão "Enviar E-mail" por aluno no Wizard (apenas se tem e-mail cadastrado)
-- [x] Botão "Enviar E-mail para Todos" no Wizard
-
-**Arquivos alterados:**
-- `06_APP/app.py` — rotas `/email/configurar`, `/email/testar`, `/email/enviar-aluno`, `/email/enviar-todos`, `/email/assunto/<tid>`
-- `06_APP/database.py` — tabela `config_email`, funções `salvar_config_email()`, `get_config_email()`, `salvar_assunto_template()`
-- `06_APP/templates/configuracoes.html` — aba E-mail
-- `06_APP/templates/layout.html` — sublink E-mail na sidebar
+- [x] Envio individual por aluno (AJAX)
+- [x] Envio em lote para todos com e-mail cadastrado
+- [x] Campo `assunto_email` nos templates
+- [x] Registro de envios na tabela `envios` (canal='email')
 
 ---
 
-## 🔲 FASE H — Integrações Automáticas *(depende de F e G)*
+## ✅ MUDANÇAS 1–5 — UX e CRM (08/06/2026)
 
-- [ ] WhatsApp automático via WAHA/Twilio
-- [ ] Link de pagamento Synapta dinâmico por aluno (substitui `{LINK_PAGAMENTO}`)
-- [ ] Kommo CRM — tagging automático
-- [ ] Agendamento diário/semanal
+- [x] Aba Resultado: removidos 4 botões redundantes (mantém só "Gerar Relatórios")
+- [x] Após gerar relatório → redireciona para `/resultado` (não mais para envio de mensagens)
+- [x] `wizard_whatsapp` renomeado para `envio_mensagens` em todo o código
+- [x] Campo `tag_crm` nos templates + botão "Planilha CRM" em Envio de Mensagens
+- [x] Aba Base: 4 cards de filtro rápido com lógica correta:
+  - Novos Inadimplentes (`categoria = 'Novos Inadimplentes'`)
+  - Em Renegociação (CPF presente no arquivo À Vencer da sessão)
+  - Inadimplentes Gerais (`status = INADIMPLENTE` e não é Novo)
+  - Inadimplentes Quitados (`status = QUITADO`)
+
+---
+
+## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
+
+Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
+**Pré-requisito para Fase H.** Ver detalhes em `PLANO_DE_ACAO.md`.
+
+| Story | Título | Esforço | Status |
+|-------|--------|---------|--------|
+| 01-01 | Quick Wins — encoding, cores, títulos, confirmações, secret key | ~7h | Pendente |
+| 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | Pendente |
+| 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | Pendente |
+| 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Pendente |
+| 01-05 | Schema migrations + índices + WAL mode | ~12h | Pendente |
+| 01-06 | Autenticação Flask-Login (MVP) | ~6h | Pendente |
+
+---
+
+## 🔲 FASE H — Integrações Automáticas (após EPIC-01)
+
+- [ ] WhatsApp automático via WAHA / Evolution API / Z-API / Twilio
+- [ ] Link de pagamento dinâmico por aluno (API Synapta — substitui `{LINK_PAGAMENTO}`)
+- [ ] Kommo CRM — tagging automático via API (add/remove tag INADIMPLENTE)
+- [ ] Agendamento diário/semanal de cobranças
+
+---
+
+## 💡 INSIGHTS — Próxima Versão
+
+Observações e aprendizados do uso real. Serão tratados após Fase H como backlog da v2.
+
+### Operação
+
+- **Separação automática Quitado × Renegociado:** Hoje é revisão manual (coluna `Situacao` em branco no XLSX). A distinção automática exige rastrear se o CPF saiu dos vencidos e apareceu no À Vencer — o arquivo Synapta mistura os dois casos. Solução robusta requer lógica de estado por CPF com janela temporal.
+
+- **Alunos sem telefone:** ~252 alunos sem telefone na base. O aviso de "sem cadastro" existe, mas não há fluxo para enriquecer o cadastro dentro do app. Considerar tela de enriquecimento manual ou integração com Synapta.
+
+- **Heurística de gênero frágil:** Nomes terminados em "a" → sra. Falha em nomes como "Joshua", "Elias", "Matias". Melhorar com lista de exceções ou biblioteca de classificação de nomes.
+
+### Produto
+
+- **Dashboard analítico:** Qtd e valor de inadimplentes por período, evolução de quitações, taxa de resposta ao WhatsApp. Hoje não existe nenhuma visão histórica no app.
+
+- **Régua configurável por aluno:** Hoje a régua é por categoria (dias de atraso). Ideal seria configurar frequência por aluno (ex.: cliente preferencial com régua mais suave).
+
+- **Negativação automática:** Estava no plano original. Clientes acima de 30 dias sem resposta entrariam em fluxo de negativação. Requer conformidade legal e parceiro de negativação (Serasa, SPC).
+
+- **Multi-usuário:** Hoje o app é mono-usuário (Flask-Login MVP com usuário único). Com crescimento da equipe de cobranças, precisará de usuários por empresa com permissões distintas.
+
+### Técnico
+
+- **Arquivo Synapta sem CPF:** Quando o arquivo À Vencer não tem CPF, o cruzamento é feito por nome (match aproximado). Erros de grafia resultam em CPF vazio e o aluno não é reconhecido como "Em Renegociação". Solução: solicitar ao Synapta exportação com CPF ou implementar fuzzy matching.
+
+- **Pickle de sessão sem expiração:** O estado de consolidação fica em pickle indefinidamente. Se o arquivo fonte mudar sem nova consolidação, os dados exibidos ficam desatualizados silenciosamente. Considerar timestamp de validade ou aviso visual de sessão antiga.
+
+- **Relatórios acumulam sem limpeza:** A pasta `C:\MATINE\relatorios\` cresce indefinidamente. Implementar política de retenção (ex.: 90 dias) ou tela de gerenciamento.
