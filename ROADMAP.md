@@ -121,6 +121,15 @@ Primeira story do EPIC-01 entregue. 2 dos 5 itens já estavam satisfeitos pelo e
 
 ---
 
+## ✅ STORY-01-03 — Loading States e Confirmação Atualizar Base (10/06/2026)
+
+- [x] Handler global reutilizável em `layout.html`: todo `<form data-loading>` desabilita o botão de submit e troca o texto por spinner (`data-loading-text`), impedindo duplo clique
+- [x] Loading state aplicado a: Consolidar, Gerar Relatórios (Início + Resultado), Atualizar Base, Importar Alunos, Salvar SMTP, Testar Conexão SMTP
+- [x] Modal de confirmação antes de "Comparar e Atualizar Base" (`#modalAtualizarBase`, padrão consistente com Limpar Sessão/Limpar Base)
+- [x] Flash de `/gerar-relatorio` com contagem total: "X mensagens prontas para envio"
+
+---
+
 ## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
 
 Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
@@ -130,7 +139,7 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 |-------|--------|---------|--------|
 | 01-01 | Quick Wins — encoding, cores, títulos, confirmações, secret key | ~7h | ✅ 10/06 |
 | 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | ✅ 10/06 |
-| 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | Pendente |
+| 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | ✅ 10/06 |
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Pendente |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | Pendente |
 | 01-06 | Autenticação Flask-Login (MVP) | ~6h | Pendente |

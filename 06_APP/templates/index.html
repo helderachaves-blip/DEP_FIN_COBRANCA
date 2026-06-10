@@ -87,8 +87,8 @@
           <p class="text-muted small mb-2">
             Processar arquivos detectados e classificar títulos por categoria.
           </p>
-          <form action="/consolidar" method="post">
-            <button type="submit" class="btn btn-primary w-100">
+          <form action="/consolidar" method="post" data-loading>
+            <button type="submit" class="btn btn-primary w-100" data-loading-text="Consolidando...">
               <i class="bi bi-lightning me-1"></i>Consolidar Agora
             </button>
           </form>
@@ -119,16 +119,15 @@
             <a href="/resultado" class="btn btn-outline-primary btn-sm">
               <i class="bi bi-table me-1"></i>Ver Tabela de Resultado
             </a>
-            <form action="/gerar-relatorio" method="post">
-              <button type="submit" class="btn btn-success btn-sm w-100">
+            <form action="/gerar-relatorio" method="post" data-loading>
+              <button type="submit" class="btn btn-success btn-sm w-100" data-loading-text="Gerando Relatórios...">
                 <i class="bi bi-file-earmark-text me-1"></i>Gerar Relatórios WhatsApp
               </button>
             </form>
-            <form action="/atualizar-base" method="post">
-              <button type="submit" class="btn btn-warning btn-sm w-100 text-dark">
-                <i class="bi bi-database-up me-1"></i>Comparar e Atualizar Base
-              </button>
-            </form>
+            <button type="button" class="btn btn-warning btn-sm w-100 text-dark"
+                    data-bs-toggle="modal" data-bs-target="#modalAtualizarBase">
+              <i class="bi bi-database-up me-1"></i>Comparar e Atualizar Base
+            </button>
             <button type="button" class="btn btn-outline-secondary btn-sm"
                     data-bs-toggle="modal" data-bs-target="#modalLimparSessao">
               <i class="bi bi-trash me-1"></i>Limpar Sessão
@@ -154,6 +153,32 @@
     </div>
   </div>
 
+</div>
+
+<!-- Modal: confirmação de Comparar e Atualizar Base -->
+<div class="modal fade" id="modalAtualizarBase" tabindex="-1" aria-labelledby="modalAtualizarBaseLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalAtualizarBaseLabel">
+          <i class="bi bi-database-up text-warning me-2"></i>Comparar e Atualizar Base
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        Esta ação atualizará <strong>permanentemente</strong> a base de
+        <strong>{{ empresa_label }}</strong> com os dados importados. Deseja continuar?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form action="/atualizar-base" method="post" data-loading class="d-inline">
+          <button type="submit" class="btn btn-warning text-dark" data-loading-text="Atualizando Base...">
+            <i class="bi bi-database-up me-1"></i>Atualizar Base
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Modal: confirmação de Limpar Sessão -->

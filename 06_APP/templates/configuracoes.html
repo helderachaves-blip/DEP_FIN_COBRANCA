@@ -242,11 +242,11 @@
         </div>
         {% endif %}
 
-        <form action="/upload" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+        <form action="/upload" method="post" enctype="multipart/form-data" class="d-flex gap-2" data-loading>
           <input type="hidden" name="tipo" value="alunos">
           <input type="file" class="form-control form-control-sm" name="arquivo"
                  accept=".csv,.xlsx,.xls">
-          <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">
+          <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap" data-loading-text="Importando...">
             <i class="bi bi-upload me-1"></i>Importar
           </button>
         </form>
@@ -267,7 +267,7 @@
         <div class="card mb-4">
           <div class="card-header"><i class="bi bi-server me-2"></i>Configuração SMTP</div>
           <div class="card-body">
-            <form method="post" action="/email/configurar" class="row g-3">
+            <form method="post" action="/email/configurar" class="row g-3" data-loading>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Servidor SMTP <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" name="smtp_host"
@@ -307,15 +307,15 @@
                 </div>
               </div>
               <div class="col-12 d-flex gap-2">
-                <button type="submit" class="btn btn-primary btn-sm">
+                <button type="submit" class="btn btn-primary btn-sm" data-loading-text="Salvando...">
                   <i class="bi bi-floppy me-1"></i>Salvar Configurações
                 </button>
               </div>
             </form>
 
             {% if config_email.get('smtp_host') %}
-            <form method="post" action="/email/testar" class="mt-2">
-              <button type="submit" class="btn btn-outline-secondary btn-sm">
+            <form method="post" action="/email/testar" class="mt-2" data-loading>
+              <button type="submit" class="btn btn-outline-secondary btn-sm" data-loading-text="Testando...">
                 <i class="bi bi-plug me-1"></i>Testar Conexão
               </button>
             </form>

@@ -367,6 +367,7 @@ def gerar_relatorio():
     data_str = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
     gerados       = []
     cpfs_cobrados = []
+    total_msgs    = 0
 
     try:
         # Agrupar cada aluno no template correspondente ao seu dias_atraso
@@ -391,6 +392,7 @@ def gerar_relatorio():
             proc.gerar_xlsx_template(tmpl['titulo'], dados_g, data_str, pasta)
             gerados.append(f"{tmpl['titulo']}: {len(dados_g)} clientes")
             cpfs_cobrados.extend(dados_g['CPF'].astype(str).str.zfill(11).tolist())
+            total_msgs += len(dados_g)
 
         if sem_template:
             _log(f"[{empresa}] {len(sem_template)} cliente(s) sem template correspondente: "
@@ -412,12 +414,18 @@ def gerar_relatorio():
             proc.gerar_txt_avencer(avencer, data_str, pasta, tmpl_avencer['conteudo'])
             proc.gerar_xlsx_avencer(avencer, data_str, pasta)
             gerados.append(f"A Vencer: {len(avencer)} clientes")
+            total_msgs += len(avencer)
 
         if cpfs_cobrados:
             db.incrementar_cobrancas(cpfs_cobrados, empresa)
 
         _log(f"[{empresa}] Relatórios gerados: {', '.join(gerados)}")
-        flash(f"✅ Relatórios gerados: {', '.join(gerados)} → {pasta}", "success")
+        flash(
+            f"✅ Relatórios gerados com sucesso para {empresa}. "
+            f"{total_msgs} mensagens prontas para envio "
+            f"({', '.join(gerados)}) → {pasta}",
+            "success"
+        )
     except Exception as e:
         _log(f"[{empresa}] ERRO gerar-relatorio: {e}")
         flash(f"Erro ao gerar relatórios: {e}", "danger")
