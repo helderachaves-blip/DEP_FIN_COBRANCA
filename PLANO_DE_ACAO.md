@@ -18,11 +18,16 @@
 
 ## O Que Está Pendente de Commit
 
-Nada pendente de commit. **4 commits locais aguardam push (exclusivo do @devops):**
+Nada pendente de commit.
+
+**Já no remoto** (`origin/homologacao`, confirmado via `git fetch`):
 - `0e88c5b` — correções de UI (R1/R2/B1/B2)
 - `2e73302` — STORY-01-01 (Quick Wins)
 - `6d641b9` — STORY-01-02 (Indicadores de empresa)
+
+**Aguardam push (exclusivo do @devops):**
 - `866b063` — STORY-01-03 (Loading states)
+- `07dbe93` — docs: rastreio de commits (+ este ajuste de correção do rastreio)
 
 ---
 
