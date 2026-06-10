@@ -2,22 +2,26 @@
 
 > Sprint atual e próximos passos. Atualizar a cada sessão.
 > Quando um item é entregue: marca ✅ aqui e registra no ROADMAP.md.
-> Última atualização: 08/06/2026
+> Última atualização: 10/06/2026
 
 ---
 
 ## Estado Atual
 
 - **Branch:** `homologacao`
-- **Fase do produto:** Fases A–G concluídas. Em Sprint Zero (EPIC-01) antes de avançar para Fase H.
-- **Último commit:** `bd93473` — fix M5 (cards de filtro da aba Base)
-- **Sessão 08–09/06/2026:** Correção dos cards M5 (✅ commitada) + reorganização da documentação em 3 arquivos de gestão.
+- **Fase do produto:** Fases A–G concluídas. EPIC-01 (Sprint Zero) em andamento — **2 de 6 stories entregues** (01-01, 01-02).
+- **Último commit:** `6d641b9` — STORY-01-02 (indicadores de empresa)
+- **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup; `.env` (gitignored) gerado na 1ª execução com a `FLASK_SECRET_KEY`.
+- **Sessão 10/06/2026:** Correções de UI (R1/R2/B1/B2) + STORY-01-01 (Quick Wins) + STORY-01-02 (Indicadores de empresa). Nova STORY-01-07 (first-run setup) adicionada ao backlog.
 
 ---
 
 ## O Que Está Pendente de Commit
 
-Nada pendente. Correção M5 e organização de arquivos commitadas nesta sessão.
+Nada pendente de commit. **3 commits locais aguardam push (exclusivo do @devops):**
+- `0e88c5b` — correções de UI (R1/R2/B1/B2)
+- `2e73302` — STORY-01-01 (Quick Wins)
+- `6d641b9` — STORY-01-02 (Indicadores de empresa)
 
 ---
 

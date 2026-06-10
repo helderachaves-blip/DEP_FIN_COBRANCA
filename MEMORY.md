@@ -1,7 +1,7 @@
 # MEMORY — MAT-INE Inadimplência 2026
 
 > Contexto permanente do projeto. Atualizar apenas quando algo estrutural mudar.
-> Última atualização: 08/06/2026
+> Última atualização: 10/06/2026
 
 ---
 
@@ -57,6 +57,13 @@ python app.py
 # Parar
 Get-Process python* | Stop-Process -Force
 ```
+
+**Onboarding em máquina nova (ex.: colaborador de dev):**
+1. Instalar Python 3.10+ ("Add to PATH")
+2. `cd` na pasta `06_APP` → `pip install -r requirements.txt`
+3. `python app.py` → a estrutura `C:\MATINE` é criada automaticamente no startup
+4. O `.env` (gitignored) é gerado na 1ª execução com a `FLASK_SECRET_KEY` (`app.py:_carregar_secret_key`)
+> Dados ficam em `C:\MATINE` (fora do projeto). Banco vazio é OK para dev; para levar dados, copiar `C:\MATINE\` inteira. Tornar isso robusto = STORY-01-07 (backlog).
 
 ---
 
