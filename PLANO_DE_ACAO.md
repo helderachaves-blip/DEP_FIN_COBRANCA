@@ -10,7 +10,7 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G concluídas. EPIC-01 (Sprint Zero) em andamento — **4 de 7 stories entregues** (01-01, 01-02, 01-03, 01-05).
-- **Último commit:** `866b063` — STORY-01-03 (Loading states). STORY-01-05 (migrations) commitada nesta sessão (hash registrado abaixo após verificação).
+- **Último commit:** `38b4ccf` — STORY-01-05 (Schema migrations + índices + WAL).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup; `.env` (gitignored) gerado na 1ª execução com a `FLASK_SECRET_KEY`.
 - **Sessão 10/06/2026:** Correções de UI (R1/R2/B1/B2) + STORY-01-01 (Quick Wins) + STORY-01-02 (Indicadores de empresa) + STORY-01-03 (Loading states). Nova STORY-01-07 (first-run setup) adicionada ao backlog.
 
@@ -25,9 +25,11 @@ Nada pendente de commit.
 - `2e73302` — STORY-01-01 (Quick Wins)
 - `6d641b9` — STORY-01-02 (Indicadores de empresa)
 
-**Aguardam push (exclusivo do @devops):**
+**Aguardam push** (`origin/homologacao..HEAD` = ahead 4, exclusivo do @devops):
 - `866b063` — STORY-01-03 (Loading states)
-- `07dbe93` — docs: rastreio de commits (+ este ajuste de correção do rastreio)
+- `07dbe93` — docs: rastreio de commits
+- `0709825` — docs: correção do rastreio de push
+- `38b4ccf` — STORY-01-05 (Schema migrations + índices + WAL)
 
 ---
 
