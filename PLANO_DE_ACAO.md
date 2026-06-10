@@ -25,11 +25,11 @@ Nada pendente de commit.
 - `2e73302` — STORY-01-01 (Quick Wins)
 - `6d641b9` — STORY-01-02 (Indicadores de empresa)
 
-**Aguardam push** (`origin/homologacao..HEAD` = ahead 4, exclusivo do @devops):
+**Aguardam push** (todos os commits em `origin/homologacao..HEAD`; recompute com
+`git fetch` — não confie nesta lista. Push é exclusivo do @devops). Commits de conteúdo:
 - `866b063` — STORY-01-03 (Loading states)
-- `07dbe93` — docs: rastreio de commits
-- `0709825` — docs: correção do rastreio de push
 - `38b4ccf` — STORY-01-05 (Schema migrations + índices + WAL)
+- (+ commits `docs:` de rastreio que acompanham, incluindo este registro)
 
 ---
 
