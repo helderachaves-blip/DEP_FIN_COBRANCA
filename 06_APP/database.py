@@ -3,6 +3,7 @@ Operações SQLite — suporte multi-empresa (Fase D).
 Todas as funções recebem o parâmetro `empresa`.
 """
 
+import importlib.util
 import sqlite3
 import pandas as pd
 from pathlib import Path
@@ -11,6 +12,26 @@ from datetime import datetime
 DB_PATH = Path(r'C:\MATINE\banco\inadimplencia.db')
 
 EMPRESAS = ('INEPROTEC', 'MATRICULAEAD')
+
+# Diretório de migrations (STORY-01-05). Carregamos o runner por caminho para não
+# depender de o pacote `migrations` estar no sys.path (funciona de qualquer cwd).
+_APP_DIR = Path(__file__).resolve().parent
+MIGRATIONS_DIR = _APP_DIR / 'migrations'
+_runner_spec = importlib.util.spec_from_file_location(
+    'migrations_runner', MIGRATIONS_DIR / 'runner.py'
+)
+runner = importlib.util.module_from_spec(_runner_spec)
+_runner_spec.loader.exec_module(runner)
+
+# Migrations que apenas CRIAM schema. Num banco legado (criado pelo init_db antigo, que já
+# produzia o schema final) elas são marcadas como aplicadas sem re-executar. As migrations
+# realmente novas (005 índices, 006 WAL) rodam normalmente.
+_BASELINE_LEGADO = [
+    (1, 'initial_schema'),
+    (2, 'add_historico'),
+    (3, 'add_envios'),
+    (4, 'add_config_email'),
+]
 
 TEMPLATES_PADRAO = {
     'INEPROTEC': [
@@ -129,175 +150,69 @@ TEMPLATES_PADRAO = {
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    # Pragmas por conexão (STORY-01-05 AC-05). Executados em conexão recém-aberta,
+    # antes de qualquer transação:
+    #  - WAL: leituras concorrentes durante escritas (persistente no arquivo do banco)
+    #  - foreign_keys=ON: por-conexão; prepara o banco para constraints formais
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
+def _table_exists(conn, name: str) -> bool:
+    return conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", (name,)
+    ).fetchone() is not None
+
+
+def _seed_templates_padrao(conn):
+    """Garante os templates padrão por empresa (idempotente — só insere o que falta)."""
+    for emp, lista in TEMPLATES_PADRAO.items():
+        for t in lista:
+            existe = conn.execute(
+                "SELECT id FROM templates WHERE categoria = ? AND empresa = ?",
+                (t['categoria'], emp)
+            ).fetchone()
+            if not existe:
+                conn.execute(
+                    "INSERT INTO templates (categoria, titulo, conteudo, empresa, dias_de, dias_ate) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (t['categoria'], t['titulo'], t['conteudo'], emp, t.get('dias_de'), t.get('dias_ate'))
+                )
+
+
 def init_db():
+    """Inicializa/atualiza o banco via migrations versionadas (STORY-01-05).
+
+    Fluxo: (1) garante schema_migrations; (2) detecta banco legado e marca as migrations
+    de criação como aplicadas; (3) aplica apenas as migrations pendentes em ordem;
+    (4) garante os templates padrão (idempotente).
+    """
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with get_conn() as conn:
-        # ── Criar tabelas base ──────────────────────────────────────────────
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS inadimplentes (
-                cpf TEXT NOT NULL,
-                aluno TEXT NOT NULL,
-                telefone TEXT,
-                email TEXT,
-                qtd_boletos INTEGER,
-                total REAL,
-                ultimo_vencimento TEXT,
-                dias_atraso INTEGER,
-                categoria TEXT,
-                status TEXT DEFAULT 'INADIMPLENTE',
-                data_entrada TEXT,
-                data_atualizacao TEXT
-            );
+    conn = get_conn()
+    conn.isolation_level = None  # autocommit: o runner controla as transações manualmente
+    try:
+        runner.ensure_migrations_table(conn)
 
-            CREATE TABLE IF NOT EXISTS templates (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                categoria TEXT NOT NULL,
-                titulo TEXT NOT NULL,
-                conteudo TEXT NOT NULL,
-                ativo INTEGER DEFAULT 1
-            );
+        # Banco legado: tem schema (criado pelo init_db antigo) mas nunca foi versionado.
+        # Marca 001-004 como aplicadas sem re-executar; 005/006 rodam normalmente.
+        if not runner.applied_versions(conn) and _table_exists(conn, 'inadimplentes'):
+            for v, n in _BASELINE_LEGADO:
+                conn.execute(
+                    "INSERT OR IGNORE INTO schema_migrations (version, name) VALUES (?, ?)",
+                    (v, n)
+                )
+            print("[db] banco legado detectado - migrations 001-004 marcadas como aplicadas")
 
-            CREATE TABLE IF NOT EXISTS historico_atualizacoes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                data TEXT NOT NULL,
-                total_base INTEGER,
-                novos INTEGER,
-                saidos INTEGER,
-                continuam INTEGER
-            );
-        """)
+        aplicadas = runner.apply_pending(conn, MIGRATIONS_DIR, log=print)
+        _seed_templates_padrao(conn)
 
-        # ── Migração Fase C: categorias A/B → novas nomenclaturas ──────────
-        conn.execute(
-            "UPDATE templates SET categoria='Inadimplentes Mês', titulo='Vencidos - 2 a 29 Dias' "
-            "WHERE categoria='A' OR categoria='Régua'"
-        )
-        conn.execute(
-            "UPDATE templates SET categoria='Acima 30 Dias', titulo='Cobranças Avançadas (Acima de 30 Dias)' "
-            "WHERE categoria='B'"
-        )
-        conn.execute("UPDATE inadimplentes SET categoria='Inadimplentes Mês' WHERE categoria='A' OR categoria='Régua'")
-        conn.execute("UPDATE inadimplentes SET categoria='Acima 30 Dias' WHERE categoria='B'")
-
-        # ── Migração Fase D: adicionar coluna empresa ───────────────────────
-        cols_i = [r[1] for r in conn.execute("PRAGMA table_info(inadimplentes)").fetchall()]
-        if 'empresa' not in cols_i:
-            # Recriar inadimplentes com PK composta (cpf, empresa)
-            conn.executescript("""
-                CREATE TABLE inadimplentes_v2 (
-                    cpf               TEXT NOT NULL,
-                    empresa           TEXT NOT NULL DEFAULT 'INEPROTEC',
-                    aluno             TEXT NOT NULL,
-                    telefone          TEXT,
-                    email             TEXT,
-                    qtd_boletos       INTEGER,
-                    total             REAL,
-                    ultimo_vencimento TEXT,
-                    dias_atraso       INTEGER,
-                    categoria         TEXT,
-                    status            TEXT DEFAULT 'INADIMPLENTE',
-                    data_entrada      TEXT,
-                    data_atualizacao  TEXT,
-                    PRIMARY KEY (cpf, empresa)
-                );
-                INSERT INTO inadimplentes_v2
-                    (cpf, empresa, aluno, telefone, email, qtd_boletos, total,
-                     ultimo_vencimento, dias_atraso, categoria, status,
-                     data_entrada, data_atualizacao)
-                SELECT cpf, 'INEPROTEC', aluno, telefone, email, qtd_boletos, total,
-                       ultimo_vencimento, dias_atraso, categoria, status,
-                       data_entrada, data_atualizacao
-                FROM inadimplentes;
-                DROP TABLE inadimplentes;
-                ALTER TABLE inadimplentes_v2 RENAME TO inadimplentes;
-            """)
-
-        # ── Migração Fase E: adicionar coluna qtd_cobranca ─────────────────
-        cols_post = [r[1] for r in conn.execute("PRAGMA table_info(inadimplentes)").fetchall()]
-        if 'qtd_cobranca' not in cols_post:
-            conn.execute(
-                "ALTER TABLE inadimplentes ADD COLUMN qtd_cobranca INTEGER DEFAULT 0"
-            )
-
-        cols_t = [r[1] for r in conn.execute("PRAGMA table_info(templates)").fetchall()]
-        if 'empresa' not in cols_t:
-            conn.execute("ALTER TABLE templates ADD COLUMN empresa TEXT NOT NULL DEFAULT 'INEPROTEC'")
-
-        # ── Migração Fase F: adicionar colunas dias_de e dias_ate ──────────
-        cols_t2 = [r[1] for r in conn.execute("PRAGMA table_info(templates)").fetchall()]
-        if 'dias_de' not in cols_t2:
-            conn.execute("ALTER TABLE templates ADD COLUMN dias_de INTEGER")
-        if 'dias_ate' not in cols_t2:
-            conn.execute("ALTER TABLE templates ADD COLUMN dias_ate INTEGER")
-        # Preencher dias padrão para templates já existentes
-        conn.execute(
-            "UPDATE templates SET dias_de=1, dias_ate=1 "
-            "WHERE categoria='Novos Inadimplentes' AND dias_de IS NULL"
-        )
-        conn.execute(
-            "UPDATE templates SET dias_de=2, dias_ate=29 "
-            "WHERE categoria='Inadimplentes Mês' AND dias_de IS NULL"
-        )
-        conn.execute(
-            "UPDATE templates SET dias_de=30 "
-            "WHERE categoria='Acima 30 Dias' AND dias_de IS NULL"
-        )
-
-        cols_h = [r[1] for r in conn.execute("PRAGMA table_info(historico_atualizacoes)").fetchall()]
-        if 'empresa' not in cols_h:
-            conn.execute("ALTER TABLE historico_atualizacoes ADD COLUMN empresa TEXT NOT NULL DEFAULT 'INEPROTEC'")
-
-        # ── Templates padrão por empresa ───────────────────────────────────
-        for emp, lista in TEMPLATES_PADRAO.items():
-            for t in lista:
-                existe = conn.execute(
-                    "SELECT id FROM templates WHERE categoria = ? AND empresa = ?",
-                    (t['categoria'], emp)
-                ).fetchone()
-                if not existe:
-                    conn.execute(
-                        "INSERT INTO templates (categoria, titulo, conteudo, empresa, dias_de, dias_ate) "
-                        "VALUES (?,?,?,?,?,?)",
-                        (t['categoria'], t['titulo'], t['conteudo'], emp, t.get('dias_de'), t.get('dias_ate'))
-                    )
-
-        # ── Migração Fase F/G: tabela envios + config_email ───────────────────
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS envios (
-                id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                cpf            TEXT NOT NULL,
-                empresa        TEXT NOT NULL,
-                canal          TEXT NOT NULL,
-                template_titulo TEXT,
-                data_envio     TEXT NOT NULL,
-                status         TEXT DEFAULT 'enviado'
-            );
-            CREATE TABLE IF NOT EXISTS config_email (
-                id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                empresa        TEXT NOT NULL UNIQUE,
-                smtp_host      TEXT DEFAULT '',
-                smtp_port      INTEGER DEFAULT 587,
-                smtp_usuario   TEXT DEFAULT '',
-                smtp_senha     TEXT DEFAULT '',
-                smtp_from_name TEXT DEFAULT '',
-                smtp_tls       INTEGER DEFAULT 1
-            );
-        """)
-
-        # Coluna assunto_email nos templates
-        cols_t3 = [r[1] for r in conn.execute("PRAGMA table_info(templates)").fetchall()]
-        if 'assunto_email' not in cols_t3:
-            conn.execute("ALTER TABLE templates ADD COLUMN assunto_email TEXT")
-
-        # Coluna tag_crm nos templates (Mudança 4 — planilha CRM)
-        cols_t4 = [r[1] for r in conn.execute("PRAGMA table_info(templates)").fetchall()]
-        if 'tag_crm' not in cols_t4:
-            conn.execute("ALTER TABLE templates ADD COLUMN tag_crm TEXT")
-
-        conn.commit()
+        if aplicadas:
+            print(f"[db] {len(aplicadas)} migration(s) aplicada(s) com sucesso: {aplicadas}")
+        else:
+            print("[db] schema na versao mais recente - nenhuma migration pendente")
+    finally:
+        conn.close()
 
 
 # ── Templates ───────────────────────────────────────────────────────────────

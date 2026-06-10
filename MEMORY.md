@@ -136,6 +136,9 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 | `envios` | Histórico de envios por canal/dia/empresa |
 | `config_email` | Config SMTP por empresa |
 | `historico_atualizacoes` | Log de atualizações da base |
+| `schema_migrations` | Controle de versão do schema (version, name, applied_at) — STORY-01-05 |
+
+**Migrations (STORY-01-05):** o schema é versionado em `06_APP/migrations/` (scripts `001`–`006`, cada um com `up`/`down`). `init_db()` aplica só as pendentes via `migrations/runner.py` (atômicas, BEGIN/COMMIT por script). `get_conn()` habilita **WAL** + `foreign_keys=ON`. Banco sem `schema_migrations` é tratado como legado (001–004 marcadas sem re-executar). Nova migration = novo arquivo `NNN_nome.py` com `version` crescente.
 
 ---
 
@@ -157,7 +160,8 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 | Arquivo | Responsabilidade |
 |---------|-----------------|
 | `06_APP/app.py` | Rotas Flask, lógica de negócio |
-| `06_APP/database.py` | SQLite — schema, queries, migrations |
+| `06_APP/database.py` | SQLite — `get_conn` (WAL+FK), `init_db` (runner), queries |
+| `06_APP/migrations/` | Migrations versionadas (`runner.py` + `001`–`006`) — STORY-01-05 |
 | `06_APP/processing.py` | Consolidação, geração de TXT/XLSX/CRM |
 | `06_APP/templates/layout.html` | Sidebar, topbar, CSS global (Bootstrap 5.3.3) |
 | `06_APP/templates/index.html` | Upload + ações de consolidação |

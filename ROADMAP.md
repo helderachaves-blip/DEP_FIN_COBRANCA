@@ -130,6 +130,21 @@ Primeira story do EPIC-01 entregue. 2 dos 5 itens já estavam satisfeitos pelo e
 
 ---
 
+## ✅ STORY-01-05 — Schema Migrations + Índices + WAL (10/06/2026)
+
+Fundação de versionamento de banco — maior bloqueador técnico para a Fase H.
+
+- [x] Tabela `schema_migrations` (version, name, applied_at)
+- [x] `init_db()` refatorado de 163 linhas com 7 fases inline → runner que aplica só migrations pendentes
+- [x] Diretório `06_APP/migrations/` com `runner.py` + scripts 001–006 (cada um com `up`/`down`)
+- [x] Migrations atômicas (BEGIN/COMMIT por script); WAL como migration não-transacional
+- [x] 5 índices de performance por `empresa` (migration 005)
+- [x] WAL mode + `foreign_keys=ON` em `get_conn()` (leituras concorrentes — necessário p/ Fase H)
+- [x] Detecção de banco legado: 001–004 marcadas como aplicadas sem re-executar
+- [x] Banco real de produção migrado sem perda de dados (1024 inadimplentes; backup criado)
+
+---
+
 ## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
 
 Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
@@ -141,7 +156,7 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 | 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | ✅ 10/06 |
 | 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | ✅ 10/06 |
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Pendente |
-| 01-05 | Schema migrations + índices + WAL mode | ~12h | Pendente |
+| 01-05 | Schema migrations + índices + WAL mode | ~12h | ✅ 10/06 |
 | 01-06 | Autenticação Flask-Login (MVP) | ~6h | Pendente |
 | 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | Pendente |
 
