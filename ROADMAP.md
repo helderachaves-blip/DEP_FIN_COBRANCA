@@ -113,6 +113,14 @@ Primeira story do EPIC-01 entregue. 2 dos 5 itens já estavam satisfeitos pelo e
 
 ---
 
+## ✅ STORY-01-02 — Indicadores de Empresa Ativa (10/06/2026)
+
+- [x] Nome da empresa colorido na topbar (azul Ineprotec · verde Mat. EaD), acima do toggle
+- [x] Banner "Enviando para: [EMPRESA]" no topo do wizard de envio
+- [x] Confirmação ao trocar de empresa quando há consolidação ativa (flag `sessao_ativa`)
+
+---
+
 ## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
 
 Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
@@ -121,7 +129,7 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 | Story | Título | Esforço | Status |
 |-------|--------|---------|--------|
 | 01-01 | Quick Wins — encoding, cores, títulos, confirmações, secret key | ~7h | ✅ 10/06 |
-| 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | Pendente |
+| 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | ✅ 10/06 |
 | 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | Pendente |
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Pendente |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | Pendente |

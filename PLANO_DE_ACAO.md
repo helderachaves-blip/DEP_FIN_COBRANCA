@@ -52,7 +52,7 @@ Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcio
 | Story | Título | Esforço | Status |
 |-------|--------|---------|--------|
 | 01-01 | Quick Wins — encoding, cores, títulos, confirmações, secret key | ~7h | ✅ Done |
-| 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | Draft |
+| 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | ✅ Done |
 | 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | Draft |
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Draft |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | Draft |
@@ -74,10 +74,10 @@ Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcio
 
 **Notas:** banner do console ainda sai com encoding cp1252 (cosmético, só no terminal — fora de escopo). Flask exibe dica "Install python-dotenv" ao ver o `.env`; ignorável (leitura é manual).
 
-### STORY-01-02 — Indicadores de Empresa (~3h)
-- Nome da empresa em texto na topbar (azul = Ineprotec, verde = Mat. EaD)
-- Banner persistente no topo do wizard de envio: "Enviando para: [EMPRESA]"
-- Confirmação ao trocar empresa com sessão ativa
+### STORY-01-02 — Indicadores de Empresa (~3h) — ✅ ENTREGUE (10/06/2026)
+- ✅ Nome da empresa em texto na topbar, acima do toggle (azul `#42A5F5` = Ineprotec, verde `#66BB6A` = Mat. EaD)
+- ✅ Banner persistente no topo do wizard de envio: "Enviando para: [EMPRESA]" com cor da empresa
+- ✅ Confirmação (`confirm`) ao trocar empresa quando há consolidação ativa; novo flag `sessao_ativa` no context processor (`_estado_file(emp).exists()`)
 
 ### STORY-01-03 — Loading States (~5h)
 - Spinner + botão desabilitado em todos os form POST síncronos: Consolidar, Gerar Relatório, Atualizar Base, Importar Alunos, Salvar SMTP, Testar SMTP
@@ -132,7 +132,8 @@ já é criada no startup (`app.py:182-190` + `db.init_db()`), então o colega s�
 
 1. ✅ Correções de UI (R1/R2/B1/B2) — commitadas (`0e88c5b`)
 2. ✅ STORY-01-01 (Quick Wins) — entregue
-3. Próxima: STORY-01-02 (Indicadores de empresa ativa). Sequência: 01-02 → 01-03 → 01-05 → 01-04 → 01-06 → 01-07
+3. ✅ STORY-01-02 (Indicadores de empresa ativa) — entregue
+4. Próxima: STORY-01-03 (Loading states). Sequência: 01-03 → 01-05 → 01-04 → 01-06 → 01-07
 
 ---
 

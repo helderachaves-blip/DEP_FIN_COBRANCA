@@ -2,6 +2,14 @@
 {% block title %}Envio de Mensagens – Cobranças INE-MAT{% endblock %}
 {% block content %}
 
+<!-- BANNER: empresa de destino do envio -->
+<div class="d-flex align-items-center mb-3 py-2 px-3 rounded"
+     style="border-left:5px solid {{ '#42A5F5' if empresa_ativa == 'INEPROTEC' else '#66BB6A' }};
+            background: {{ '#E3F2FD' if empresa_ativa == 'INEPROTEC' else '#E8F5E9' }};">
+  <i class="bi bi-send-fill me-2" style="color: {{ '#1565C0' if empresa_ativa == 'INEPROTEC' else '#2E7D32' }}"></i>
+  <span>Enviando para: <strong style="color: {{ '#1565C0' if empresa_ativa == 'INEPROTEC' else '#2E7D32' }}">{{ empresa_label }}</strong></span>
+</div>
+
 <!-- CABEÇALHO -->
 <div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
   <div>

@@ -95,6 +95,7 @@ def inject_empresa():
         'empresa_ativa':  emp,
         'empresa_label':  EMPRESA_LABELS.get(emp, emp),
         'empresa_labels': EMPRESA_LABELS,
+        'sessao_ativa':   _estado_file(emp).exists(),
     }
 
 

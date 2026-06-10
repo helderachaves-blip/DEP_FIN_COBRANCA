@@ -96,6 +96,7 @@
     }
     .empresa-btn.active { background: #fff; color: #1a1a2e; }
     .empresa-btn:hover:not(.active) { color: #fff; background: rgba(255,255,255,.15); }
+    .empresa-nome { font-size: .8rem; font-weight: 700; letter-spacing: .03em; line-height: 1; }
 
     /* ── Content area ────────────────────────────── */
     .content-area { padding: 1.5rem 1.75rem; flex: 1; }
@@ -227,11 +228,17 @@
            style="opacity: {{ '1' if empresa_ativa == 'INEPROTEC' else '0.35' }}; transition:.2s">
     </div>
 
-    <div class="empresa-toggle">
-      {% for key, label in empresa_labels.items() %}
-      <a href="{{ url_for('trocar_empresa', nome=key) }}"
-         class="empresa-btn {{ 'active' if empresa_ativa == key }}">{{ label }}</a>
-      {% endfor %}
+    <div class="d-flex flex-column align-items-center gap-1">
+      <span class="empresa-nome" style="color: {{ '#42A5F5' if empresa_ativa == 'INEPROTEC' else '#66BB6A' }}">
+        <i class="bi bi-building me-1"></i>{{ empresa_label }}
+      </span>
+      <div class="empresa-toggle">
+        {% for key, label in empresa_labels.items() %}
+        <a href="{{ url_for('trocar_empresa', nome=key) }}"
+           class="empresa-btn {{ 'active' if empresa_ativa == key }}"
+           {% if sessao_ativa and key != empresa_ativa %}onclick="return confirm('Você tem uma consolidação ativa para {{ empresa_label }}. Trocar para {{ label }} muda a visualização — os dados de {{ empresa_label }} continuam salvos. Continuar?')"{% endif %}>{{ label }}</a>
+        {% endfor %}
+      </div>
     </div>
 
     <div class="topbar-logo">
