@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% block title %}Início – Cobranças INE-MAT{% endblock %}
 {% block content %}
 
 <div class="row mb-3">
@@ -128,9 +129,10 @@
                 <i class="bi bi-database-up me-1"></i>Comparar e Atualizar Base
               </button>
             </form>
-            <a href="/limpar" class="btn btn-outline-secondary btn-sm">
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalLimparSessao">
               <i class="bi bi-trash me-1"></i>Limpar Sessão
-            </a>
+            </button>
           </div>
         </div>
         {% else %}
@@ -152,5 +154,29 @@
     </div>
   </div>
 
+</div>
+
+<!-- Modal: confirmação de Limpar Sessão -->
+<div class="modal fade" id="modalLimparSessao" tabindex="-1" aria-labelledby="modalLimparSessaoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalLimparSessaoLabel">
+          <i class="bi bi-exclamation-triangle text-warning me-2"></i>Limpar Sessão
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        Tem certeza que deseja limpar a sessão atual? Os dados consolidados em memória
+        serão descartados. A <strong>Base de Inadimplentes</strong> não é afetada.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <a href="/limpar" class="btn btn-danger">
+          <i class="bi bi-trash me-1"></i>Sim, limpar sessão
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

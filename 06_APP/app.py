@@ -6,6 +6,7 @@ Multi-empresa: Ineprotec / Matrícula EaD (Fase D)
 import json
 import os
 import pickle
+import secrets
 import shutil
 import smtplib
 from datetime import datetime
@@ -29,13 +30,32 @@ UPLOADS_DIR = DATA_DIR / 'uploads'    # uploads/{EMPRESA}/{tipo}/  ← detecçã
 RELATORIOS  = DATA_DIR / 'relatorios' # relatorios/{EMPRESA}/{ano}/{mes}/{dia}/
 LOGS_DIR    = DATA_DIR / 'logs'
 ESTADO_DIR  = DATA_DIR / 'estado'
+ENV_PATH    = Path(__file__).resolve().parent / '.env'
+
+
+def _carregar_secret_key():
+    """Lê FLASK_SECRET_KEY do .env; gera e persiste na primeira execução.
+
+    Mantém a secret_key fora do código-fonte e estável entre reinícios
+    (sessões Flask não são invalidadas a cada restart).
+    """
+    if ENV_PATH.exists():
+        for linha in ENV_PATH.read_text(encoding='utf-8').splitlines():
+            if linha.startswith('FLASK_SECRET_KEY='):
+                valor = linha.split('=', 1)[1].strip()
+                if valor:
+                    return valor
+    nova_chave = secrets.token_hex(32)
+    with ENV_PATH.open('a', encoding='utf-8') as f:
+        f.write(f'FLASK_SECRET_KEY={nova_chave}\n')
+    return nova_chave
 
 # ---------------------------------------------------------------------------
 # Flask
 # ---------------------------------------------------------------------------
 
 app = Flask(__name__)
-app.secret_key = "matine2026-inadimplencia"
+app.secret_key = _carregar_secret_key()
 
 
 @app.template_filter('brl')

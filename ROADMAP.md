@@ -101,6 +101,18 @@ Ajustes reportados pelo Edilvo na revisão do app. Apenas template + JS, sem bac
 
 ---
 
+## ✅ STORY-01-01 — Quick Wins (10/06/2026)
+
+Primeira story do EPIC-01 entregue. 2 dos 5 itens já estavam satisfeitos pelo estado do app.
+
+- [x] Encoding UTF-8 sem BOM (já OK em todos os templates)
+- [x] Cores semânticas por categoria em Resultado e Envio de Mensagens (já OK)
+- [x] Título dinâmico por página via `{% block title %}` (layout + 5 templates)
+- [x] Confirmação modal antes de "Limpar Sessão" (não afeta a Base)
+- [x] `secret_key` Flask gerada uma vez e persistida em `.env` (gitignored, sem dependência nova)
+
+---
+
 ## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
 
 Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
@@ -108,7 +120,7 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 
 | Story | Título | Esforço | Status |
 |-------|--------|---------|--------|
-| 01-01 | Quick Wins — encoding, cores, títulos, confirmações, secret key | ~7h | Pendente |
+| 01-01 | Quick Wins — encoding, cores, títulos, confirmações, secret key | ~7h | ✅ 10/06 |
 | 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | Pendente |
 | 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | Pendente |
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Pendente |
