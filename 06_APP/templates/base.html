@@ -11,12 +11,8 @@
   </div>
 </div>
 
-<!-- LEGENDA DE STATUS -->
 <div class="d-flex gap-2 mb-3 flex-wrap">
-  <span class="badge badge-inadimplente fs-6">INADIMPLENTE</span>
-  <span class="badge badge-quitado fs-6">QUITADO</span>
-  <span class="badge badge-renegociado fs-6">RENEGOCIADO</span>
-  <small class="text-muted align-self-center ms-2">
+  <small class="text-muted align-self-center">
     Clique em "Alterar Status" para atualizar individualmente cada cliente.
   </small>
 </div>
@@ -108,6 +104,8 @@
           <option value="Novos Inadimplentes">Novos Inadimplentes</option>
           <option value="Inadimplentes Mês">Inadimplentes Mês (2-29 dias)</option>
           <option value="Acima 30 Dias">Acima de 30 Dias</option>
+          <option value="Vence Hoje">Vence Hoje</option>
+          <option value="A Vencer">A Vencer</option>
         </select>
       </div>
       <div class="col">
@@ -284,7 +282,10 @@ function filtrar() {
   linhas.forEach(tr => {
     const cardOk = cardMatchRow(tr, filtroCard);
     const stOk   = !st   || tr.dataset.status === st;
-    const catOk  = !cat  || tr.dataset.cat    === cat;
+    let catOk;
+    if (cat === 'Vence Hoje')    catOk = tr.dataset.venceHoje === 'true';
+    else if (cat === 'A Vencer') catOk = tr.dataset.ren === 'true' && tr.dataset.venceHoje !== 'true';
+    else                         catOk = !cat || tr.dataset.cat === cat;
     const nomeOk = !busca || tr.dataset.nome.includes(busca);
     const show   = cardOk && stOk && catOk && nomeOk;
     tr.style.display = show ? '' : 'none';

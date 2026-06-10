@@ -90,6 +90,17 @@
 
 ---
 
+## ✅ CORREÇÕES DE UI — Resultados + Base (10/06/2026)
+
+Ajustes reportados pelo Edilvo na revisão do app. Apenas template + JS, sem backend.
+
+- [x] **R1** — Cards "Vence Hoje" / "À Vencer" (Resultados) com auto-filtro, igual aos demais cards. Filtro estendido para a tabela "A Vencer" separada, com toggle de seção.
+- [x] **R2** — Dropdown Filtrar de Resultados com as 5 categorias (Vence Hoje + A Vencer incluídas).
+- [x] **B1** — Removidas as legendas INADIMPLENTE / QUITADO / RENEGOCIADO da aba Base.
+- [x] **B2** — Dropdown Filtrar da Base com 5 categorias; "Vence Hoje"/"A Vencer" filtram pelas flags de sessão À Vencer.
+
+---
+
 ## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
 
 Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
@@ -103,6 +114,7 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Pendente |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | Pendente |
 | 01-06 | Autenticação Flask-Login (MVP) | ~6h | Pendente |
+| 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | Pendente |
 
 ---
 

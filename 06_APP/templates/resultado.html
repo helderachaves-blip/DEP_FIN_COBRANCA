@@ -22,16 +22,18 @@
   {% set cnt_vence_hoje = avencer_linhas | selectattr('categoria', 'equalto', 'Vence Hoje') | list | length %}
   {% set cnt_a_vencer   = avencer_linhas | selectattr('categoria', 'equalto', 'A Vencer')   | list | length %}
   <div class="col-12 col-md-2">
-    <div class="stat-card" style="background:linear-gradient(135deg,#AD1457,#EC407A)">
+    <div class="stat-card stat-filtro" data-filtro="Vence Hoje"
+         style="background:linear-gradient(135deg,#AD1457,#EC407A);cursor:pointer" title="Clique para filtrar">
       <div class="stat-num">{{ cnt_vence_hoje }}</div>
-      <div class="stat-label"><i class="bi bi-calendar-check me-1"></i>Vence Hoje</div>
+      <div class="stat-label"><i class="bi bi-calendar-check me-1"></i>Vence Hoje <i class="bi bi-funnel-fill" style="font-size:.7rem;opacity:.7"></i></div>
     </div>
   </div>
   {% if cnt_a_vencer > 0 %}
   <div class="col-12 col-md-2">
-    <div class="stat-card" style="background:linear-gradient(135deg,#E65100,#FF9800)">
+    <div class="stat-card stat-filtro" data-filtro="A Vencer"
+         style="background:linear-gradient(135deg,#E65100,#FF9800);cursor:pointer" title="Clique para filtrar">
       <div class="stat-num">{{ cnt_a_vencer }}</div>
-      <div class="stat-label"><i class="bi bi-bell me-1"></i>A Vencer</div>
+      <div class="stat-label"><i class="bi bi-bell me-1"></i>A Vencer <i class="bi bi-funnel-fill" style="font-size:.7rem;opacity:.7"></i></div>
     </div>
   </div>
   {% endif %}
@@ -70,7 +72,7 @@
 </div>
 
 <!-- TOTALIZADORES (atualizam com o filtro) -->
-<div class="row mb-3 g-3">
+<div class="row mb-3 g-3" id="rowTotalizadores">
   <div class="col-12 col-md-6">
     <div class="card shadow-sm h-100 stat-filtro" data-filtro=""
          style="border:none;border-left:4px solid #1565C0;cursor:pointer;border-radius:12px" title="Clique para mostrar todos">
@@ -109,6 +111,10 @@
           <option value="Novos Inadimplentes">Novos Inadimplentes</option>
           <option value="Inadimplentes Mês">Inadimplentes Mês (2-29 dias)</option>
           <option value="Acima 30 Dias">Acima de 30 Dias</option>
+          {% if avencer_linhas %}
+          <option value="Vence Hoje">Vence Hoje</option>
+          <option value="A Vencer">A Vencer</option>
+          {% endif %}
         </select>
       </div>
       <div class="col">
@@ -123,7 +129,7 @@
 </div>
 
 <!-- TABELA -->
-<div class="card">
+<div class="card" id="cardResultado">
   <div class="card-header">
     <i class="bi bi-table me-2"></i>Resultado da Consolidação
   </div>
@@ -176,14 +182,14 @@
 
 <!-- TABELA A VENCER -->
 {% if avencer_linhas %}
-<div class="card mt-4">
+<div class="card mt-4" id="cardAvencer">
   <div class="card-header text-white" style="background:#AD1457">
     <i class="bi bi-calendar-check me-2"></i>Lembretes — Vencimentos
     <span class="badge bg-white text-dark ms-2">{{ avencer_linhas|length }}</span>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0">
+      <table class="table table-hover mb-0" id="tabelaAvencer">
         <thead class="table-dark">
           <tr>
             <th>#</th>
@@ -197,7 +203,8 @@
         </thead>
         <tbody>
           {% for a in avencer_linhas %}
-          <tr class="{{ 'table-warning' if a.categoria == 'Vence Hoje' else '' }}">
+          <tr class="{{ 'table-warning' if a.categoria == 'Vence Hoje' else '' }}"
+              data-cat="{{ a.categoria }}" data-nome="{{ a.nome|lower }}">
             <td class="text-muted small">{{ loop.index }}</td>
             <td class="fw-semibold">{{ a.nome }}</td>
             <td>{{ a.telefone }}</td>
@@ -231,7 +238,11 @@ const contador    = document.getElementById('contadorFiltro');
 const totalAlunos = document.getElementById('totalAlunos');
 const totalValor  = document.getElementById('totalValor');
 const linhas      = document.querySelectorAll('#tabelaResultado tbody tr');
+const linhasAv    = document.querySelectorAll('#tabelaAvencer tbody tr');
 const cards       = document.querySelectorAll('.stat-filtro');
+const secMain     = document.getElementById('cardResultado');
+const secTot      = document.getElementById('rowTotalizadores');
+const secAvencer  = document.getElementById('cardAvencer');
 
 function fmtBrl(val) {
   return 'R$ ' + val.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -240,6 +251,9 @@ function fmtBrl(val) {
 function filtrar() {
   const cat   = filtroCat.value;
   const busca = filtroBusca.value.toLowerCase();
+  const isAv  = (cat === 'Vence Hoje' || cat === 'A Vencer');
+
+  // Tabela principal (inadimplentes)
   let vis = 0, soma = 0;
   linhas.forEach(tr => {
     const catOk  = !cat   || tr.dataset.cat === cat;
@@ -248,9 +262,27 @@ function filtrar() {
     tr.style.display = show ? '' : 'none';
     if (show) { vis++; soma += parseFloat(tr.dataset.valor || 0); }
   });
-  contador.textContent    = vis + ' cliente' + (vis !== 1 ? 's' : '');
   totalAlunos.textContent = vis;
   totalValor.textContent  = fmtBrl(soma);
+
+  // Tabela "A Vencer"
+  let visAv = 0;
+  linhasAv.forEach(tr => {
+    const catOk  = !cat   || tr.dataset.cat === cat;
+    const nomeOk = !busca || tr.dataset.nome.includes(busca);
+    const show   = catOk && nomeOk;
+    tr.style.display = show ? '' : 'none';
+    if (show) visAv++;
+  });
+
+  // Mostra/oculta as seções conforme a categoria escolhida
+  if (secMain)    secMain.style.display    = isAv ? 'none' : '';
+  if (secTot)     secTot.style.display     = isAv ? 'none' : '';
+  if (secAvencer) secAvencer.style.display = (cat === '' || isAv) ? '' : 'none';
+
+  // Contador reflete a tabela ativa
+  const cnt = isAv ? visAv : vis;
+  contador.textContent = cnt + ' cliente' + (cnt !== 1 ? 's' : '');
 
   // Destaque visual no card ativo
   cards.forEach(c => {

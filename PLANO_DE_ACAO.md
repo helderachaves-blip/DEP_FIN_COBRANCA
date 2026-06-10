@@ -21,6 +21,30 @@ Nada pendente. Correção M5 e organização de arquivos commitadas nesta sessã
 
 ---
 
+## Correções de UI Reportadas (10/06/2026) — ✅ ENTREGUE
+
+Bugs e ajustes verificados durante a revisão do app. Resolvidos na sessão de 10/06/2026
+(100% template + JS, sem mudança de backend). Validados com app rodando (HTTP 200 em
+`/resultado` e `/base`).
+
+### Aba Resultados (`resultado.html`)
+
+| # | Item | Solução | Status |
+|---|------|---------|--------|
+| R1 | Botões **"Vence Hoje"** e **"À Vencer"** não filtravam | Cards ganharam `stat-filtro` + `data-filtro`; `filtrar()` estendido para varrer também a tabela `#tabelaAvencer` (com toggle de seção: categoria à vencer oculta a tabela de inadimplentes e vice-versa). | ✅ |
+| R2 | Dropdown **Filtrar** com categorias incompletas | `#filtroCategoria` passou a listar **Vence Hoje** e **A Vencer** (dentro de `{% if avencer_linhas %}`). | ✅ |
+
+### Aba Base (`base.html`)
+
+| # | Item | Solução | Status |
+|---|------|---------|--------|
+| B1 | Remover legendas da 3ª linha | Badges INADIMPLENTE / QUITADO / RENEGOCIADO removidos; texto de ajuda "Clique em Alterar Status…" mantido. | ✅ |
+| B2 | Dropdown **Filtrar** com categorias incompletas | `#filtroCategoria` ganhou **Vence Hoje** e **A Vencer**; JS mapeia para as flags `data-vence-hoje`/`data-ren` (Base não usa `data-cat` para essas). A Vencer = na sessão À Vencer e não vence hoje. | ✅ |
+
+**Pendente:** commit local na branch `homologacao` (push é do @devops).
+
+---
+
 ## EPIC-01 — Sprint Zero (Pré-Fase H)
 
 Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcionalidade de integração (WhatsApp automático, Kommo, Synapta API) deve ser iniciada antes do EPIC-01 estar completo.
@@ -33,8 +57,9 @@ Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcio
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Draft |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | Draft |
 | 01-06 | Autenticação Flask-Login (MVP — usuário único) | ~6h | Draft |
+| 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | Draft |
 
-**Total estimado: ~37h**
+**Total estimado: ~40h**
 
 ---
 
@@ -73,6 +98,21 @@ Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcio
 - Login/logout com Flask-Login
 - Proteção de todas as rotas com `@login_required`
 - Tela de login minimalista
+
+### STORY-01-07 — First-run setup robusto (~3h)
+**Motivação:** projeto compartilhado com colaborador de desenvolvimento. Em outra máquina o
+caminho do projeto muda, mas o app usa `DATA_DIR = C:\MATINE` (fixo, `app.py:27`). A estrutura
+já é criada no startup (`app.py:182-190` + `db.init_db()`), então o colega só precisa de Python
++ deps — o banco vazio é aceitável para dev. Esta story torna esse onboarding explícito e à prova de falhas.
+
+- Encapsular a criação atual (hoje no import do módulo) numa função `setup_inicial()` idempotente
+- Passos da função: (1) criar estrutura `C:\MATINE`, (2) `db.init_db()`, (3) semear templates
+  padrão por empresa, (4) validar dependências e exibir mensagem amigável no primeiro acesso
+  (em vez de stack trace cru)
+- Detectar "primeira execução" (ex.: ausência do banco) e logar/sinalizar setup concluído
+- Relação com 01-01: mover `secret_key` fixa (`app.py:38`) para `.env`
+- **Onboarding dev (documentar no README):** instalar Python 3.10+, `pip install -r requirements.txt`,
+  `python app.py`, acessar `http://localhost:5000` — estrutura criada automaticamente
 
 ---
 
