@@ -25,9 +25,10 @@ verificado em 10/06/2026 noite).
 
 **Últimos pushes** (sessão 10/06 noite, via @devops):
 - `8d257a2..18909c9` — 9 commits: STORY-01-03/04/05 + `docs:` de rastreio
-- `855a58d..ace5172` — STORY-01-06 (Autenticação Flask-Login) + atualização do plano/roadmap
+- `855a58d..ace5172` — STORY-01-06 (Autenticação Flask-Login) + plano/roadmap
+- `d1c91ea..c5fe5d8` — STORY-01-07 (First-run setup) → **EPIC-01 completo**
 
-Topo do remoto = `ace5172`. (recompute sempre com `git fetch` — não confie nesta lista.)
+Topo do remoto = `c5fe5d8`. (recompute sempre com `git fetch` — não confie nesta lista.)
 
 ---
 
