@@ -23,9 +23,11 @@ Nada pendente de commit. **Nada aguardando push** — `origin/homologacao` e `HE
 idênticos (`git rev-list --left-right --count origin/homologacao...HEAD` = `0  0`,
 verificado em 10/06/2026 noite).
 
-**Último push** (sessão 10/06 noite, via @devops): `8d257a2..18909c9` — 9 commits,
-incluindo STORY-01-03, STORY-01-05, STORY-01-04 e commits `docs:` de rastreio.
-Topo do remoto = `18909c9`.
+**Últimos pushes** (sessão 10/06 noite, via @devops):
+- `8d257a2..18909c9` — 9 commits: STORY-01-03/04/05 + `docs:` de rastreio
+- `855a58d..ace5172` — STORY-01-06 (Autenticação Flask-Login) + atualização do plano/roadmap
+
+Topo do remoto = `ace5172`. (recompute sempre com `git fetch` — não confie nesta lista.)
 
 ---
 
