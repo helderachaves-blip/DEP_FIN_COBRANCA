@@ -32,16 +32,16 @@
 
     /* ── Menu do usuário (dropdown no topbar) ─────── */
     .user-menu-btn {
-      display: flex; align-items: center; gap: .45rem;
+      display: flex; align-items: center; justify-content: center;
       background: rgba(255,255,255,.1); color: #fff;
-      border: none; border-radius: 20px; padding: .3rem .85rem;
-      font-size: .82rem; font-weight: 600; cursor: pointer;
-      transition: background .15s; white-space: nowrap;
+      border: none; border-radius: 50%; width: 40px; height: 40px;
+      font-size: 1.35rem; cursor: pointer; transition: background .15s;
     }
     .user-menu-btn:hover, .user-menu-btn:focus,
     .user-menu-btn[aria-expanded="true"] { background: rgba(255,255,255,.22); color: #fff; }
-    .user-menu-btn .bi-person-circle { font-size: 1.15rem; }
-    .user-menu-name { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-menu-head { padding: .65rem 1rem .5rem; }
+    .user-menu-head .nome { font-weight: 600; line-height: 1.2; }
+    .user-menu-head .login { font-size: .8rem; color: #8a8a9a; margin-top: .25rem; }
     .dropdown-menu .dropdown-item.active,
     .dropdown-menu .dropdown-item:active { background: #eef1f8; color: #1a1a2e; }
 
@@ -263,17 +263,16 @@
 
       {% if current_user.is_authenticated %}
       <div class="dropdown">
-        <button class="user-menu-btn dropdown-toggle" type="button"
+        <button class="user-menu-btn" type="button" title="{{ current_user.nome }}"
                 data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-person-circle"></i>
-          <span class="user-menu-name">{{ current_user.nome }}</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow">
-          <li class="px-3 py-2">
-            <div class="fw-semibold">{{ current_user.nome }}
+          <li class="user-menu-head">
+            <div class="nome">{{ current_user.nome }}
               {% if current_user.is_admin %}<span class="badge bg-primary ms-1">Admin</span>{% endif %}
             </div>
-            <div class="small text-muted">{{ current_user.usuario }}</div>
+            <div class="login"><i class="bi bi-person me-1"></i>{{ current_user.usuario }}</div>
           </li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item {% if request.endpoint == 'conta' %}active{% endif %}" href="{{ url_for('conta') }}">
