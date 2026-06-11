@@ -247,12 +247,40 @@ Rede de regressão (pytest) — fundação de qualidade antes da Fase H.
 
 ---
 
-## 🔲 FASE H — Integrações Automáticas (após EPIC-01)
+## 🔲 FASE H — Integrações (Sprint H-1 e H-2)
 
-- [ ] WhatsApp automático via WAHA / Evolution API / Z-API / Twilio
-- [ ] Link de pagamento dinâmico por aluno (API Synapta — substitui `{LINK_PAGAMENTO}`)
-- [ ] Kommo CRM — tagging automático via API (add/remove tag INADIMPLENTE)
-- [ ] Agendamento diário/semanal de cobranças
+> Brainstorm realizado em 11/06/2026. Decisões registradas no MEMORY.md.
+
+### Sprint H-1 — WhatsApp via Google Drive + Kommo *(próxima)*
+
+**Fluxo definido:**
+```
+App gera planilha XLSX → sobe no Google Drive (pasta configurada) →
+Kommo lê via Make ou integração nativa Google Sheets →
+dispara WhatsApp pelo número conectado ao Kommo →
+tipo de mensagem definido pela tag_crm
+```
+
+**Estrutura da planilha (a validar com o Kommo):**
+
+| telefone | nome | tag_crm | empresa | categoria | vencimento | valor |
+|----------|------|---------|---------|-----------|------------|-------|
+| 5511... | João Silva | INADIMPLENTE_REGUA | INEPROTEC | Régua | 01/06/2026 | R$ 350,00 |
+
+Tags mapeiam para templates no Kommo: `INADIMPLENTE_NOVO`, `INADIMPLENTE_REGUA`, `INADIMPLENTE_30DIAS`.
+
+- [ ] **Aba de Configuração WhatsApp** — nova seção em Configurações:
+  - *Bloco Google Drive:* método de auth (Service Account JSON ou OAuth), ID da pasta de destino, nome do arquivo gerado (`cobrancas_{empresa}_{DDMMYYYY}.xlsx`), botão Testar Conexão
+  - *Bloco Kommo:* URL do webhook ou ID do pipeline, tag CRM padrão (já existe `tag_crm` nos templates)
+  - *Bloco Comportamento:* geração **sob demanda** via botão em Envio de Mensagens (não automático — decisão de 11/06)
+- [ ] Botão **"Exportar para WhatsApp"** na tela de Envio de Mensagens — gera XLSX + faz upload no Drive
+- [ ] Registro do envio na tabela `envios` (canal=`whatsapp_crm`)
+- [ ] Migration `008_add_config_whatsapp` — tabela `config_whatsapp` por empresa
+
+### Sprint H-2 — Agendamento + Dashboard
+
+- [ ] Agendamento via Windows Task Scheduler — consolidação + exportação automática em horário configurável
+- [ ] Dashboard analítico básico: evolução semanal de inadimplentes, taxa de quitação pós-cobrança, mensagens enviadas × conversões
 
 ---
 
@@ -268,6 +296,8 @@ Observações e aprendizados do uso real. Serão tratados após Fase H como back
 
 - **Heurística de gênero frágil:** Nomes terminados em "a" → sra. Falha em nomes como "Joshua", "Elias", "Matias". Melhorar com lista de exceções ou biblioteca de classificação de nomes.
 
+- **Régua inteligente por comportamento:** Hoje a régua é rígida por dias de atraso. Evoluir para: aluno que quitou na 1ª mensagem → régua mais suave; aluno que nunca responde → escalar canal ou marcar para negativação; renegociado → pausar cobranças automáticas.
+
 ### Documentação
 
 - **Central de Ajuda — incluir prints das telas:** o conteúdo passo a passo já existe, mas falta ilustrar cada seção com screenshots das telas reais para a operadora se localizar visualmente. Revisar também o texto (Edilvo/Helder fariam um passe de revisão). *(observação de 10/06, a fazer quando houver disponibilidade)*
@@ -282,6 +312,10 @@ Observações e aprendizados do uso real. Serão tratados após Fase H como back
 
 - **Multi-usuário — permissões granulares:** A base multi-usuário já existe (tabela `usuarios`, perfis admin/operador). Evolução futura: usuários **por empresa** e permissões mais finas por função (ex.: operador que só envia, não configura).
 
+- **Relatório gerencial semanal:** PDF/Excel gerado automaticamente ao final da semana para o gestor — inadimplentes totais, cobrados, quitados, evolução da carteira.
+
+- **PWA / acesso mobile:** transformar o app em Progressive Web App — o gestor acompanha pelo celular sem instalar nada. Custo praticamente zero (manifest.json + service worker).
+
 ### Técnico
 
 - **Arquivo Synapta sem CPF:** Quando o arquivo À Vencer não tem CPF, o cruzamento é feito por nome (match aproximado). Erros de grafia resultam em CPF vazio e o aluno não é reconhecido como "Em Renegociação". Solução: solicitar ao Synapta exportação com CPF ou implementar fuzzy matching.
@@ -289,3 +323,39 @@ Observações e aprendizados do uso real. Serão tratados após Fase H como back
 - **Pickle de sessão sem expiração:** O estado de consolidação fica em pickle indefinidamente. Se o arquivo fonte mudar sem nova consolidação, os dados exibidos ficam desatualizados silenciosamente. Considerar timestamp de validade ou aviso visual de sessão antiga.
 
 - **Relatórios acumulam sem limpeza:** A pasta `C:\MATINE\relatorios\` cresce indefinidamente. Implementar política de retenção (ex.: 90 dias) ou tela de gerenciamento.
+
+---
+
+## 🔭 VISÃO v2 — Produto SaaS Multi-Tenant *(discussão estratégica — 11/06/2026)*
+
+> Decisão: o produto evoluirá de solução local das escolas do Edilvo para **plataforma SaaS de cobrança de inadimplentes**, multi-tenant, cloud-native.
+> Edilvo = cliente zero (laboratório sem cobrança) — cada decisão nas escolas dele deve ser generalizável.
+
+### Decisões arquiteturais a tomar antes de escalar
+
+| Decisão | Situação atual | Alvo v2 | Impacto |
+|---------|---------------|---------|---------|
+| Banco | SQLite local | PostgreSQL cloud | Multi-tenant real |
+| Storage | `C:\MATINE\` Windows | S3 ou similar por tenant | Portabilidade |
+| Deploy | Flask local Windows | Cloud (Railway / Render / AWS) | Acessibilidade |
+| Credenciais | Keyring Windows | Vault cloud (HashiCorp ou similar) | Segurança multi-tenant |
+| Empresas | 2 hardcoded | N tenants configuráveis | Modelo de dados |
+| Fonte de dados | Synapta CSV | Importação genérica com mapeamento de colunas | Universalidade |
+| WhatsApp | Kommo + Drive | Provider configurável por tenant | Flexibilidade |
+
+### Funcionalidades universais (independem do segmento)
+
+- Importação de inadimplentes via CSV/XLSX com mapeamento de colunas configurável
+- Régua de cobrança configurável (dias, canais, frequência)
+- Multi-canal: WhatsApp + E-mail + (futuro) SMS
+- Dashboard analítico por tenant
+- Gestão de usuários com perfis por empresa
+- Relatório gerencial exportável
+- Negativação automática (parceiro TBD)
+
+### O que é específico das escolas (não generalizar)
+
+- Nomenclatura "aluno" → generalizar para "devedor" ou "cliente"
+- Lógica de gênero (sr./sra.) → opcional/configurável
+- Templates educacionais → apenas exemplos padrão, não hardcoded
+- Integração Synapta → descontinuar quando o sistema for substituído

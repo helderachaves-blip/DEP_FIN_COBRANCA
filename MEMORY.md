@@ -188,6 +188,54 @@ Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Min
 
 ---
 
+## Visão Estratégica do Produto *(decisão 11/06/2026)*
+
+O produto evoluirá das escolas do Edilvo para uma **plataforma SaaS de cobrança de inadimplentes, multi-tenant, cloud-native**.
+
+| Dimensão | Decisão |
+|----------|---------|
+| Modelo | SaaS — multi-tenant, cloud |
+| Cliente zero | Edilvo (INEPROTEC + MATRÍCULA EAD) — laboratório sem cobrança |
+| Postura de dev | Cada decisão nas escolas deve ser generalizável — sem gambiarras específicas do Synapta |
+| Nomenclatura futura | "aluno" → "devedor/cliente"; templates educacionais → exemplos padrão |
+
+**Roadmap de evolução arquitetural (v2):**
+- SQLite → PostgreSQL
+- `C:\MATINE\` → storage cloud (S3 ou similar por tenant)
+- Flask local Windows → deploy cloud (Railway / Render / AWS — TBD)
+- Keyring Windows → vault cloud
+- 2 empresas hardcoded → N tenants
+- Fonte Synapta → importação genérica com mapeamento de colunas configurável
+
+---
+
+## Integração WhatsApp — Decisões *(11/06/2026)*
+
+**Fluxo escolhido:**
+```
+App gera planilha XLSX → sobe no Google Drive (pasta configurada) →
+Kommo lê via Make ou integração nativa Google Sheets →
+dispara WhatsApp pelo número conectado ao Kommo →
+tipo de mensagem definido pela tag_crm
+```
+
+**Estrutura da planilha (a validar com Kommo):**
+
+| telefone | nome | tag_crm | empresa | categoria | vencimento | valor |
+|----------|------|---------|---------|-----------|------------|-------|
+| 5511... | João | INADIMPLENTE_REGUA | INEPROTEC | Régua | 01/06/2026 | R$350 |
+
+**Tags definidas:** `INADIMPLENTE_NOVO`, `INADIMPLENTE_REGUA`, `INADIMPLENTE_30DIAS`
+
+**Aba de Configuração WhatsApp** (nova seção em Configurações — migration 008):
+- Bloco Google Drive: Service Account JSON ou OAuth, ID da pasta, nome do arquivo, botão Testar Conexão
+- Bloco Kommo: URL do webhook ou ID do pipeline, tag CRM padrão
+- Bloco Comportamento: geração **sob demanda** via botão em Envio de Mensagens (não automático)
+
+**Canal registrado na tabela `envios`:** `canal='whatsapp_crm'`
+
+---
+
 ## Problemas Conhecidos e Soluções
 
 | # | Sintoma | Solução | Status |

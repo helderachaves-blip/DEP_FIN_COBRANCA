@@ -163,17 +163,16 @@ Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcio
 
 ## Próxima Sessão
 
-1. ✅ Correções de UI (R1/R2/B1/B2) — commitadas (`0e88c5b`)
-2. ✅ STORY-01-01 (Quick Wins) — entregue
-3. ✅ STORY-01-02 (Indicadores de empresa ativa) — entregue
-4. ✅ STORY-01-03 (Loading states) — entregue
-5. ✅ STORY-01-05 (Schema migrations + índices + WAL) — entregue
-6. ✅ STORY-01-04 (Senha SMTP via Keyring) — entregue
-7. ✅ STORY-01-06 (Autenticação Flask-Login) — entregue
-8. ✅ STORY-01-07 (First-run setup robusto) — entregue → **EPIC-01 COMPLETO**
-9. Próxima sessão: iniciar **Fase H** (integrações automáticas). Recomendado começar
-   pelo PRD/spec da integração WhatsApp (escolha do provider: WAHA / Evolution / Z-API / Twilio)
-   antes de implementar — ver tabela "Fase H" abaixo.
+**Brainstorm Fase H realizado em 11/06/2026.** Decisões documentadas em `MEMORY.md`, `ROADMAP.md` e `docs/stories/story-h1-whatsapp-gdrive-kommo.md`.
+
+**Próximo passo: implementar STORY-H-01**
+
+1. Validar estrutura das colunas da planilha com o Kommo/Make (Helder/Edilvo)
+2. Decidir método de auth Google Drive (Service Account vs OAuth)
+3. Implementar migration `008_add_config_whatsapp`
+4. Implementar aba "WhatsApp" em Configurações
+5. Implementar botão "Exportar para WhatsApp" em Envio de Mensagens
+6. Implementar geração do XLSX + upload no Drive (`gdrive.py`)
 
 ---
 
