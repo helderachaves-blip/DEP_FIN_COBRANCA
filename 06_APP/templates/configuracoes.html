@@ -292,11 +292,19 @@
                        placeholder="cobrancas@empresa.com.br">
               </div>
               <div class="col-md-4">
-                <label class="form-label fw-semibold">Senha / App Password <span class="text-danger">*</span></label>
+                <label class="form-label fw-semibold">Senha / App Password
+                  {% if not smtp_senha_set %}<span class="text-danger">*</span>{% endif %}
+                </label>
                 <input type="password" class="form-control" name="smtp_senha"
-                       value="{{ config_email.get('smtp_senha', '') }}"
-                       placeholder="••••••••">
-                <div class="form-text">Gmail: use uma <em>Senha de App</em>.</div>
+                       value="" autocomplete="new-password"
+                       placeholder="{{ '••••••••' if smtp_senha_set else 'Senha de App' }}">
+                <div class="form-text">
+                  {% if smtp_senha_set %}
+                    <i class="bi bi-shield-lock-fill text-success me-1"></i>Senha salva com segurança (Windows Credential Store). Deixe em branco para manter.
+                  {% else %}
+                    Gmail: use uma <em>Senha de App</em>. Guardada no keyring, fora do banco.
+                  {% endif %}
+                </div>
               </div>
               <div class="col-md-2 d-flex align-items-end pb-1">
                 <div class="form-check form-switch">

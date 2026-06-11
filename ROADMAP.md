@@ -145,6 +145,19 @@ Fundação de versionamento de banco — maior bloqueador técnico para a Fase H
 
 ---
 
+## ✅ STORY-01-04 — Senha SMTP Segura (keyring) (10/06/2026)
+
+Senha SMTP fora do banco — fecha exposição em backups/cópias do `inadimplencia.db`.
+
+- [x] `keyring>=25.0.0` (backend WinVaultKeyring = Windows Credential Manager)
+- [x] `salvar_config_email` grava no keyring; coluna `smtp_senha` guarda só `[keyring]`
+- [x] `get_config_email` lê do keyring (fallback: env `SMTP_<EMPRESA>_SENHA` → coluna legado)
+- [x] Migração de segurança no startup: senha em texto plano → keyring (banco real migrado)
+- [x] UI não vaza a senha no HTML; bullets quando configurada; campo vazio preserva a atual
+- [x] Caminho de envio/teste SMTP inalterado (consome `config['smtp_senha']`)
+
+---
+
 ## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
 
 Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
@@ -155,7 +168,7 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 | 01-01 | Quick Wins — encoding, cores, títulos, confirmações, secret key | ~7h | ✅ 10/06 |
 | 01-02 | Indicadores de empresa ativa (topbar + wizard) | ~3h | ✅ 10/06 |
 | 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | ✅ 10/06 |
-| 01-04 | Proteger senha SMTP com Python Keyring | ~4h | Pendente |
+| 01-04 | Proteger senha SMTP com Python Keyring | ~4h | ✅ 10/06 |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | ✅ 10/06 |
 | 01-06 | Autenticação Flask-Login (MVP) | ~6h | Pendente |
 | 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | Pendente |

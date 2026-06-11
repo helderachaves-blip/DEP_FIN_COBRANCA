@@ -580,10 +580,15 @@ def configuracoes():
     templates    = db.get_templates_completo(empresa)
     auto_alunos  = _detectar_arquivo('alunos', empresa)
     config_email = db.get_config_email(empresa) or {}
+    # A senha SMTP nunca vai para o HTML (STORY-01-04). Passamos só um flag para a UI
+    # decidir entre mostrar bullets ("já configurada") ou pedir a senha.
+    smtp_senha_set = bool(config_email.get('smtp_senha'))
+    config_email = {**config_email, 'smtp_senha': ''}
     return render_template('configuracoes.html',
                            templates=templates,
                            auto_alunos=auto_alunos,
-                           config_email=config_email)
+                           config_email=config_email,
+                           smtp_senha_set=smtp_senha_set)
 
 
 def _encontrar_template(dias_atraso: int, templates: list) -> dict | None:

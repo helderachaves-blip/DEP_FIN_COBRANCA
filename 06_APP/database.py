@@ -4,6 +4,7 @@ Todas as funções recebem o parâmetro `empresa`.
 """
 
 import importlib.util
+import os
 import sqlite3
 import pandas as pd
 from pathlib import Path
@@ -12,6 +13,86 @@ from datetime import datetime
 DB_PATH = Path(r'C:\MATINE\banco\inadimplencia.db')
 
 EMPRESAS = ('INEPROTEC', 'MATRICULAEAD')
+
+# ── Senha SMTP segura via keyring (STORY-01-04) ──────────────────────────────
+# A senha SMTP nunca fica em texto plano no banco. É guardada no Windows Credential
+# Store (keyring). A coluna `config_email.smtp_senha` carrega apenas um marcador.
+# Import protegido: se o keyring não estiver disponível no ambiente, o sistema
+# continua funcionando via fallback em variável de ambiente.
+try:
+    import keyring as _keyring
+    _KEYRING_OK = True
+except Exception:  # pragma: no cover - ambiente sem keyring
+    _keyring = None
+    _KEYRING_OK = False
+
+KEYRING_SERVICE = "matine-smtp"
+SENHA_MARKER = "[keyring]"
+
+
+def _env_senha(empresa: str) -> str | None:
+    """Fallback de rollback: SMTP_INEPROTEC_SENHA / SMTP_MATRICULAEAD_SENHA."""
+    return os.environ.get(f"SMTP_{empresa}_SENHA") or None
+
+
+def _gravar_senha_smtp(empresa: str, senha: str) -> bool:
+    """Grava a senha no keyring. Retorna False (com log) se o keyring falhar."""
+    if _KEYRING_OK:
+        try:
+            _keyring.set_password(KEYRING_SERVICE, empresa, senha)
+            return True
+        except Exception as e:  # pragma: no cover
+            print(f"[smtp] keyring indisponível na escrita: {e}")
+    print(f"[smtp] Keyring não disponível. "
+          f"Configure SMTP_{empresa}_SENHA como variável de ambiente.")
+    return False
+
+
+def _ler_senha_smtp(empresa: str, col_fallback: str | None = None) -> str | None:
+    """Lê a senha de forma segura: keyring → variável de ambiente → coluna (legado).
+
+    O fallback de coluna só é usado se o keyring/env falharem e a coluna ainda tiver
+    uma senha real (não vazia e não o marcador) — evita regressão em ambientes onde o
+    keyring ainda não migrou. Retorna None se nenhuma fonte tiver a senha.
+    """
+    if _KEYRING_OK:
+        try:
+            v = _keyring.get_password(KEYRING_SERVICE, empresa)
+            if v:
+                return v
+        except Exception as e:  # pragma: no cover
+            print(f"[smtp] keyring indisponível na leitura: {e}")
+    env = _env_senha(empresa)
+    if env:
+        return env
+    if col_fallback and col_fallback not in ('', SENHA_MARKER):
+        return col_fallback
+    return None
+
+
+def migrar_senhas_smtp():
+    """Move senhas SMTP em texto plano (legado) para o keyring e grava o marcador.
+
+    Idempotente: linhas já marcadas com SENHA_MARKER ou vazias são ignoradas. Se o
+    keyring falhar, a senha permanece na coluna (para não quebrar envios) e fica um aviso.
+    """
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT empresa, smtp_senha FROM config_email "
+            "WHERE smtp_senha IS NOT NULL AND smtp_senha NOT IN ('', ?)",
+            (SENHA_MARKER,)
+        ).fetchall()
+        for r in rows:
+            empresa, senha_plana = r['empresa'], r['smtp_senha']
+            if _gravar_senha_smtp(empresa, senha_plana):
+                conn.execute(
+                    "UPDATE config_email SET smtp_senha=? WHERE empresa=?",
+                    (SENHA_MARKER, empresa)
+                )
+                print(f"[smtp] senha de {empresa} migrada para o keyring")
+            else:
+                print(f"[smtp] AVISO: keyring indisponível; senha de {empresa} permanece no banco")
+        conn.commit()
 
 # Diretório de migrations (STORY-01-05). Carregamos o runner por caminho para não
 # depender de o pacote `migrations` estar no sys.path (funciona de qualquer cwd).
@@ -213,6 +294,10 @@ def init_db():
             print("[db] schema na versao mais recente - nenhuma migration pendente")
     finally:
         conn.close()
+
+    # Migração de segurança (STORY-01-04): move senhas SMTP em texto plano para o keyring.
+    # Roda em conexão própria, após o fechamento da conexão das migrations.
+    migrar_senhas_smtp()
 
 
 # ── Templates ───────────────────────────────────────────────────────────────
@@ -474,6 +559,10 @@ def get_envios_hoje(empresa: str, canal: str = None) -> list[dict]:
 
 def salvar_config_email(empresa: str, host: str, port: int, usuario: str,
                         senha: str, from_name: str, tls: bool):
+    # Senha: gravada no keyring apenas se veio preenchida. Campo vazio preserva a senha
+    # atual (AC-04). A coluna nunca recebe a senha real — apenas o marcador.
+    if senha:
+        _gravar_senha_smtp(empresa, senha)
     with get_conn() as conn:
         conn.execute("""
             INSERT INTO config_email
@@ -486,7 +575,7 @@ def salvar_config_email(empresa: str, host: str, port: int, usuario: str,
                 smtp_senha=excluded.smtp_senha,
                 smtp_from_name=excluded.smtp_from_name,
                 smtp_tls=excluded.smtp_tls
-        """, (empresa, host, port, usuario, senha, from_name, 1 if tls else 0))
+        """, (empresa, host, port, usuario, SENHA_MARKER, from_name, 1 if tls else 0))
         conn.commit()
 
 
@@ -495,7 +584,12 @@ def get_config_email(empresa: str) -> dict | None:
         row = conn.execute(
             "SELECT * FROM config_email WHERE empresa=?", (empresa,)
         ).fetchone()
-    return dict(row) if row else None
+    if not row:
+        return None
+    cfg = dict(row)
+    # Senha lida do keyring (com fallback env/coluna-legado). None se não configurada.
+    cfg['smtp_senha'] = _ler_senha_smtp(empresa, cfg.get('smtp_senha'))
+    return cfg
 
 
 def salvar_assunto_template(template_id: int, assunto: str, empresa: str):

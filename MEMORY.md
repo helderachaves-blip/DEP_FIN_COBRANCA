@@ -134,7 +134,7 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 | `inadimplentes` | Base persistente (PK composta: cpf + empresa) |
 | `templates` | Mensagens configuráveis por empresa (com tag_crm) |
 | `envios` | Histórico de envios por canal/dia/empresa |
-| `config_email` | Config SMTP por empresa |
+| `config_email` | Config SMTP por empresa. **Senha NÃO fica aqui** — vai para o keyring (Windows Credential Store); a coluna `smtp_senha` guarda só o marcador `[keyring]` (STORY-01-04) |
 | `historico_atualizacoes` | Log de atualizações da base |
 | `schema_migrations` | Controle de versão do schema (version, name, applied_at) — STORY-01-05 |
 

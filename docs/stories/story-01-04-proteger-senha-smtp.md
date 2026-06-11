@@ -1,6 +1,6 @@
 # STORY-01-04: Proteger Senha SMTP com Python Keyring
 **Epic:** EPIC-01 Sprint Zero
-**Status:** Draft
+**Status:** Done
 **Esforco estimado:** ~4h
 **Prioridade:** P1
 **Debitos resolvidos:** DB-C01, SEC-02
@@ -16,27 +16,25 @@ A senha SMTP esta armazenada em texto plano na coluna `smtp_senha` da tabela `co
 ## Acceptance Criteria
 
 ### AC-01 — Instalacao de dependencia
-- [ ] `keyring` adicionado ao `06_APP/requirements.txt`
-- [ ] `pip install keyring` funcional no Python 3.14 do ambiente da Luana
+- [x] `keyring` adicionado ao `06_APP/requirements.txt` (`keyring>=25.0.0`)
+- [x] `pip install keyring` funcional (keyring 25.7.0, backend **WinVaultKeyring** = Windows Credential Manager)
 
 ### AC-02 — Salvar senha no Windows Credential Store
-- [ ] Rota `/email/configurar`: ao salvar configuracao SMTP, senha e armazenada via `keyring.set_password("matine-smtp", empresa, senha)` em vez de INSERT na coluna `smtp_senha`
-- [ ] Coluna `smtp_senha` na tabela `config_email` recebe valor vazio ou marcador `"[keyring]"` em vez da senha real
-- [ ] Migracao de seguranca: registro existente com senha em texto plano e sobrescrito por `"[keyring]"` e a senha e movida para o keyring na primeira execucao apos o deploy
+- [x] `salvar_config_email` armazena via `keyring.set_password("matine-smtp", empresa, senha)` em vez de gravar a senha na coluna
+- [x] Coluna `smtp_senha` recebe o marcador `"[keyring]"` (nunca a senha real)
+- [x] Migracao de seguranca (`migrar_senhas_smtp`): senha em texto plano e movida para o keyring e a coluna vira marcador, no startup (`init_db`). **Verificado no banco real:** senha INEPROTEC migrada, coluna agora `[keyring]`
 
 ### AC-03 — Ler senha do Windows Credential Store
-- [ ] Funcao `get_config_email(empresa)` em `database.py` retorna a senha via `keyring.get_password("matine-smtp", empresa)` em vez de ler a coluna `smtp_senha`
-- [ ] Se `keyring.get_password` retornar `None` (senha nao configurada), o campo senha e retornado como `None` — nao como string vazia
+- [x] `get_config_email(empresa)` popula `smtp_senha` via `_ler_senha_smtp` (keyring → env → coluna-legado)
+- [x] Se nenhuma fonte tiver a senha, retorna `None` (nao string vazia)
 
 ### AC-04 — Formulario de configuracao SMTP
-- [ ] Campo de senha no formulario de configuracoes e `type="password"` (ja e? verificar)
-- [ ] Ao abrir a aba de configuracoes, o campo de senha exibe `••••••••` (8 pontos) se senha esta configurada no keyring, ou vazio se nao esta
-- [ ] Enviar o formulario com o campo de senha vazio NAO sobrescreve a senha atual no keyring (comportamento: preservar senha existente se campo vier vazio)
+- [x] Campo de senha e `type="password"`
+- [x] Exibe placeholder `••••••••` quando configurada; o valor real NUNCA vai para o HTML (rota remove a senha antes de renderizar; flag `smtp_senha_set`)
+- [x] Enviar com o campo vazio NAO sobrescreve a senha atual (`salvar_config_email` só toca no keyring se `senha` vier preenchida) — testado
 
 ### AC-05 — Teste SMTP funcional apos migracao
-- [ ] Rota `/email/testar` funciona normalmente apos a mudanca (busca senha do keyring)
-- [ ] Envio de e-mail individual (`/email/enviar-aluno`) funciona normalmente
-- [ ] Envio em lote (`/email/enviar-todos`) funciona normalmente
+- [x] `/email/testar`, `/email/enviar-aluno`, `/email/enviar-todos` inalterados: consomem `config['smtp_senha']`, que agora vem do keyring. Caminho de login SMTP idêntico ao anterior; resolução da senha via keyring verificada (login real no Gmail não testado — credencial de teste fictícia)
 
 ---
 
@@ -50,18 +48,57 @@ A senha SMTP esta armazenada em texto plano na coluna `smtp_senha` da tabela `co
 
 ## Testes Esperados
 
-- [ ] Configurar SMTP com senha real: senha NAO aparece em texto em `inadimplencia.db` (verificar com DB Browser for SQLite)
-- [ ] Testar conexao: autentica no Gmail com senha do keyring
-- [ ] Reiniciar o servidor: senha ainda funciona (persistida no Windows Credential Store)
-- [ ] Campo de senha no formulario: mostra bullets se configurado, vazio se nao configurado
-- [ ] Salvar sem alterar a senha (campo vazio): senha existente nao e apagada
+- [x] Configurar SMTP com senha real: coluna fica com marcador `[keyring]`, senha NAO aparece em texto no banco (verificado)
+- [x] Senha persistida no Windows Credential Store (round-trip keyring OK)
+- [x] Campo de senha no formulario: placeholder de bullets quando configurado; senha real ausente do HTML (verificado via curl)
+- [x] Salvar sem alterar a senha (campo vazio): senha existente nao e apagada (testado)
+- [x] Migracao de senha legada em texto plano → keyring (idempotente; testado + banco real)
+- [x] Fallback de variavel de ambiente `SMTP_<EMPRESA>_SENHA` (testado)
+- [ ] Login real no Gmail com a senha do keyring — não exercitado nesta sessão (sem credencial válida de teste); caminho de código inalterado
 
 ---
 
 ## Nota de Rollback
 
-Se o keyring falhar em algum ambiente (ex: servidor sem interface grafica), o sistema deve logar um erro claro:
-`"Keyring nao disponivel. Configure SMTP_[EMPRESA]_SENHA como variavel de ambiente."` e buscar fallback em variavel de ambiente `SMTP_INEPROTEC_SENHA` / `SMTP_MATRICULAEAD_SENHA`.
+Se o keyring falhar (ex.: ambiente sem credential store), o sistema loga
+`"Keyring não disponível. Configure SMTP_<EMPRESA>_SENHA como variável de ambiente."`
+e usa o fallback `SMTP_INEPROTEC_SENHA` / `SMTP_MATRICULAEAD_SENHA`. Implementado em
+`_ler_senha_smtp` / `_gravar_senha_smtp`. A migração mantém a senha na coluna se o keyring
+falhar (não quebra envios), com aviso no log.
+
+---
+
+## File List
+
+- `06_APP/requirements.txt` — adiciona `keyring>=25.0.0`
+- `06_APP/database.py` — import protegido de keyring; `_env_senha`, `_gravar_senha_smtp`,
+  `_ler_senha_smtp`, `migrar_senhas_smtp`; `salvar_config_email`/`get_config_email`
+  reescritas; chamada de migração no `init_db()`
+- `06_APP/app.py` — rota `/configuracoes` passa `smtp_senha_set` e remove a senha do contexto
+- `06_APP/templates/configuracoes.html` — campo senha sem `value`, placeholder de bullets + helptext condicional
+
+## Dev Notes
+
+- **Interface preservada:** todo o código de envio/teste SMTP (`_enviar_email_smtp`,
+  `/email/testar`, `/email/enviar-*`) continua lendo `config['smtp_senha']` — só a origem
+  mudou (keyring em vez da coluna). Zero alteração no caminho de login.
+- **Ordem de leitura da senha:** keyring → variável de ambiente → coluna (legado). O fallback
+  de coluna evita regressão se a migração ainda não rodou ou o keyring estiver indisponível;
+  após a migração a coluna tem só o marcador, então o fallback retorna None e o keyring manda.
+- **Não vaza no HTML:** a rota tira a senha do `config_email` antes de renderizar e passa
+  apenas `smtp_senha_set`. O input usa `value=""` + placeholder de bullets.
+- **Migração roda em conexão própria** após o fechamento da conexão das migrations (evita
+  duas conexões simultâneas ao mesmo arquivo).
+- **Validação:** suite temporária (marcador na coluna, leitura do keyring, vazio preserva,
+  migração legada, idempotência, fallback env) 100% PASS; banco real migrado (senha plana
+  movida ao keyring, coluna = `[keyring]`); rotas 200; senha ausente do HTML.
+
+## Change Log
+
+| Data | Status | Autor | Nota |
+|------|--------|-------|------|
+| (origem) | Draft | @sm | Story criada |
+| 10/06/2026 | Draft -> Done | @dev | Senha SMTP movida para keyring (Windows Credential Store) com fallback env/coluna; migração de senha legada no startup; UI sem vazamento. Testado e banco real migrado |
 
 ---
 
