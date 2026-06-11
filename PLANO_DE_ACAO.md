@@ -11,7 +11,7 @@
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G concluídas. **EPIC-01 (Sprint Zero) COMPLETO — 7 de 7 stories** (01-01 a 01-07). Próximo marco: **Fase H** (integrações automáticas).
 - **Extra (10/06 noite):** Central de Ajuda (`/ajuda`) — página com índice lateral e conteúdo operacional passo a passo por tela, focada na operadora (Luana). Ver `docs/stories/story-ajuda-central.md`.
-- **Último commit no remoto:** `c5fe5d8` (será atualizado ao push da Central de Ajuda).
+- **Último commit no remoto:** `2719016` (Central de Ajuda).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup; `.env` (gitignored) gerado na 1ª execução com a `FLASK_SECRET_KEY`.
 - **Sessão 10/06/2026 (manhã):** Correções de UI (R1/R2/B1/B2) + STORY-01-01 (Quick Wins) + STORY-01-02 (Indicadores de empresa). Nova STORY-01-07 (first-run setup) adicionada ao backlog.
 - **Sessão 10/06/2026 (tarde):** STORY-01-03 (Loading states) + STORY-01-05 (Schema migrations + índices + WAL) + STORY-01-04 (senha SMTP via keyring). Banco real de produção migrado (versionamento + WAL + senha movida ao keyring); backup `inadimplencia_backup_20260610_204730.db` criado. Regra de sincronia git↔plano adicionada ao frame global (`~/.claude/CLAUDE.md`).
@@ -28,8 +28,9 @@ verificado em 10/06/2026 noite).
 - `8d257a2..18909c9` — 9 commits: STORY-01-03/04/05 + `docs:` de rastreio
 - `855a58d..ace5172` — STORY-01-06 (Autenticação Flask-Login) + plano/roadmap
 - `d1c91ea..c5fe5d8` — STORY-01-07 (First-run setup) → **EPIC-01 completo**
+- `78f6b4c..2719016` — Central de Ajuda (`/ajuda`)
 
-Topo do remoto = `c5fe5d8`. (recompute sempre com `git fetch` — não confie nesta lista.)
+Topo do remoto = `2719016`. (recompute sempre com `git fetch` — não confie nesta lista.)
 
 ---
 
