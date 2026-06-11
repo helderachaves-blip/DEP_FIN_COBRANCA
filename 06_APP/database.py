@@ -670,6 +670,13 @@ def atualizar_senha_usuario(user_id, senha_hash: str):
         conn.commit()
 
 
+def atualizar_nome_usuario(user_id, nome: str):
+    """Atualiza o nome de exibição. Vazio → o login passa a ser exibido (fallback no app)."""
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET nome = ? WHERE id = ?", (nome, user_id))
+        conn.commit()
+
+
 def set_usuario_admin(user_id, is_admin: bool):
     with get_conn() as conn:
         conn.execute("UPDATE usuarios SET is_admin = ? WHERE id = ?",

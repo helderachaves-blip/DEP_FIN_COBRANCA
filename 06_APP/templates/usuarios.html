@@ -38,6 +38,11 @@
           </td>
           <td class="text-muted small">{{ u.criado_em }}</td>
           <td class="text-end">
+            <!-- Editar nome -->
+            <button class="btn btn-sm btn-outline-secondary" title="Editar nome"
+                    data-bs-toggle="modal" data-bs-target="#modalNome{{ u.id }}">
+              <i class="bi bi-pencil"></i>
+            </button>
             <!-- Resetar senha -->
             <button class="btn btn-sm btn-outline-secondary" title="Redefinir senha"
                     data-bs-toggle="modal" data-bs-target="#modalSenha{{ u.id }}">
@@ -69,6 +74,29 @@
             {% endif %}
           </td>
         </tr>
+
+        <!-- Modal: editar nome deste usuário -->
+        <div class="modal fade" id="modalNome{{ u.id }}" tabindex="-1">
+          <div class="modal-dialog">
+            <form class="modal-content" method="POST"
+                  action="{{ url_for('usuarios_editar_nome', uid=u.id) }}" data-loading>
+              <div class="modal-header">
+                <h5 class="modal-title">Editar nome — {{ u.usuario }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <label class="form-label" for="nome{{ u.id }}">Nome de exibição</label>
+                <input type="text" class="form-control" id="nome{{ u.id }}" name="nome"
+                       value="{{ u.nome }}" autocomplete="off" maxlength="80">
+                <div class="form-text">É o nome mostrado no sistema. Se ficar em branco, o login é exibido.</div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" data-loading-text="Salvando...">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
 
         <!-- Modal: redefinir senha deste usuário -->
         <div class="modal fade" id="modalSenha{{ u.id }}" tabindex="-1">

@@ -442,6 +442,16 @@ def usuarios_criar():
     return redirect(url_for('usuarios'))
 
 
+@app.route('/usuarios/<int:uid>/nome', methods=['POST'])
+@_admin_required
+def usuarios_editar_nome(uid):
+    nome = request.form.get('nome', '').strip()
+    db.atualizar_nome_usuario(uid, nome)
+    _log(f"Nome do usuário id={uid} alterado por {current_user.usuario}")
+    flash("✅ Nome atualizado.", "success")
+    return redirect(url_for('usuarios'))
+
+
 @app.route('/usuarios/<int:uid>/senha', methods=['POST'])
 @_admin_required
 def usuarios_resetar_senha(uid):
