@@ -30,6 +30,26 @@
 
     .sidebar-nav { flex: 1; padding: .6rem 0; overflow-y: auto; }
 
+    /* ── Sidebar footer (usuário + logout) ───────── */
+    .sidebar-footer {
+      padding: .8rem 1.3rem;
+      border-top: 1px solid rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: .5rem;
+    }
+    .sidebar-user {
+      color: rgba(255,255,255,.6); font-size: .8rem;
+      display: flex; align-items: center; gap: .4rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sidebar-logout {
+      color: rgba(255,255,255,.55); text-decoration: none;
+      font-size: .8rem; font-weight: 600; white-space: nowrap;
+      display: flex; align-items: center; gap: .3rem;
+      transition: color .15s;
+    }
+    .sidebar-logout:hover { color: #ef5350; }
+
     .sidebar-nav .nav-section {
       font-size: .67rem; font-weight: 700; letter-spacing: .09em;
       text-transform: uppercase; color: rgba(255,255,255,.3);
@@ -216,6 +236,14 @@
 
   </nav>
 
+  <div class="sidebar-footer">
+    <span class="sidebar-user">
+      <i class="bi bi-person-circle"></i>{{ current_user.id if current_user.is_authenticated else '' }}
+    </span>
+    <a class="sidebar-logout" href="{{ url_for('logout') }}" title="Sair">
+      <i class="bi bi-box-arrow-right"></i> Sair
+    </a>
+  </div>
 
 </aside>
 

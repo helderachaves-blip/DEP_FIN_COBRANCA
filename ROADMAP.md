@@ -158,6 +158,20 @@ Senha SMTP fora do banco — fecha exposição em backups/cópias do `inadimplen
 
 ---
 
+## ✅ STORY-01-06 — Autenticação Flask-Login (10/06/2026)
+
+Fecha o vetor de acesso aberto — pré-requisito de segurança para a Fase H (webhooks).
+
+- [x] `flask-login>=0.6.3` + usuário único via `.env` (`APP_USUARIO`/`APP_SENHA`)
+- [x] Senha como hash pbkdf2 (`werkzeug.security`) — nunca em texto plano
+- [x] Login/logout funcionais; `remember=True` com cookie de 7 dias
+- [x] Proteção de todas as rotas via guard global `before_request` (default-deny; allowlist login/logout/static) — novas rotas já nascem protegidas
+- [x] Tela `login.html` standalone (logos, centralizada, sem sidebar) + footer da sidebar com usuário e botão Sair
+- [x] Seed de fábrica `luana` / `matine2026` na 1ª execução (troca via `.env.example`)
+- [x] Smoke test (Flask test client): 8/8 PASS, incluindo bloqueio de open-redirect
+
+---
+
 ## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
 
 Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
@@ -170,7 +184,7 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 | 01-03 | Loading states + confirmação "Atualizar Base" | ~5h | ✅ 10/06 |
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | ✅ 10/06 |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | ✅ 10/06 |
-| 01-06 | Autenticação Flask-Login (MVP) | ~6h | Pendente |
+| 01-06 | Autenticação Flask-Login (MVP) | ~6h | ✅ 10/06 |
 | 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | Pendente |
 
 ---

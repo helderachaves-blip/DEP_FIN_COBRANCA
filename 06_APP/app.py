@@ -9,13 +9,18 @@ import pickle
 import secrets
 import shutil
 import smtplib
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
 import pandas as pd
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_login import (
+    LoginManager, UserMixin, current_user,
+    login_required, login_user, logout_user,
+)
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import database as db
 import processing as proc
@@ -33,22 +38,56 @@ ESTADO_DIR  = DATA_DIR / 'estado'
 ENV_PATH    = Path(__file__).resolve().parent / '.env'
 
 
-def _carregar_secret_key():
-    """Lê FLASK_SECRET_KEY do .env; gera e persiste na primeira execução.
+# ---------------------------------------------------------------------------
+# Leitura/escrita simples do .env (sem dependência externa)
+# ---------------------------------------------------------------------------
+
+def _env_get(chave: str) -> str | None:
+    """Lê uma chave do .env. Retorna None se ausente ou vazia."""
+    if ENV_PATH.exists():
+        for linha in ENV_PATH.read_text(encoding='utf-8').splitlines():
+            if linha.startswith(chave + '='):
+                valor = linha.split('=', 1)[1].strip()
+                return valor or None
+    return None
+
+
+def _env_set(chave: str, valor: str):
+    """Acrescenta chave=valor ao .env (gitignored). Usado para semear na 1ª execução."""
+    with ENV_PATH.open('a', encoding='utf-8') as f:
+        f.write(f'{chave}={valor}\n')
+
+
+def _carregar_secret_key() -> str:
+    """FLASK_SECRET_KEY do .env; gera e persiste na primeira execução.
 
     Mantém a secret_key fora do código-fonte e estável entre reinícios
     (sessões Flask não são invalidadas a cada restart).
     """
-    if ENV_PATH.exists():
-        for linha in ENV_PATH.read_text(encoding='utf-8').splitlines():
-            if linha.startswith('FLASK_SECRET_KEY='):
-                valor = linha.split('=', 1)[1].strip()
-                if valor:
-                    return valor
+    chave = _env_get('FLASK_SECRET_KEY')
+    if chave:
+        return chave
     nova_chave = secrets.token_hex(32)
-    with ENV_PATH.open('a', encoding='utf-8') as f:
-        f.write(f'FLASK_SECRET_KEY={nova_chave}\n')
+    _env_set('FLASK_SECRET_KEY', nova_chave)
     return nova_chave
+
+
+def _carregar_credenciais() -> tuple[str, str]:
+    """Usuário único + hash da senha (STORY-01-06). Semeia defaults na 1ª execução.
+
+    APP_USUARIO e APP_SENHA ficam no .env (gitignored). A senha é guardada como
+    hash pbkdf2 — nunca em texto plano. Default de fábrica: luana / matine2026,
+    trocável regenerando o hash (ver .env.example).
+    """
+    usuario = _env_get('APP_USUARIO')
+    if not usuario:
+        usuario = 'luana'
+        _env_set('APP_USUARIO', usuario)
+    senha_hash = _env_get('APP_SENHA')
+    if not senha_hash:
+        senha_hash = generate_password_hash('matine2026', method='pbkdf2:sha256')
+        _env_set('APP_SENHA', senha_hash)
+    return usuario, senha_hash
 
 # ---------------------------------------------------------------------------
 # Flask
@@ -56,6 +95,43 @@ def _carregar_secret_key():
 
 app = Flask(__name__)
 app.secret_key = _carregar_secret_key()
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
+
+APP_USUARIO, APP_SENHA_HASH = _carregar_credenciais()
+
+# ---------------------------------------------------------------------------
+# Autenticação (Flask-Login — usuário único MVP, STORY-01-06)
+# ---------------------------------------------------------------------------
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Faça login para acessar o sistema.'
+login_manager.login_message_category = 'warning'
+
+# Endpoints liberados sem login. Tudo o mais é negado por padrão (default-deny)
+# via before_request — assim novas rotas (ex.: webhooks da Fase H) já nascem
+# protegidas sem depender de lembrar de decorar cada uma.
+_ENDPOINTS_PUBLICOS = {'login', 'logout', 'static'}
+
+
+class _Usuario(UserMixin):
+    """Usuário único do sistema. O id é o nome de usuário configurado."""
+    def __init__(self, user_id: str):
+        self.id = user_id
+
+
+@login_manager.user_loader
+def _load_user(user_id: str):
+    return _Usuario(user_id) if user_id == APP_USUARIO else None
+
+
+@app.before_request
+def _exigir_login():
+    if request.endpoint in _ENDPOINTS_PUBLICOS:
+        return
+    if not current_user.is_authenticated:
+        return redirect(url_for('login', next=request.path))
 
 
 @app.template_filter('brl')
@@ -209,6 +285,37 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 (DATA_DIR / 'banco').mkdir(parents=True, exist_ok=True)
 
 db.init_db()
+
+
+# ---------------------------------------------------------------------------
+# Rotas — Autenticação (STORY-01-06)
+# ---------------------------------------------------------------------------
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        usuario = request.form.get('usuario', '').strip()
+        senha   = request.form.get('senha', '')
+        if usuario == APP_USUARIO and check_password_hash(APP_SENHA_HASH, senha):
+            login_user(_Usuario(usuario), remember=True)
+            _log(f"Login bem-sucedido: {usuario}")
+            destino = request.args.get('next', '')
+            # Evita open redirect: só aceita caminhos internos (começam com '/' e não '//').
+            if not destino.startswith('/') or destino.startswith('//'):
+                destino = url_for('index')
+            return redirect(destino)
+        flash("Usuário ou senha incorretos.", "danger")
+        _log(f"Login falhou para usuário: {usuario!r}")
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    flash("Sessão encerrada.", "info")
+    return redirect(url_for('login'))
 
 
 # ---------------------------------------------------------------------------
