@@ -172,10 +172,22 @@ Fecha o vetor de acesso aberto — pré-requisito de segurança para a Fase H (w
 
 ---
 
-## 🔲 EPIC-01 — Sprint Zero (Pré-Fase H)
+## ✅ STORY-01-07 — First-run setup robusto (10/06/2026)
+
+Onboarding à prova de falhas — **fecha o EPIC-01**.
+
+- [x] `setup_inicial()` idempotente encapsula a criação da estrutura (antes solta no import)
+- [x] Passos: estrutura `C:\MATINE` → `db.init_db()` (schema + templates) → validação de deps
+- [x] `_checar_dependencias()` — mensagem amigável (`pip install -r requirements.txt`) sem stack trace cru
+- [x] Detecção de 1ª execução (ausência do banco) + sinalização no log e no banner
+- [x] `06_APP/README.md` reescrito com onboarding web atual (era da versão desktop antiga)
+
+---
+
+## ✅ EPIC-01 — Sprint Zero (Pré-Fase H) — COMPLETO (10/06/2026)
 
 Resolução de débitos técnicos críticos identificados no Brownfield Discovery.
-**Pré-requisito para Fase H.** Ver detalhes em `PLANO_DE_ACAO.md`.
+**Pré-requisito para a Fase H — agora satisfeito (7/7 stories).**
 
 | Story | Título | Esforço | Status |
 |-------|--------|---------|--------|
@@ -185,7 +197,7 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | ✅ 10/06 |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | ✅ 10/06 |
 | 01-06 | Autenticação Flask-Login (MVP) | ~6h | ✅ 10/06 |
-| 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | Pendente |
+| 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | ✅ 10/06 |
 
 ---
 

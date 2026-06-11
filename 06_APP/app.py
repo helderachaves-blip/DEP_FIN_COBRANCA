@@ -14,11 +14,31 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
+
+def _checar_dependencias():
+    """Mensagem amigável se faltar lib de terceiros, em vez de stack trace cru (STORY-01-07).
+
+    Roda antes de importar pandas/flask/etc., de modo que um ambiente sem as deps
+    receba uma instrução clara em vez de um ImportError no meio do arquivo.
+    """
+    import importlib.util
+    faltando = [p for p in ('flask', 'flask_login', 'pandas', 'openpyxl')
+                if importlib.util.find_spec(p) is None]
+    if faltando:
+        print("=" * 60)
+        print("  ERRO: dependências faltando: " + ", ".join(faltando))
+        print("  Instale com:  pip install -r requirements.txt")
+        print("=" * 60)
+        raise SystemExit(1)
+
+
+_checar_dependencias()
+
 import pandas as pd
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import (
     LoginManager, UserMixin, current_user,
-    login_required, login_user, logout_user,
+    login_user, logout_user,
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -35,6 +55,8 @@ UPLOADS_DIR = DATA_DIR / 'uploads'    # uploads/{EMPRESA}/{tipo}/  ← detecçã
 RELATORIOS  = DATA_DIR / 'relatorios' # relatorios/{EMPRESA}/{ano}/{mes}/{dia}/
 LOGS_DIR    = DATA_DIR / 'logs'
 ESTADO_DIR  = DATA_DIR / 'estado'
+BANCO_DIR   = DATA_DIR / 'banco'
+CRM_PASTA   = DATA_DIR / 'crm-exports'
 ENV_PATH    = Path(__file__).resolve().parent / '.env'
 
 
@@ -273,18 +295,40 @@ def _limpar_estado(empresa: str):
 
 
 # ---------------------------------------------------------------------------
-# Inicialização — cria estrutura C:\MATINE\ se não existir
+# Inicialização — setup idempotente da estrutura C:\MATINE\ (STORY-01-07)
 # ---------------------------------------------------------------------------
 
-for _emp in db.EMPRESAS:
-    for _tipo in ('vencidos', 'avencer', 'alunos', 'pagos_cancelados'):
-        (UPLOADS_DIR / _emp / _tipo).mkdir(parents=True, exist_ok=True)
-    (RELATORIOS / _emp).mkdir(parents=True, exist_ok=True)
-ESTADO_DIR.mkdir(parents=True, exist_ok=True)
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
-(DATA_DIR / 'banco').mkdir(parents=True, exist_ok=True)
+def setup_inicial() -> bool:
+    """Prepara o ambiente para rodar. Idempotente — seguro chamar a cada boot.
 
-db.init_db()
+    Passos:
+      1. Detecta primeira execução (ausência do banco).
+      2. Cria a estrutura de pastas em C:\\MATINE (uploads por empresa/tipo,
+         relatórios, estado, logs, banco, crm-exports).
+      3. db.init_db() — schema versionado (migrations) + templates padrão por empresa.
+      4. Loga a conclusão; sinaliza se foi a primeira execução.
+
+    Retorna True se esta foi a primeira execução (banco ainda não existia).
+    """
+    primeira_vez = not db.DB_PATH.exists()
+
+    for _emp in db.EMPRESAS:
+        for _tipo in ('vencidos', 'avencer', 'alunos', 'pagos_cancelados'):
+            (UPLOADS_DIR / _emp / _tipo).mkdir(parents=True, exist_ok=True)
+        (RELATORIOS / _emp).mkdir(parents=True, exist_ok=True)
+    for _dir in (ESTADO_DIR, LOGS_DIR, BANCO_DIR, CRM_PASTA):
+        _dir.mkdir(parents=True, exist_ok=True)
+
+    db.init_db()
+
+    if primeira_vez:
+        _log(f"Primeira execução: estrutura criada em {DATA_DIR} e banco inicializado.")
+    else:
+        _log("Setup verificado (estrutura e banco já existentes).")
+    return primeira_vez
+
+
+PRIMEIRA_EXECUCAO = setup_inicial()
 
 
 # ---------------------------------------------------------------------------
@@ -1159,9 +1203,6 @@ def email_enviar_todos():
 # Fase H — Planilha CRM
 # ---------------------------------------------------------------------------
 
-CRM_PASTA = DATA_DIR / 'crm-exports'
-
-
 @app.route('/crm/gerar-planilha', methods=['POST'])
 def crm_gerar_planilha():
     empresa = get_empresa()
@@ -1197,6 +1238,9 @@ def crm_gerar_planilha():
 if __name__ == '__main__':
     print("=" * 60)
     print("  Consolidador de Inadimplências — Multi-empresa")
+    if PRIMEIRA_EXECUCAO:
+        print(f"  ✓ Primeira execução: estrutura criada em {DATA_DIR}")
     print("  Acesse: http://localhost:5000")
+    print("  Login padrão: luana / matine2026  (troque em 06_APP/.env)")
     print("=" * 60)
     app.run(debug=False, host='127.0.0.1', port=5000)

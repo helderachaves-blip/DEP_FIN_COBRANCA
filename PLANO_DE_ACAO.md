@@ -9,8 +9,8 @@
 ## Estado Atual
 
 - **Branch:** `homologacao`
-- **Fase do produto:** Fases A–G concluídas. EPIC-01 (Sprint Zero) em andamento — **6 de 7 stories entregues** (01-01, 01-02, 01-03, 01-04, 01-05, 01-06). Falta só a 01-07.
-- **Último commit no remoto:** `855a58d` — rastreio do push da sessão 10/06 noite.
+- **Fase do produto:** Fases A–G concluídas. **EPIC-01 (Sprint Zero) COMPLETO — 7 de 7 stories entregues** (01-01 a 01-07). Próximo marco: **Fase H** (integrações automáticas).
+- **Último commit no remoto:** `d1c91ea` (será atualizado ao push da 01-07).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup; `.env` (gitignored) gerado na 1ª execução com a `FLASK_SECRET_KEY`.
 - **Sessão 10/06/2026 (manhã):** Correções de UI (R1/R2/B1/B2) + STORY-01-01 (Quick Wins) + STORY-01-02 (Indicadores de empresa). Nova STORY-01-07 (first-run setup) adicionada ao backlog.
 - **Sessão 10/06/2026 (tarde):** STORY-01-03 (Loading states) + STORY-01-05 (Schema migrations + índices + WAL) + STORY-01-04 (senha SMTP via keyring). Banco real de produção migrado (versionamento + WAL + senha movida ao keyring); backup `inadimplencia_backup_20260610_204730.db` criado. Regra de sincronia git↔plano adicionada ao frame global (`~/.claude/CLAUDE.md`).
@@ -67,9 +67,9 @@ Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcio
 | 01-04 | Proteger senha SMTP com Python Keyring | ~4h | ✅ Done |
 | 01-05 | Schema migrations + índices + WAL mode | ~12h | ✅ Done |
 | 01-06 | Autenticação Flask-Login (MVP — usuário único) | ~6h | ✅ Done |
-| 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | Draft |
+| 01-07 | First-run setup robusto (estrutura `C:\MATINE` + onboarding dev) | ~3h | ✅ Done |
 
-**Total estimado: ~40h**
+**Total estimado: ~40h — EPIC-01 COMPLETO (7/7) ✅**
 
 ---
 
@@ -121,19 +121,12 @@ Todos os débitos abaixo são pré-requisitos para a Fase H. Nenhuma nova funcio
 - **Desvio justificado:** `before_request` no lugar de `@login_required` por rota (ver Dev Notes da story)
 
 ### STORY-01-07 — First-run setup robusto (~3h)
-**Motivação:** projeto compartilhado com colaborador de desenvolvimento. Em outra máquina o
-caminho do projeto muda, mas o app usa `DATA_DIR = C:\MATINE` (fixo, `app.py:27`). A estrutura
-já é criada no startup (`app.py:182-190` + `db.init_db()`), então o colega só precisa de Python
-+ deps — o banco vazio é aceitável para dev. Esta story torna esse onboarding explícito e à prova de falhas.
-
-- Encapsular a criação atual (hoje no import do módulo) numa função `setup_inicial()` idempotente
-- Passos da função: (1) criar estrutura `C:\MATINE`, (2) `db.init_db()`, (3) semear templates
-  padrão por empresa, (4) validar dependências e exibir mensagem amigável no primeiro acesso
-  (em vez de stack trace cru)
-- Detectar "primeira execução" (ex.: ausência do banco) e logar/sinalizar setup concluído
-- Relação com 01-01: mover `secret_key` fixa (`app.py:38`) para `.env`
-- **Onboarding dev (documentar no README):** instalar Python 3.10+, `pip install -r requirements.txt`,
-  `python app.py`, acessar `http://localhost:5000` — estrutura criada automaticamente
+### STORY-01-07 — First-run setup robusto (~3h) — ✅ ENTREGUE (10/06/2026)
+- ✅ Função `setup_inicial()` idempotente encapsula a criação (antes solta no import); chamada uma vez via `PRIMEIRA_EXECUCAO = setup_inicial()`
+- ✅ Passos: (1) cria estrutura `C:\MATINE`, (2) `db.init_db()` (schema versionado + templates padrão), (3) seeding já idempotente dentro do init_db, (4) `_checar_dependencias()` com mensagem amigável (sem stack trace cru)
+- ✅ Detecção de 1ª execução pela ausência do banco; banner do `__main__` sinaliza + loga; retorna `True`/`False`
+- ✅ `06_APP/README.md` reescrito (onboarding web atual: Python 3.10+, deps, `python app.py`, login padrão, troca de senha)
+- **Notas:** seeding de templates já existia no `init_db`; `secret_key` já tinha ido para `.env` na 01-01 (nada a mover)
 
 ---
 
@@ -144,7 +137,7 @@ já é criada no startup (`app.py:182-190` + `db.init_db()`), então o colega s�
 01-05                    ✅ (banco — feito antes de 01-04 e 01-06)
 01-04                    ✅ (segurança — senha SMTP no keyring)
 01-06                    ✅ (autenticação Flask-Login)
-01-07                    ← PRÓXIMO (first-run setup robusto — FECHA o EPIC-01)
+01-07                    ✅ (first-run setup robusto — EPIC-01 FECHADO)
 ```
 
 ---
@@ -158,7 +151,10 @@ já é criada no startup (`app.py:182-190` + `db.init_db()`), então o colega s�
 5. ✅ STORY-01-05 (Schema migrations + índices + WAL) — entregue
 6. ✅ STORY-01-04 (Senha SMTP via Keyring) — entregue
 7. ✅ STORY-01-06 (Autenticação Flask-Login) — entregue
-8. Próxima: STORY-01-07 (First-run setup robusto) — **fecha o EPIC-01** e libera a Fase H
+8. ✅ STORY-01-07 (First-run setup robusto) — entregue → **EPIC-01 COMPLETO**
+9. Próxima sessão: iniciar **Fase H** (integrações automáticas). Recomendado começar
+   pelo PRD/spec da integração WhatsApp (escolha do provider: WAHA / Evolution / Z-API / Twilio)
+   antes de implementar — ver tabela "Fase H" abaixo.
 
 ---
 
