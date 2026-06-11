@@ -389,27 +389,39 @@ def logout():
 _SENHA_MIN = 6
 
 
-@app.route('/conta', methods=['GET', 'POST'])
+@app.route('/conta')
 def conta():
-    """Qualquer usuário logado troca a própria senha."""
-    if request.method == 'POST':
-        atual = request.form.get('senha_atual', '')
-        nova  = request.form.get('senha_nova', '')
-        conf  = request.form.get('senha_conf', '')
-        row = db.get_usuario_por_id(current_user.id)
-        if not row or not check_password_hash(row['senha_hash'], atual):
-            flash("Senha atual incorreta.", "danger")
-        elif len(nova) < _SENHA_MIN:
-            flash(f"A nova senha deve ter ao menos {_SENHA_MIN} caracteres.", "warning")
-        elif nova != conf:
-            flash("A confirmação não corresponde à nova senha.", "warning")
-        else:
-            db.atualizar_senha_usuario(current_user.id,
-                                       generate_password_hash(nova, method='pbkdf2:sha256'))
-            _log(f"Senha alterada pelo próprio usuário: {current_user.usuario}")
-            flash("✅ Senha alterada com sucesso.", "success")
-            return redirect(url_for('conta'))
+    """Minha conta — o usuário edita o próprio nome e troca a própria senha."""
     return render_template('conta.html')
+
+
+@app.route('/conta/nome', methods=['POST'])
+def conta_nome():
+    nome = request.form.get('nome', '').strip()
+    db.atualizar_nome_usuario(current_user.id, nome)
+    _log(f"Nome alterado pelo próprio usuário: {current_user.usuario}")
+    flash("✅ Nome atualizado.", "success")
+    return redirect(url_for('conta'))
+
+
+@app.route('/conta/senha', methods=['POST'])
+def conta_senha():
+    atual = request.form.get('senha_atual', '')
+    nova  = request.form.get('senha_nova', '')
+    conf  = request.form.get('senha_conf', '')
+    row = db.get_usuario_por_id(current_user.id)
+    if not row or not check_password_hash(row['senha_hash'], atual):
+        flash("Senha atual incorreta.", "danger")
+    elif len(nova) < _SENHA_MIN:
+        flash(f"A nova senha deve ter ao menos {_SENHA_MIN} caracteres.", "warning")
+    elif nova != conf:
+        flash("A confirmação não corresponde à nova senha.", "warning")
+    else:
+        db.atualizar_senha_usuario(current_user.id,
+                                   generate_password_hash(nova, method='pbkdf2:sha256'))
+        _log(f"Senha alterada pelo próprio usuário: {current_user.usuario}")
+        flash("✅ Senha alterada com sucesso.", "success")
+    return redirect(url_for('conta'))
 
 
 # ── Gestão de usuários (admin) ───────────────────────────────────────────────
@@ -439,16 +451,6 @@ def usuarios_criar():
             flash(f"✅ Usuário '{usuario}' criado.", "success")
         else:
             flash(erro, "danger")
-    return redirect(url_for('usuarios'))
-
-
-@app.route('/usuarios/<int:uid>/nome', methods=['POST'])
-@_admin_required
-def usuarios_editar_nome(uid):
-    nome = request.form.get('nome', '').strip()
-    db.atualizar_nome_usuario(uid, nome)
-    _log(f"Nome do usuário id={uid} alterado por {current_user.usuario}")
-    flash("✅ Nome atualizado.", "success")
     return redirect(url_for('usuarios'))
 
 

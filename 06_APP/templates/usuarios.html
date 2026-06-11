@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h2 class="mb-1"><i class="bi bi-people text-primary me-2"></i>Usuários</h2>
-    <p class="text-muted mb-0">Quem pode acessar o sistema. Administradores gerenciam usuários; todos podem trocar a própria senha em <a href="{{ url_for('conta') }}">Minha conta</a>.</p>
+    <p class="text-muted mb-0">Quem pode acessar o sistema. Administradores criam/removem usuários, redefinem senha e definem perfil; cada um edita o próprio nome e senha em <a href="{{ url_for('conta') }}">Minha conta</a>.</p>
   </div>
   <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovo">
     <i class="bi bi-person-plus me-1"></i>Novo usuário
@@ -38,11 +38,6 @@
           </td>
           <td class="text-muted small">{{ u.criado_em }}</td>
           <td class="text-end">
-            <!-- Editar nome -->
-            <button class="btn btn-sm btn-outline-secondary" title="Editar nome"
-                    data-bs-toggle="modal" data-bs-target="#modalNome{{ u.id }}">
-              <i class="bi bi-pencil"></i>
-            </button>
             <!-- Resetar senha -->
             <button class="btn btn-sm btn-outline-secondary" title="Redefinir senha"
                     data-bs-toggle="modal" data-bs-target="#modalSenha{{ u.id }}">
@@ -74,57 +69,37 @@
             {% endif %}
           </td>
         </tr>
-
-        <!-- Modal: editar nome deste usuário -->
-        <div class="modal fade" id="modalNome{{ u.id }}" tabindex="-1">
-          <div class="modal-dialog">
-            <form class="modal-content" method="POST"
-                  action="{{ url_for('usuarios_editar_nome', uid=u.id) }}" data-loading>
-              <div class="modal-header">
-                <h5 class="modal-title">Editar nome — {{ u.usuario }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-              <div class="modal-body">
-                <label class="form-label" for="nome{{ u.id }}">Nome de exibição</label>
-                <input type="text" class="form-control" id="nome{{ u.id }}" name="nome"
-                       value="{{ u.nome }}" autocomplete="off" maxlength="80">
-                <div class="form-text">É o nome mostrado no sistema. Se ficar em branco, o login é exibido.</div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary" data-loading-text="Salvando...">Salvar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Modal: redefinir senha deste usuário -->
-        <div class="modal fade" id="modalSenha{{ u.id }}" tabindex="-1">
-          <div class="modal-dialog">
-            <form class="modal-content" method="POST"
-                  action="{{ url_for('usuarios_resetar_senha', uid=u.id) }}" data-loading>
-              <div class="modal-header">
-                <h5 class="modal-title">Redefinir senha — {{ u.usuario }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-              <div class="modal-body">
-                <label class="form-label" for="senha{{ u.id }}">Nova senha</label>
-                <input type="password" class="form-control" id="senha{{ u.id }}" name="senha"
-                       minlength="6" autocomplete="new-password" required>
-                <div class="form-text">Mínimo de 6 caracteres. O usuário usará esta senha no próximo login.</div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary" data-loading-text="Salvando...">Redefinir</button>
-              </div>
-            </form>
-          </div>
-        </div>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+<!-- Modais de redefinir senha — FORA da tabela (dentro de <tbody> é HTML inválido
+     e o navegador "desmonta" o modal, causando popup transparente/quebrado). -->
+{% for u in usuarios %}
+<div class="modal fade" id="modalSenha{{ u.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST"
+          action="{{ url_for('usuarios_resetar_senha', uid=u.id) }}" data-loading>
+      <div class="modal-header">
+        <h5 class="modal-title">Redefinir senha — {{ u.usuario }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" for="senha{{ u.id }}">Nova senha</label>
+        <input type="password" class="form-control" id="senha{{ u.id }}" name="senha"
+               minlength="6" autocomplete="new-password" required>
+        <div class="form-text">Mínimo de 6 caracteres. O usuário usará esta senha no próximo login.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" data-loading-text="Salvando...">Redefinir</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
 
 <!-- Modal: novo usuário -->
 <div class="modal fade" id="modalNovo" tabindex="-1">

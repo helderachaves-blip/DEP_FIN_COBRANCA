@@ -10,10 +10,32 @@
   </p>
 </div>
 
+<div class="card mb-3" style="max-width: 480px;">
+  <div class="card-header"><i class="bi bi-person-badge me-1"></i> Meus dados</div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('conta_nome') }}" data-loading>
+      <div class="mb-3">
+        <label class="form-label" for="nome">Nome de exibição</label>
+        <input type="text" class="form-control" id="nome" name="nome"
+               value="{{ current_user.nome }}" autocomplete="off" maxlength="80">
+        <div class="form-text">É o nome mostrado no sistema. Se ficar em branco, seu login (<code>{{ current_user.usuario }}</code>) é exibido.</div>
+      </div>
+      <div class="mb-1">
+        <label class="form-label text-muted">Login</label>
+        <input type="text" class="form-control" value="{{ current_user.usuario }}" disabled>
+        <div class="form-text">O login não pode ser alterado.</div>
+      </div>
+      <button type="submit" class="btn btn-primary mt-2" data-loading-text="Salvando...">
+        <i class="bi bi-check-lg me-1"></i>Salvar nome
+      </button>
+    </form>
+  </div>
+</div>
+
 <div class="card" style="max-width: 480px;">
   <div class="card-header"><i class="bi bi-key me-1"></i> Alterar minha senha</div>
   <div class="card-body">
-    <form method="POST" action="{{ url_for('conta') }}" data-loading>
+    <form method="POST" action="{{ url_for('conta_senha') }}" data-loading>
       <div class="mb-3">
         <label class="form-label" for="senha_atual">Senha atual</label>
         <input type="password" class="form-control" id="senha_atual" name="senha_atual"
