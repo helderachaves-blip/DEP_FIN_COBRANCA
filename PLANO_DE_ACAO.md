@@ -15,7 +15,7 @@
 - **Extra (10/06 noite):** UI — cards de filtro rápido das abas **Base** e **Resultado** agora com altura/proporção uniformes (preenchem a coluna; rótulo reserva 2 linhas), independentemente do tamanho do texto. Em Resultado, o estilo mira só `.stat-card.stat-filtro` para não afetar o card totalizador.
 - **Extra (10/06 noite):** UX — **menu do usuário em dropdown no topbar** (canto superior direito): Minha conta, Usuários (admin), Central de Ajuda e Sair. Removidos da sidebar o rodapé (usuário/sair), a seção Suporte/Ajuda e o link Usuários do submenu Configurações.
 - **⚠️ Reiniciar o app** para ver as novidades (templates ficam em cache com `debug=False`).
-- **Último commit no remoto:** `fabd29e` (botão Editar nome na tela de Usuários).
+- **Último commit no remoto:** `1194c9f` (edição de nome em Minha conta + correção dos modais transparentes em Usuários).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup; `.env` (gitignored) gerado na 1ª execução com a `FLASK_SECRET_KEY`.
 - **Sessão 10/06/2026 (manhã):** Correções de UI (R1/R2/B1/B2) + STORY-01-01 (Quick Wins) + STORY-01-02 (Indicadores de empresa). Nova STORY-01-07 (first-run setup) adicionada ao backlog.
 - **Sessão 10/06/2026 (tarde):** STORY-01-03 (Loading states) + STORY-01-05 (Schema migrations + índices + WAL) + STORY-01-04 (senha SMTP via keyring). Banco real de produção migrado (versionamento + WAL + senha movida ao keyring); backup `inadimplencia_backup_20260610_204730.db` criado. Regra de sincronia git↔plano adicionada ao frame global (`~/.claude/CLAUDE.md`).
@@ -40,8 +40,9 @@ verificado em 10/06/2026 noite).
 - `96df728..adb0d02` — UX: dropdown só-ícone + espaçamento do login
 - `d4e7cee..9707c76` — fix: nome do admin no dropdown sem redundância (seed + dado luana)
 - `727e594..fabd29e` — feat: botão Editar nome na tela de Usuários
+- `4e53861..1194c9f` — fix: nome editável em Minha conta + modais de Usuários fora da tabela
 
-Topo do remoto = `fabd29e`. (recompute sempre com `git fetch` — não confie nesta lista.)
+Topo do remoto = `1194c9f`. (recompute sempre com `git fetch` — não confie nesta lista.)
 
 ---
 
