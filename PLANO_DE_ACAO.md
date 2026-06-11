@@ -17,21 +17,15 @@
 
 ---
 
-## O Que Está Pendente de Commit
+## O Que Está Pendente de Commit / Push
 
-Nada pendente de commit.
+Nada pendente de commit. **Nada aguardando push** — `origin/homologacao` e `HEAD`
+idênticos (`git rev-list --left-right --count origin/homologacao...HEAD` = `0  0`,
+verificado em 10/06/2026 noite).
 
-**Já no remoto** (`origin/homologacao`, confirmado via `git fetch`):
-- `0e88c5b` — correções de UI (R1/R2/B1/B2)
-- `2e73302` — STORY-01-01 (Quick Wins)
-- `6d641b9` — STORY-01-02 (Indicadores de empresa)
-
-**Aguardam push** (todos os commits em `origin/homologacao..HEAD`; recompute com
-`git fetch` — não confie nesta lista. Push é exclusivo do @devops). Commits de conteúdo:
-- `866b063` — STORY-01-03 (Loading states)
-- `38b4ccf` — STORY-01-05 (Schema migrations + índices + WAL)
-- `3511518` — STORY-01-04 (senha SMTP via keyring)
-- (+ commits `docs:` de rastreio que acompanham, incluindo este registro)
+**Último push** (sessão 10/06 noite, via @devops): `8d257a2..18909c9` — 9 commits,
+incluindo STORY-01-03, STORY-01-05, STORY-01-04 e commits `docs:` de rastreio.
+Topo do remoto = `18909c9`.
 
 ---
 
