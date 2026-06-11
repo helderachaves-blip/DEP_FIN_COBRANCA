@@ -2,6 +2,29 @@
 {% block title %}Resultado – Cobranças INE-MAT{% endblock %}
 {% block content %}
 
+<style>
+  /* Cards de filtro por categoria: alturas e proporções iguais, mesmo com
+     rótulos de tamanhos diferentes. Mira só `.stat-card.stat-filtro` para NÃO
+     afetar o card totalizador "Total de Inadimplentes" (que também é .stat-filtro). */
+  .stat-card.stat-filtro {
+    height: 100%;
+    min-height: 94px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: .7rem .6rem;
+  }
+  .stat-card.stat-filtro .stat-num { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+  .stat-card.stat-filtro .stat-label {
+    font-size: .8rem; line-height: 1.2; margin-top: .4rem; opacity: .95;
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: .2rem;
+    min-height: 2.4em;          /* reserva 2 linhas → todos os cards iguais */
+  }
+</style>
+
 {% if not linhas %}
   <div class="alert alert-warning">
     Nenhuma consolidação em curso. <a href="/">Volte ao início</a> e consolide primeiro.
