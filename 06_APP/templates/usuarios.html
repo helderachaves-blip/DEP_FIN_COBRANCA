@@ -1,0 +1,140 @@
+{% extends 'layout.html' %}
+{% block title %}Usuários – Cobranças INE-MAT{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="mb-1"><i class="bi bi-people text-primary me-2"></i>Usuários</h2>
+    <p class="text-muted mb-0">Quem pode acessar o sistema. Administradores gerenciam usuários; todos podem trocar a própria senha em <a href="{{ url_for('conta') }}">Minha conta</a>.</p>
+  </div>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovo">
+    <i class="bi bi-person-plus me-1"></i>Novo usuário
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Usuário</th>
+          <th>Nome</th>
+          <th class="text-center">Perfil</th>
+          <th>Criado em</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr>
+          <td><i class="bi bi-person me-1 text-muted"></i><strong>{{ u.usuario }}</strong></td>
+          <td>{{ u.nome or '—' }}</td>
+          <td class="text-center">
+            {% if u.is_admin %}
+              <span class="badge bg-primary">Administrador</span>
+            {% else %}
+              <span class="badge bg-secondary">Operador</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ u.criado_em }}</td>
+          <td class="text-end">
+            <!-- Resetar senha -->
+            <button class="btn btn-sm btn-outline-secondary" title="Redefinir senha"
+                    data-bs-toggle="modal" data-bs-target="#modalSenha{{ u.id }}">
+              <i class="bi bi-key"></i>
+            </button>
+            <!-- Promover / rebaixar -->
+            <form method="POST" action="{{ url_for('usuarios_toggle_admin', uid=u.id) }}"
+                  class="d-inline" data-loading>
+              <input type="hidden" name="is_admin" value="{{ '0' if u.is_admin else '1' }}">
+              <button class="btn btn-sm btn-outline-primary"
+                      title="{{ 'Rebaixar para Operador' if u.is_admin else 'Tornar Administrador' }}"
+                      data-loading-text="...">
+                <i class="bi {{ 'bi-arrow-down-circle' if u.is_admin else 'bi-arrow-up-circle' }}"></i>
+              </button>
+            </form>
+            <!-- Remover -->
+            {% if u.id|string != current_user.id %}
+            <form method="POST" action="{{ url_for('usuarios_remover', uid=u.id) }}"
+                  class="d-inline" data-loading
+                  onsubmit="return confirm('Remover o usuário {{ u.usuario }}? Esta ação não pode ser desfeita.')">
+              <button class="btn btn-sm btn-outline-danger" title="Remover" data-loading-text="...">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+            {% else %}
+            <button class="btn btn-sm btn-outline-danger" disabled title="Você não pode remover a própria conta">
+              <i class="bi bi-trash"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+
+        <!-- Modal: redefinir senha deste usuário -->
+        <div class="modal fade" id="modalSenha{{ u.id }}" tabindex="-1">
+          <div class="modal-dialog">
+            <form class="modal-content" method="POST"
+                  action="{{ url_for('usuarios_resetar_senha', uid=u.id) }}" data-loading>
+              <div class="modal-header">
+                <h5 class="modal-title">Redefinir senha — {{ u.usuario }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <label class="form-label" for="senha{{ u.id }}">Nova senha</label>
+                <input type="password" class="form-control" id="senha{{ u.id }}" name="senha"
+                       minlength="6" autocomplete="new-password" required>
+                <div class="form-text">Mínimo de 6 caracteres. O usuário usará esta senha no próximo login.</div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" data-loading-text="Salvando...">Redefinir</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: novo usuário -->
+<div class="modal fade" id="modalNovo" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="{{ url_for('usuarios_criar') }}" data-loading>
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-person-plus me-1"></i>Novo usuário</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="novo_usuario">Login *</label>
+          <input type="text" class="form-control" id="novo_usuario" name="usuario"
+                 autocomplete="off" required>
+          <div class="form-text">Usado para entrar no sistema. Sem espaços.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="novo_nome">Nome</label>
+          <input type="text" class="form-control" id="novo_nome" name="nome" autocomplete="off">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="nova_senha">Senha *</label>
+          <input type="password" class="form-control" id="nova_senha" name="senha"
+                 minlength="6" autocomplete="new-password" required>
+          <div class="form-text">Mínimo de 6 caracteres.</div>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="novo_admin" name="is_admin" value="1">
+          <label class="form-check-label" for="novo_admin">
+            Administrador <span class="text-muted">(pode gerenciar usuários)</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" data-loading-text="Criando...">Criar usuário</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

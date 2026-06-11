@@ -38,10 +38,12 @@
       gap: .5rem;
     }
     .sidebar-user {
-      color: rgba(255,255,255,.6); font-size: .8rem;
+      color: rgba(255,255,255,.6); font-size: .8rem; text-decoration: none;
       display: flex; align-items: center; gap: .4rem;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      overflow: hidden; white-space: nowrap; transition: color .15s;
     }
+    .sidebar-user span { overflow: hidden; text-overflow: ellipsis; }
+    .sidebar-user:hover, .sidebar-user.active { color: #a0c4ff; }
     .sidebar-logout {
       color: rgba(255,255,255,.55); text-decoration: none;
       font-size: .8rem; font-weight: 600; white-space: nowrap;
@@ -232,6 +234,11 @@
       <a class="nav-sublink" href="/configuracoes#tab-risco">
         <i class="bi bi-dot"></i>Zona de Risco
       </a>
+      {% if current_user.is_authenticated and current_user.is_admin %}
+      <a class="nav-sublink {% if request.endpoint == 'usuarios' %}active{% endif %}" href="{{ url_for('usuarios') }}">
+        <i class="bi bi-dot"></i>Usuários
+      </a>
+      {% endif %}
     </div>
 
     <div class="nav-section">Suporte</div>
@@ -242,9 +249,10 @@
   </nav>
 
   <div class="sidebar-footer">
-    <span class="sidebar-user">
-      <i class="bi bi-person-circle"></i>{{ current_user.id if current_user.is_authenticated else '' }}
-    </span>
+    <a class="sidebar-user {% if request.endpoint == 'conta' %}active{% endif %}"
+       href="{{ url_for('conta') }}" title="Minha conta (trocar senha)">
+      <i class="bi bi-person-circle"></i><span>{{ current_user.nome if current_user.is_authenticated else '' }}</span>
+    </a>
     <a class="sidebar-logout" href="{{ url_for('logout') }}" title="Sair">
       <i class="bi bi-box-arrow-right"></i> Sair
     </a>

@@ -1,0 +1,39 @@
+{% extends 'layout.html' %}
+{% block title %}Minha conta – Cobranças INE-MAT{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h2 class="mb-1"><i class="bi bi-person-circle text-primary me-2"></i>Minha conta</h2>
+  <p class="text-muted mb-0">
+    Você está logado como <strong>{{ current_user.nome }}</strong>
+    (<code>{{ current_user.usuario }}</code>){% if current_user.is_admin %} — <span class="badge bg-primary">Administrador</span>{% endif %}.
+  </p>
+</div>
+
+<div class="card" style="max-width: 480px;">
+  <div class="card-header"><i class="bi bi-key me-1"></i> Alterar minha senha</div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('conta') }}" data-loading>
+      <div class="mb-3">
+        <label class="form-label" for="senha_atual">Senha atual</label>
+        <input type="password" class="form-control" id="senha_atual" name="senha_atual"
+               autocomplete="current-password" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="senha_nova">Nova senha</label>
+        <input type="password" class="form-control" id="senha_nova" name="senha_nova"
+               autocomplete="new-password" minlength="6" required>
+        <div class="form-text">Mínimo de 6 caracteres.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="senha_conf">Confirmar nova senha</label>
+        <input type="password" class="form-control" id="senha_conf" name="senha_conf"
+               autocomplete="new-password" minlength="6" required>
+      </div>
+      <button type="submit" class="btn btn-primary" data-loading-text="Salvando...">
+        <i class="bi bi-check-lg me-1"></i>Salvar nova senha
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

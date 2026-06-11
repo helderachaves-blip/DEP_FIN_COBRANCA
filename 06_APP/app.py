@@ -10,6 +10,7 @@ import secrets
 import shutil
 import smtplib
 from datetime import datetime, timedelta
+from functools import wraps
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -138,14 +139,18 @@ _ENDPOINTS_PUBLICOS = {'login', 'logout', 'static'}
 
 
 class _Usuario(UserMixin):
-    """Usuário único do sistema. O id é o nome de usuário configurado."""
-    def __init__(self, user_id: str):
-        self.id = user_id
+    """Usuário carregado da tabela `usuarios` (migration 007)."""
+    def __init__(self, row: dict):
+        self.id = str(row['id'])
+        self.usuario = row['usuario']
+        self.nome = row['nome'] or row['usuario']
+        self.is_admin = bool(row['is_admin'])
 
 
 @login_manager.user_loader
 def _load_user(user_id: str):
-    return _Usuario(user_id) if user_id == APP_USUARIO else None
+    row = db.get_usuario_por_id(user_id)
+    return _Usuario(row) if row else None
 
 
 @app.before_request
@@ -154,6 +159,17 @@ def _exigir_login():
         return
     if not current_user.is_authenticated:
         return redirect(url_for('login', next=request.path))
+
+
+def _admin_required(f):
+    """Restringe a rota a administradores (current_user.is_admin)."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not getattr(current_user, 'is_admin', False):
+            flash("Acesso restrito a administradores.", "warning")
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return wrapper
 
 
 @app.template_filter('brl')
@@ -321,6 +337,12 @@ def setup_inicial() -> bool:
 
     db.init_db()
 
+    # Bootstrap da autenticação multi-usuário (migration 007): se a tabela `usuarios`
+    # estiver vazia, cria o admin inicial a partir das credenciais do .env (APP_USUARIO/
+    # APP_SENHA). A partir daí a gestão é feita pela tela /usuarios.
+    if db.seed_usuario_admin(APP_USUARIO, 'Administrador', APP_SENHA_HASH):
+        _log(f"Usuário admin inicial criado: {APP_USUARIO}")
+
     if primeira_vez:
         _log(f"Primeira execução: estrutura criada em {DATA_DIR} e banco inicializado.")
     else:
@@ -342,8 +364,9 @@ def login():
     if request.method == 'POST':
         usuario = request.form.get('usuario', '').strip()
         senha   = request.form.get('senha', '')
-        if usuario == APP_USUARIO and check_password_hash(APP_SENHA_HASH, senha):
-            login_user(_Usuario(usuario), remember=True)
+        row = db.get_usuario_por_login(usuario)
+        if row and check_password_hash(row['senha_hash'], senha):
+            login_user(_Usuario(row), remember=True)
             _log(f"Login bem-sucedido: {usuario}")
             destino = request.args.get('next', '')
             # Evita open redirect: só aceita caminhos internos (começam com '/' e não '//').
@@ -360,6 +383,101 @@ def logout():
     logout_user()
     flash("Sessão encerrada.", "info")
     return redirect(url_for('login'))
+
+
+_SENHA_MIN = 6
+
+
+@app.route('/conta', methods=['GET', 'POST'])
+def conta():
+    """Qualquer usuário logado troca a própria senha."""
+    if request.method == 'POST':
+        atual = request.form.get('senha_atual', '')
+        nova  = request.form.get('senha_nova', '')
+        conf  = request.form.get('senha_conf', '')
+        row = db.get_usuario_por_id(current_user.id)
+        if not row or not check_password_hash(row['senha_hash'], atual):
+            flash("Senha atual incorreta.", "danger")
+        elif len(nova) < _SENHA_MIN:
+            flash(f"A nova senha deve ter ao menos {_SENHA_MIN} caracteres.", "warning")
+        elif nova != conf:
+            flash("A confirmação não corresponde à nova senha.", "warning")
+        else:
+            db.atualizar_senha_usuario(current_user.id,
+                                       generate_password_hash(nova, method='pbkdf2:sha256'))
+            _log(f"Senha alterada pelo próprio usuário: {current_user.usuario}")
+            flash("✅ Senha alterada com sucesso.", "success")
+            return redirect(url_for('conta'))
+    return render_template('conta.html')
+
+
+# ── Gestão de usuários (admin) ───────────────────────────────────────────────
+
+@app.route('/usuarios')
+@_admin_required
+def usuarios():
+    return render_template('usuarios.html', usuarios=db.listar_usuarios())
+
+
+@app.route('/usuarios/criar', methods=['POST'])
+@_admin_required
+def usuarios_criar():
+    usuario  = request.form.get('usuario', '').strip()
+    nome     = request.form.get('nome', '').strip()
+    senha    = request.form.get('senha', '')
+    is_admin = request.form.get('is_admin') == '1'
+    if not usuario or not senha:
+        flash("Usuário e senha são obrigatórios.", "warning")
+    elif len(senha) < _SENHA_MIN:
+        flash(f"A senha deve ter ao menos {_SENHA_MIN} caracteres.", "warning")
+    else:
+        ok, erro = db.criar_usuario(
+            usuario, nome, generate_password_hash(senha, method='pbkdf2:sha256'), is_admin)
+        if ok:
+            _log(f"Usuário criado por {current_user.usuario}: {usuario} (admin={is_admin})")
+            flash(f"✅ Usuário '{usuario}' criado.", "success")
+        else:
+            flash(erro, "danger")
+    return redirect(url_for('usuarios'))
+
+
+@app.route('/usuarios/<int:uid>/senha', methods=['POST'])
+@_admin_required
+def usuarios_resetar_senha(uid):
+    senha = request.form.get('senha', '')
+    if len(senha) < _SENHA_MIN:
+        flash(f"A senha deve ter ao menos {_SENHA_MIN} caracteres.", "warning")
+    else:
+        db.atualizar_senha_usuario(uid, generate_password_hash(senha, method='pbkdf2:sha256'))
+        _log(f"Senha redefinida por {current_user.usuario} para o usuário id={uid}")
+        flash("✅ Senha redefinida.", "success")
+    return redirect(url_for('usuarios'))
+
+
+@app.route('/usuarios/<int:uid>/admin', methods=['POST'])
+@_admin_required
+def usuarios_toggle_admin(uid):
+    tornar = request.form.get('is_admin') == '1'
+    if not tornar and db.is_ultimo_admin(uid):
+        flash("Não é possível remover o último administrador.", "warning")
+    else:
+        db.set_usuario_admin(uid, tornar)
+        flash("Permissão atualizada.", "success")
+    return redirect(url_for('usuarios'))
+
+
+@app.route('/usuarios/<int:uid>/remover', methods=['POST'])
+@_admin_required
+def usuarios_remover(uid):
+    if str(uid) == str(current_user.id):
+        flash("Você não pode remover a própria conta.", "warning")
+    elif db.is_ultimo_admin(uid):
+        flash("Não é possível remover o último administrador.", "warning")
+    else:
+        db.remover_usuario(uid)
+        _log(f"Usuário id={uid} removido por {current_user.usuario}")
+        flash("Usuário removido.", "info")
+    return redirect(url_for('usuarios'))
 
 
 # ---------------------------------------------------------------------------

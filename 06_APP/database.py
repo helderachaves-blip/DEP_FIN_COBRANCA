@@ -599,3 +599,97 @@ def salvar_assunto_template(template_id: int, assunto: str, empresa: str):
             (assunto, template_id, empresa)
         )
         conn.commit()
+
+
+# ── Usuários (autenticação multi-usuário, migration 007) ─────────────────────
+
+def seed_usuario_admin(usuario: str, nome: str, senha_hash: str) -> bool:
+    """Cria o primeiro admin se a tabela `usuarios` estiver vazia. Idempotente.
+
+    Bootstrap da autenticação: na primeira vez, o usuário/senha do .env vira o
+    admin inicial — assim ninguém fica trancado para fora ao migrar do modelo
+    de usuário único para multi-usuário. Retorna True se criou.
+    """
+    with get_conn() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]
+        if total == 0:
+            conn.execute(
+                "INSERT INTO usuarios (usuario, nome, senha_hash, is_admin) VALUES (?,?,?,1)",
+                (usuario, nome or usuario, senha_hash)
+            )
+            conn.commit()
+            return True
+    return False
+
+
+def get_usuario_por_login(usuario: str) -> dict | None:
+    """Usuário ativo pelo login (para autenticar). None se não existe/inativo."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM usuarios WHERE usuario = ? AND ativo = 1", (usuario,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_usuario_por_id(user_id) -> dict | None:
+    """Usuário ativo pelo id (para o user_loader do Flask-Login)."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM usuarios WHERE id = ? AND ativo = 1", (user_id,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def listar_usuarios() -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, usuario, nome, is_admin, ativo, criado_em "
+            "FROM usuarios ORDER BY is_admin DESC, usuario ASC"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def criar_usuario(usuario: str, nome: str, senha_hash: str,
+                  is_admin: bool = False) -> tuple[bool, str]:
+    """Cria um usuário. Retorna (ok, mensagem_de_erro)."""
+    try:
+        with get_conn() as conn:
+            conn.execute(
+                "INSERT INTO usuarios (usuario, nome, senha_hash, is_admin) VALUES (?,?,?,?)",
+                (usuario, nome, senha_hash, 1 if is_admin else 0)
+            )
+            conn.commit()
+        return True, ""
+    except sqlite3.IntegrityError:
+        return False, f"Já existe um usuário com o login '{usuario}'."
+
+
+def atualizar_senha_usuario(user_id, senha_hash: str):
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET senha_hash = ? WHERE id = ?", (senha_hash, user_id))
+        conn.commit()
+
+
+def set_usuario_admin(user_id, is_admin: bool):
+    with get_conn() as conn:
+        conn.execute("UPDATE usuarios SET is_admin = ? WHERE id = ?",
+                     (1 if is_admin else 0, user_id))
+        conn.commit()
+
+
+def remover_usuario(user_id):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+        conn.commit()
+
+
+def is_ultimo_admin(user_id) -> bool:
+    """True se este usuário é admin e é o único admin ativo (proteção anti-lockout)."""
+    with get_conn() as conn:
+        row = conn.execute("SELECT is_admin FROM usuarios WHERE id = ?", (user_id,)).fetchone()
+        if not row or not row['is_admin']:
+            return False
+        admins = conn.execute(
+            "SELECT COUNT(*) FROM usuarios WHERE is_admin = 1 AND ativo = 1"
+        ).fetchone()[0]
+    return admins <= 1

@@ -213,6 +213,19 @@ Suporte embutido no sistema — reduz dependência de Edilvo/Helder para dúvida
 
 ---
 
+## ✅ Gestão de Múltiplos Usuários (10/06/2026)
+
+Evolução da autenticação de usuário único (STORY-01-06) para multi-usuário no banco.
+
+- [x] Migration `007_add_usuarios` — tabela `usuarios` (login único, nome, hash, is_admin, ativo)
+- [x] Autenticação migrada do `.env` para o banco (login + user_loader); `.env` vira só semente do 1º admin
+- [x] Tela `/usuarios` (admin): criar, redefinir senha, promover/rebaixar, remover
+- [x] Tela `/conta` (todos): trocar a própria senha (confere senha atual)
+- [x] Proteções anti-lockout: não remover/rebaixar o último admin nem a própria conta
+- [x] Sidebar: "Usuários" (admin) + nome do usuário → "Minha conta"
+
+---
+
 ## 🔲 FASE H — Integrações Automáticas (após EPIC-01)
 
 - [ ] WhatsApp automático via WAHA / Evolution API / Z-API / Twilio
@@ -242,7 +255,7 @@ Observações e aprendizados do uso real. Serão tratados após Fase H como back
 
 - **Negativação automática:** Estava no plano original. Clientes acima de 30 dias sem resposta entrariam em fluxo de negativação. Requer conformidade legal e parceiro de negativação (Serasa, SPC).
 
-- **Multi-usuário:** Hoje o app é mono-usuário (Flask-Login MVP com usuário único). Com crescimento da equipe de cobranças, precisará de usuários por empresa com permissões distintas.
+- **Multi-usuário — permissões granulares:** A base multi-usuário já existe (tabela `usuarios`, perfis admin/operador). Evolução futura: usuários **por empresa** e permissões mais finas por função (ex.: operador que só envia, não configura).
 
 ### Técnico
 

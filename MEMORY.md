@@ -137,6 +137,9 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 | `config_email` | Config SMTP por empresa. **Senha NÃO fica aqui** — vai para o keyring (Windows Credential Store); a coluna `smtp_senha` guarda só o marcador `[keyring]` (STORY-01-04) |
 | `historico_atualizacoes` | Log de atualizações da base |
 | `schema_migrations` | Controle de versão do schema (version, name, applied_at) — STORY-01-05 |
+| `usuarios` | Login por pessoa (usuario único, nome, senha_hash pbkdf2, is_admin, ativo) — STORY-MULTIUSUARIO (migration 007) |
+
+**Autenticação (STORY-01-06 → STORY-MULTIUSUARIO):** multi-usuário via tabela `usuarios`. Login/`user_loader` consultam o banco; senha sempre hash pbkdf2. O `.env` (`APP_USUARIO`/`APP_SENHA`) serve **só como semente** do 1º admin na tabela vazia — depois disso a gestão é pela tela `/usuarios` (admin) e cada um troca a própria senha em `/conta`. Admin default inicial: `luana` / `matine2026` (trocar em produção). Proteções anti-lockout: não remover/rebaixar o último admin nem a própria conta.
 
 **Migrations (STORY-01-05):** o schema é versionado em `06_APP/migrations/` (scripts `001`–`006`, cada um com `up`/`down`). `init_db()` aplica só as pendentes via `migrations/runner.py` (atômicas, BEGIN/COMMIT por script). `get_conn()` habilita **WAL** + `foreign_keys=ON`. Banco sem `schema_migrations` é tratado como legado (001–004 marcadas sem re-executar). Nova migration = novo arquivo `NNN_nome.py` com `version` crescente.
 
