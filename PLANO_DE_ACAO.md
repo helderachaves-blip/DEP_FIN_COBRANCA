@@ -17,7 +17,7 @@
 - **Extra (10/06 noite):** **Suíte de testes (pytest)** — 49 testes cobrindo processing, migrations, auth, multiusuário e Minha conta; banco isolado via `MATINE_DATA_DIR` (nunca toca produção). `cd 06_APP && pip install -r requirements-dev.txt && pytest`. Ver `docs/stories/story-suite-testes.md`.
 - **Extra (10/06 noite):** **Backup do banco** (`06_APP/backup_db.py`) — cópia consistente (WAL-safe) com retenção; backups em `C:\MATINE\backups\`. 3 testes; primeiro backup real criado. Agendável no Agendador de Tarefas.
 - **⚠️ Reiniciar o app** para ver as novidades de UI (templates ficam em cache com `debug=False`).
-- **Último commit no remoto:** `c8361b0` (será atualizado ao push do backup).
+- **Último commit no remoto:** `da9d404` (script de backup do banco).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup; `.env` (gitignored) gerado na 1ª execução com a `FLASK_SECRET_KEY`.
 - **Sessão 10/06/2026 (manhã):** Correções de UI (R1/R2/B1/B2) + STORY-01-01 (Quick Wins) + STORY-01-02 (Indicadores de empresa). Nova STORY-01-07 (first-run setup) adicionada ao backlog.
 - **Sessão 10/06/2026 (tarde):** STORY-01-03 (Loading states) + STORY-01-05 (Schema migrations + índices + WAL) + STORY-01-04 (senha SMTP via keyring). Banco real de produção migrado (versionamento + WAL + senha movida ao keyring); backup `inadimplencia_backup_20260610_204730.db` criado. Regra de sincronia git↔plano adicionada ao frame global (`~/.claude/CLAUDE.md`).
@@ -44,8 +44,9 @@ verificado em 10/06/2026 noite).
 - `727e594..fabd29e` — feat: botão Editar nome na tela de Usuários
 - `4e53861..1194c9f` — fix: nome editável em Minha conta + modais de Usuários fora da tabela
 - `c6c3ac3..c8361b0` — test: suíte pytest (49 testes) + banco isolável via `MATINE_DATA_DIR`
+- `bb07364..da9d404` — feat: script de backup do banco com retenção (+3 testes)
 
-Topo do remoto = `c8361b0`. (recompute sempre com `git fetch` — não confie nesta lista.)
+Topo do remoto = `da9d404`. (recompute sempre com `git fetch` — não confie nesta lista.)
 
 ---
 
