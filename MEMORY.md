@@ -141,7 +141,7 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 
 **Autenticação (STORY-01-06 → STORY-MULTIUSUARIO):** multi-usuário via tabela `usuarios`. Login/`user_loader` consultam o banco; senha sempre hash pbkdf2. O `.env` (`APP_USUARIO`/`APP_SENHA`) serve **só como semente** do 1º admin na tabela vazia — depois disso a gestão é pela tela `/usuarios` (admin) e cada um troca a própria senha em `/conta`. Admin default inicial: `luana` / `matine2026` (trocar em produção). Proteções anti-lockout: não remover/rebaixar o último admin nem a própria conta.
 
-**Migrations (STORY-01-05):** o schema é versionado em `06_APP/migrations/` (scripts `001`–`006`, cada um com `up`/`down`). `init_db()` aplica só as pendentes via `migrations/runner.py` (atômicas, BEGIN/COMMIT por script). `get_conn()` habilita **WAL** + `foreign_keys=ON`. Banco sem `schema_migrations` é tratado como legado (001–004 marcadas sem re-executar). Nova migration = novo arquivo `NNN_nome.py` com `version` crescente.
+**Migrations (STORY-01-05):** o schema é versionado em `06_APP/migrations/` (scripts `001`–`007`, cada um com `up`/`down`; 007 = tabela `usuarios`). `init_db()` aplica só as pendentes via `migrations/runner.py` (atômicas, BEGIN/COMMIT por script). `get_conn()` habilita **WAL** + `foreign_keys=ON`. Banco sem `schema_migrations` é tratado como legado (001–004 marcadas sem re-executar). Nova migration = novo arquivo `NNN_nome.py` com `version` crescente.
 
 ---
 
@@ -149,12 +149,18 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 
 | Rota | Descrição |
 |------|-----------|
+| `/login` · `/logout` | Autenticação (público); guard `before_request` protege o resto |
 | `/` | Início — upload e consolidação |
 | `/resultado` | Resultado da consolidação com filtros |
 | `/envio-mensagens` | Wizard de envio (WhatsApp + E-mail) |
 | `/base` | Base de inadimplentes persistida |
 | `/configuracoes` | Templates, SMTP, Régua, Clientes, Zona de Risco |
 | `/crm/gerar-planilha` | Gera XLSX de tagging Kommo |
+| `/ajuda` | Central de Ajuda (índice lateral + conteúdo por tela) |
+| `/conta` · `/conta/nome` · `/conta/senha` | Minha conta — edita o próprio nome e senha |
+| `/usuarios` (+ `/criar`, `/<id>/senha`, `/<id>/admin`, `/<id>/remover`) | Gestão de usuários (admin) |
+
+Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Minha conta, Usuários (admin), Central de Ajuda, Sair.
 
 ---
 
@@ -162,16 +168,23 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 
 | Arquivo | Responsabilidade |
 |---------|-----------------|
-| `06_APP/app.py` | Rotas Flask, lógica de negócio |
-| `06_APP/database.py` | SQLite — `get_conn` (WAL+FK), `init_db` (runner), queries |
-| `06_APP/migrations/` | Migrations versionadas (`runner.py` + `001`–`006`) — STORY-01-05 |
+| `06_APP/app.py` | Rotas Flask, lógica de negócio, autenticação (Flask-Login), `setup_inicial()` |
+| `06_APP/database.py` | SQLite — `get_conn` (WAL+FK), `init_db` (runner), queries, usuários. `DATA_DIR`/`DB_PATH` leem `MATINE_DATA_DIR` (default `C:\MATINE`) |
+| `06_APP/migrations/` | Migrations versionadas (`runner.py` + `001`–`007`; 007 = `usuarios`) |
 | `06_APP/processing.py` | Consolidação, geração de TXT/XLSX/CRM |
-| `06_APP/templates/layout.html` | Sidebar, topbar, CSS global (Bootstrap 5.3.3) |
+| `06_APP/backup_db.py` | Backup do banco com retenção (WAL-safe, `--keep`) |
+| `06_APP/templates/layout.html` | Sidebar, topbar, dropdown do usuário, CSS global (Bootstrap 5.3.3) |
+| `06_APP/templates/login.html` | Tela de login standalone (sem sidebar) |
 | `06_APP/templates/index.html` | Upload + ações de consolidação |
 | `06_APP/templates/resultado.html` | Tabela de resultado com filtros |
 | `06_APP/templates/envio_mensagens.html` | Wizard de envio (WhatsApp + E-mail) |
 | `06_APP/templates/base.html` | Base persistida com cards de filtro |
 | `06_APP/templates/configuracoes.html` | Configurações gerais |
+| `06_APP/templates/ajuda.html` | Central de Ajuda |
+| `06_APP/templates/usuarios.html` · `conta.html` | Gestão de usuários (admin) · Minha conta |
+| `06_APP/conftest.py` · `pytest.ini` · `tests/` | Suíte de testes pytest (banco isolado via `MATINE_DATA_DIR`) |
+
+**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (52 testes; nunca tocam produção).
 
 ---
 
