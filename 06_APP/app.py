@@ -818,6 +818,12 @@ def limpar():
     return redirect(url_for('index'))
 
 
+@app.route('/ajuda')
+def ajuda():
+    """Central de Ajuda — explica, em linguagem operacional, como usar cada tela."""
+    return render_template('ajuda.html')
+
+
 # ---------------------------------------------------------------------------
 # Fase F — Wizard de Envio WhatsApp
 # ---------------------------------------------------------------------------

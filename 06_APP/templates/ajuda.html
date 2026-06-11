@@ -1,0 +1,231 @@
+{% extends 'layout.html' %}
+{% block title %}Ajuda – Cobranças INE-MAT{% endblock %}
+
+{% block content %}
+<style>
+  .ajuda-wrap { display: flex; gap: 1.5rem; align-items: flex-start; }
+  .ajuda-nav {
+    position: sticky; top: 4.5rem;
+    min-width: 210px; max-width: 210px;
+    font-size: .9rem;
+  }
+  .ajuda-nav .nav-title {
+    font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: #8a8a9a; padding: 0 .25rem .5rem;
+  }
+  .ajuda-nav .nav-link {
+    color: #555; padding: .4rem .75rem; border-radius: 8px;
+    display: flex; align-items: center; gap: .5rem; border-left: 3px solid transparent;
+  }
+  .ajuda-nav .nav-link:hover { background: #eef1f8; color: #1a1a2e; }
+  .ajuda-nav .nav-link.active {
+    background: rgba(160,196,255,.18); color: #1565C0;
+    font-weight: 600; border-left: 3px solid #1565C0;
+  }
+  .ajuda-content { flex: 1; max-width: 820px; }
+  .ajuda-sec { scroll-margin-top: 4.5rem; margin-bottom: 2.5rem; }
+  .ajuda-sec h3 {
+    display: flex; align-items: center; gap: .6rem;
+    font-size: 1.25rem; font-weight: 700; color: #1a1a2e;
+    padding-bottom: .5rem; border-bottom: 2px solid #eef1f8; margin-bottom: 1rem;
+  }
+  .ajuda-sec h3 i { color: #1565C0; }
+  .ajuda-sec ol, .ajuda-sec ul { padding-left: 1.2rem; }
+  .ajuda-sec li { margin-bottom: .5rem; line-height: 1.55; }
+  .ajuda-sec .lead-text { color: #555; margin-bottom: 1rem; }
+  .ajuda-tip {
+    background: #fff8e1; border-left: 4px solid #ffa726;
+    padding: .7rem 1rem; border-radius: 8px; font-size: .9rem; margin: 1rem 0;
+  }
+  .ajuda-tip i { color: #e65100; }
+  kbd-btn {
+    display: inline-block; background: #1a1a2e; color: #fff;
+    padding: .05rem .5rem; border-radius: 6px; font-size: .82rem; font-weight: 600;
+  }
+  @media (max-width: 820px) { .ajuda-nav { display: none; } }
+</style>
+
+<div class="mb-4">
+  <h2 class="mb-1"><i class="bi bi-question-circle text-primary me-2"></i>Central de Ajuda</h2>
+  <p class="text-muted mb-0">Como usar cada tela do sistema, passo a passo. Use <kbd>Ctrl</kbd>+<kbd>F</kbd> para buscar um assunto.</p>
+</div>
+
+<div class="ajuda-wrap">
+
+  <!-- Índice lateral -->
+  <nav id="ajuda-nav" class="ajuda-nav nav flex-column">
+    <div class="nav-title">Telas</div>
+    <a class="nav-link" href="#visao-geral"><i class="bi bi-compass"></i> Visão geral</a>
+    <a class="nav-link" href="#inicio"><i class="bi bi-house"></i> Início</a>
+    <a class="nav-link" href="#resultado"><i class="bi bi-table"></i> Resultado</a>
+    <a class="nav-link" href="#envio"><i class="bi bi-whatsapp"></i> Envio de Mensagens</a>
+    <a class="nav-link" href="#base"><i class="bi bi-database"></i> Base</a>
+    <a class="nav-link" href="#configuracoes"><i class="bi bi-gear"></i> Configurações</a>
+    <a class="nav-link" href="#duvidas"><i class="bi bi-life-preserver"></i> Dúvidas frequentes</a>
+  </nav>
+
+  <!-- Conteúdo -->
+  <div class="ajuda-content" data-bs-spy="scroll" data-bs-target="#ajuda-nav" tabindex="0">
+
+    <!-- VISÃO GERAL -->
+    <section id="visao-geral" class="ajuda-sec">
+      <h3><i class="bi bi-compass"></i>Visão geral</h3>
+      <p class="lead-text">O sistema organiza a cobrança de inadimplentes de duas empresas
+        (<strong>Ineprotec</strong> e <strong>Matrícula EaD</strong>) em um fluxo simples:
+        importar os arquivos → consolidar → enviar as mensagens → atualizar a base.</p>
+      <ul>
+        <li><strong>Entrar e sair:</strong> você acessa com usuário e senha. Para sair, use o botão
+          <kbd-btn><i class="bi bi-box-arrow-right"></i> Sair</kbd-btn> no rodapé da barra lateral esquerda.</li>
+        <li><strong>Escolher a empresa:</strong> no topo da tela há um botão
+          <kbd-btn>Ineprotec | Mat. EaD</kbd-btn>. Cada empresa tem seus próprios dados, arquivos e
+          mensagens. <strong>Confira sempre qual empresa está selecionada</strong> (o nome aparece
+          colorido no topo) antes de trabalhar.</li>
+        <li><strong>Menu lateral:</strong> à esquerda estão todas as telas — Início, Resultado,
+          Envio de Mensagens, Base, Configurações e esta Ajuda.</li>
+      </ul>
+      <div class="ajuda-tip"><i class="bi bi-lightbulb"></i> <strong>Dica:</strong> trocar de empresa
+        no meio de um trabalho não apaga nada — apenas muda a visualização. Os dados de cada empresa
+        ficam salvos separadamente.</div>
+    </section>
+
+    <!-- INÍCIO -->
+    <section id="inicio" class="ajuda-sec">
+      <h3><i class="bi bi-house"></i>Início</h3>
+      <p class="lead-text">É aqui que você importa os arquivos do dia e gera a lista de inadimplentes.</p>
+      <ol>
+        <li>Confirme a <strong>empresa</strong> selecionada no topo.</li>
+        <li>Em <strong>Importar Arquivos</strong>, clique em <kbd-btn>Importar</kbd-btn> no
+          <strong>Vencidos</strong> e escolha o arquivo exportado do Synapta (Faturas vencidas).</li>
+        <li>Repita para o <strong>Alunos</strong> (cadastro com telefone/e-mail).</li>
+        <li>Se tiver, importe também os opcionais: <strong>A Vencer</strong> (boletos que vencem amanhã)
+          e <strong>Pagos/Cancelados</strong>.</li>
+        <li>Clique em <kbd-btn>Consolidar</kbd-btn>. O sistema cruza os arquivos e classifica cada
+          aluno por dias de atraso. Ao terminar, leva você para a tela <strong>Resultado</strong>.</li>
+      </ol>
+      <div class="ajuda-tip"><i class="bi bi-info-circle"></i> O nome do arquivo não importa — o
+        sistema reconhece pelo botão em que você importou. Se aparecer um aviso de
+        "clientes sem cadastro", são alunos do arquivo de vencidos que não estão no de alunos
+        (geralmente faltando telefone).</div>
+      <p>Para descartar a consolidação atual e recomeçar, use <kbd-btn>Limpar Sessão</kbd-btn>
+        (pede confirmação). Isso não apaga a Base.</p>
+    </section>
+
+    <!-- RESULTADO -->
+    <section id="resultado" class="ajuda-sec">
+      <h3><i class="bi bi-table"></i>Resultado</h3>
+      <p class="lead-text">Mostra a consolidação que você acabou de gerar, com os totais e a lista de alunos.</p>
+      <ul>
+        <li><strong>Cartões no topo:</strong> mostram quantos alunos há em cada categoria —
+          Novos Inadimplentes (1 dia), Inadimplentes do Mês (2 a 29 dias), Acima de 30 Dias,
+          além de Vence Hoje e A Vencer. <strong>Clique em um cartão</strong> para filtrar a tabela
+          só com aqueles alunos.</li>
+        <li><strong>Filtrar / Buscar:</strong> use o campo de busca para achar um aluno pelo nome ou
+          telefone, ou o menu <kbd-btn>Filtrar</kbd-btn> para escolher uma categoria.</li>
+        <li><strong>Gerar Relatórios:</strong> clique em <kbd-btn>Gerar Relatórios</kbd-btn> para
+          criar os arquivos de mensagens (TXT e planilha) organizados por régua. O sistema informa
+          quantas mensagens ficaram prontas.</li>
+      </ul>
+      <div class="ajuda-tip"><i class="bi bi-lightbulb"></i> Gerar relatórios também conta a cobrança
+        de cada aluno (coluna "Cobr." na Base). Depois disso, siga para
+        <strong>Envio de Mensagens</strong> para de fato enviar.</div>
+    </section>
+
+    <!-- ENVIO -->
+    <section id="envio" class="ajuda-sec">
+      <h3><i class="bi bi-whatsapp"></i>Envio de Mensagens</h3>
+      <p class="lead-text">Aqui ficam as mensagens já prontas para cada aluno, para envio por
+        WhatsApp (manual) e por e-mail.</p>
+      <p><strong>Por WhatsApp:</strong></p>
+      <ol>
+        <li>Cada linha mostra um aluno e a mensagem pronta. Clique na linha para ver a mensagem completa.</li>
+        <li>Clique em <kbd-btn><i class="bi bi-clipboard"></i> Copiar</kbd-btn> para copiar a mensagem,
+          abra o WhatsApp do aluno e cole.</li>
+        <li>Depois de enviar, clique em <kbd-btn>Marcar enviado</kbd-btn> — a barra de progresso no
+          topo (X/Y enviados) é atualizada na hora.</li>
+        <li>Para marcar todos de uma vez, use <kbd-btn>Marcar Todos Enviados</kbd-btn>.</li>
+      </ol>
+      <p><strong>Por e-mail:</strong> se o servidor de e-mail estiver configurado
+        (Configurações → E-mail), você pode enviar para um aluno individualmente ou em lote para
+        todos que têm e-mail cadastrado.</p>
+      <ul>
+        <li><strong>Filtros:</strong> filtre por categoria, busque por nome/telefone e use
+          "ocultar enviados" para focar em quem ainda falta.</li>
+        <li><strong>Planilha CRM:</strong> o botão <kbd-btn>Planilha CRM</kbd-btn> gera um arquivo
+          para importar as tags no CRM (Kommo).</li>
+      </ul>
+      <div class="ajuda-tip"><i class="bi bi-info-circle"></i> "Marcar enviado" serve para você não se
+        perder em listas grandes — controla quem já foi contatado <strong>no dia</strong>.</div>
+    </section>
+
+    <!-- BASE -->
+    <section id="base" class="ajuda-sec">
+      <h3><i class="bi bi-database"></i>Base</h3>
+      <p class="lead-text">É o histórico permanente de inadimplentes da empresa — diferente da
+        Resultado, que mostra só a consolidação do momento.</p>
+      <ul>
+        <li><strong>Cartões de filtro rápido:</strong> Novos Inadimplentes, Em Renegociação,
+          Inadimplentes Gerais e Quitados. Clique para filtrar a tabela.</li>
+        <li><strong>Alterar Status:</strong> em cada aluno você pode marcar o status manualmente —
+          Inadimplente, Quitado, Renegociado ou Cancelado.</li>
+        <li><strong>Coluna "Cobr.":</strong> mostra quantas vezes aquele aluno já foi cobrado.</li>
+        <li><strong>Comparar e Atualizar Base:</strong> o botão <kbd-btn>Comparar e Atualizar Base</kbd-btn>
+          (pede confirmação) salva a consolidação atual na Base e detecta automaticamente quem saiu
+          dos vencidos — marcando como Quitado, Renegociado ou Cancelado conforme os arquivos.</li>
+      </ul>
+      <div class="ajuda-tip"><i class="bi bi-exclamation-triangle"></i> <strong>Limpar Base</strong>
+        apaga todo o histórico da empresa e exige digitar a palavra <strong>LIMPAR</strong> para
+        confirmar. Use com muito cuidado.</div>
+    </section>
+
+    <!-- CONFIGURAÇÕES -->
+    <section id="configuracoes" class="ajuda-sec">
+      <h3><i class="bi bi-gear"></i>Configurações</h3>
+      <p class="lead-text">Onde se ajusta o conteúdo e o comportamento da cobrança. Organizada em abas:</p>
+      <ul>
+        <li><strong>Mensagens:</strong> os textos enviados em cada categoria. Você pode editar o
+          texto usando os campos automáticos entre chaves — por exemplo <code>{NOME}</code> e
+          <code>{DATA_VENCIMENTO}</code> — que o sistema substitui pelos dados de cada aluno.</li>
+        <li><strong>Régua:</strong> define as faixas de dias de atraso de cada mensagem
+          (ex.: 1 dia, 2 a 29 dias, acima de 30 dias).</li>
+        <li><strong>Clientes:</strong> importa/atualiza o cadastro de alunos (telefones e e-mails).</li>
+        <li><strong>E-mail:</strong> configura o servidor de envio de e-mail (SMTP) e permite
+          <kbd-btn>Testar Conexão</kbd-btn> antes de usar.</li>
+        <li><strong>Zona de Risco:</strong> reúne as ações que apagam dados — use com atenção.</li>
+      </ul>
+      <div class="ajuda-tip"><i class="bi bi-lightbulb"></i> Mudou um texto de mensagem? A alteração
+        vale a partir da próxima geração de relatórios.</div>
+    </section>
+
+    <!-- DÚVIDAS -->
+    <section id="duvidas" class="ajuda-sec">
+      <h3><i class="bi bi-life-preserver"></i>Dúvidas frequentes</h3>
+      <ul>
+        <li><strong>"Não aparece nada na Resultado."</strong> Você precisa importar os arquivos e
+          clicar em Consolidar na tela Início primeiro.</li>
+        <li><strong>"O aluno está com o tratamento errado (sr./sra.)."</strong> O sistema adivinha
+          pelo nome; em casos raros pode errar. É possível ajustar o texto manualmente antes de enviar.</li>
+        <li><strong>"Importei o arquivo errado."</strong> Basta importar de novo no mesmo botão — o
+          sistema usa sempre o arquivo mais recente daquele tipo.</li>
+        <li><strong>"Troquei de empresa e os dados sumiram."</strong> Eles não sumiram — cada empresa
+          tem dados separados. Volte a empresa no botão do topo.</li>
+        <li><strong>Esqueci a senha / preciso trocar.</strong> Fale com o responsável técnico (Helder).</li>
+      </ul>
+    </section>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Realça no índice lateral a seção que está visível ao rolar a página.
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      new bootstrap.ScrollSpy(document.body, {
+        target: '#ajuda-nav',
+        rootMargin: '0px 0px -55%',
+      });
+    } catch (e) { /* scrollspy é só um realce visual; ignora se indisponível */ }
+  });
+</script>
+{% endblock %}

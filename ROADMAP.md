@@ -201,6 +201,18 @@ Resolução de débitos técnicos críticos identificados no Brownfield Discover
 
 ---
 
+## ✅ Central de Ajuda (10/06/2026)
+
+Suporte embutido no sistema — reduz dependência de Edilvo/Helder para dúvidas da operadora.
+
+- [x] Rota `/ajuda` (protegida pelo login) + link "Ajuda" na sidebar (seção Suporte)
+- [x] Página com índice lateral fixo + conteúdo por tela (ScrollSpy realça a seção ativa)
+- [x] Conteúdo operacional passo a passo: Visão geral, Início, Resultado, Envio de Mensagens,
+  Base, Configurações + Dúvidas frequentes
+- [x] Responsivo (índice some em telas estreitas); manutenção documentada na story
+
+---
+
 ## 🔲 FASE H — Integrações Automáticas (após EPIC-01)
 
 - [ ] WhatsApp automático via WAHA / Evolution API / Z-API / Twilio
