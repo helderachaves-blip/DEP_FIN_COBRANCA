@@ -63,6 +63,18 @@ C:\MATINE\
 `flask`, `flask-login`, `pandas`, `openpyxl`, `keyring` (ver `requirements.txt`).
 Se faltar alguma, o app exibe instrução amigável no startup em vez de stack trace.
 
+## 💾 Backup do banco
+
+Script de backup com retenção (cópia consistente via API do sqlite3, funciona com WAL):
+
+```
+python backup_db.py            # mantém os 14 backups mais recentes
+python backup_db.py --keep 30  # mantém 30
+```
+
+Os backups vão para `C:\MATINE\backups\`. Pode ser agendado no **Agendador de Tarefas do
+Windows** para rodar diariamente.
+
 ## 🧪 Testes
 
 Suíte automatizada com **pytest** (rede de regressão para auth, migrations,

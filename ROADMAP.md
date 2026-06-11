@@ -238,6 +238,15 @@ Rede de regressão (pytest) — fundação de qualidade antes da Fase H.
 
 ---
 
+## ✅ Backup do Banco com Retenção (10/06/2026)
+
+- [x] `backup_db.py` — cópia consistente via API do sqlite3 (funciona com WAL); retenção configurável (`--keep`, default 14)
+- [x] Backups em `C:\MATINE\backups\` (respeita `MATINE_DATA_DIR`); agendável no Agendador de Tarefas
+- [x] 3 testes (`tests/test_backup.py`): backup válido com schema, retenção, banco ausente → None
+- [x] Validado contra o banco real (primeiro backup automático criado)
+
+---
+
 ## 🔲 FASE H — Integrações Automáticas (após EPIC-01)
 
 - [ ] WhatsApp automático via WAHA / Evolution API / Z-API / Twilio
