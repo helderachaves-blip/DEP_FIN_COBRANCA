@@ -10,7 +10,7 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G concluídas. EPIC-01 (Sprint Zero) em andamento — **5 de 7 stories entregues** (01-01, 01-02, 01-03, 01-04, 01-05).
-- **Último commit:** `38b4ccf` — STORY-01-05. STORY-01-04 (senha SMTP via keyring) commitada nesta sessão (hash registrado abaixo após verificação).
+- **Último commit:** `3511518` — STORY-01-04 (senha SMTP via keyring).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup; `.env` (gitignored) gerado na 1ª execução com a `FLASK_SECRET_KEY`.
 - **Sessão 10/06/2026:** Correções de UI (R1/R2/B1/B2) + STORY-01-01 (Quick Wins) + STORY-01-02 (Indicadores de empresa) + STORY-01-03 (Loading states). Nova STORY-01-07 (first-run setup) adicionada ao backlog.
 
@@ -29,6 +29,7 @@ Nada pendente de commit.
 `git fetch` — não confie nesta lista. Push é exclusivo do @devops). Commits de conteúdo:
 - `866b063` — STORY-01-03 (Loading states)
 - `38b4ccf` — STORY-01-05 (Schema migrations + índices + WAL)
+- `3511518` — STORY-01-04 (senha SMTP via keyring)
 - (+ commits `docs:` de rastreio que acompanham, incluindo este registro)
 
 ---
