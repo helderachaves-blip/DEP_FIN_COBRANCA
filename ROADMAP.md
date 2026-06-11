@@ -226,6 +226,18 @@ Evolução da autenticação de usuário único (STORY-01-06) para multi-usuári
 
 ---
 
+## ✅ Suíte de Testes Automatizados (10/06/2026)
+
+Rede de regressão (pytest) — fundação de qualidade antes da Fase H.
+
+- [x] **49 testes** verdes: processing, migrations, auth, multiusuário, Minha conta
+- [x] Banco isolado via `MATINE_DATA_DIR` (default `C:\MATINE` — produção inalterada); testes nunca tocam dados reais
+- [x] `conftest.py` (fixtures app/client/db/users/login) + `pytest.ini` + `requirements-dev.txt`
+- [x] Cobre: CSV multi-separador, conversão de valores BR, heurística de gênero, consolidação; runner de migrations (up/down da 007); guard de rotas e open-redirect; CRUD de usuários e proteções anti-lockout
+- [x] README com seção Testes; rodar: `cd 06_APP && pip install -r requirements-dev.txt && pytest`
+
+---
+
 ## 🔲 FASE H — Integrações Automáticas (após EPIC-01)
 
 - [ ] WhatsApp automático via WAHA / Evolution API / Z-API / Twilio
@@ -246,6 +258,10 @@ Observações e aprendizados do uso real. Serão tratados após Fase H como back
 - **Alunos sem telefone:** ~252 alunos sem telefone na base. O aviso de "sem cadastro" existe, mas não há fluxo para enriquecer o cadastro dentro do app. Considerar tela de enriquecimento manual ou integração com Synapta.
 
 - **Heurística de gênero frágil:** Nomes terminados em "a" → sra. Falha em nomes como "Joshua", "Elias", "Matias". Melhorar com lista de exceções ou biblioteca de classificação de nomes.
+
+### Documentação
+
+- **Central de Ajuda — incluir prints das telas:** o conteúdo passo a passo já existe, mas falta ilustrar cada seção com screenshots das telas reais para a operadora se localizar visualmente. Revisar também o texto (Edilvo/Helder fariam um passe de revisão). *(observação de 10/06, a fazer quando houver disponibilidade)*
 
 ### Produto
 

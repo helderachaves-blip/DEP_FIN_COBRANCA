@@ -10,7 +10,11 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
-DB_PATH = Path(r'C:\MATINE\banco\inadimplencia.db')
+# Diretório de dados configurável por ambiente (default: C:\MATINE — produção
+# inalterada). Os testes definem MATINE_DATA_DIR para um temp e nunca tocam o
+# banco real. app.py lê a mesma variável para DATA_DIR.
+DATA_DIR = Path(os.environ.get('MATINE_DATA_DIR', r'C:\MATINE'))
+DB_PATH = DATA_DIR / 'banco' / 'inadimplencia.db'
 
 EMPRESAS = ('INEPROTEC', 'MATRICULAEAD')
 

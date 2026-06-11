@@ -51,7 +51,7 @@ from processing import fmt_brl
 # Caminhos — estrutura de dados em C:\MATINE\
 # ---------------------------------------------------------------------------
 
-DATA_DIR    = Path(r'C:\MATINE')
+DATA_DIR    = Path(os.environ.get('MATINE_DATA_DIR', r'C:\MATINE'))  # configurável p/ testes
 UPLOADS_DIR = DATA_DIR / 'uploads'    # uploads/{EMPRESA}/{tipo}/  ← detecção por pasta
 RELATORIOS  = DATA_DIR / 'relatorios' # relatorios/{EMPRESA}/{ano}/{mes}/{dia}/
 LOGS_DIR    = DATA_DIR / 'logs'

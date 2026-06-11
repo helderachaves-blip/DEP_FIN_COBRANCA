@@ -21,6 +21,10 @@ env/
 *.pkl
 06_APP/uploads/*.pkl
 
+# Test caches
+.pytest_cache/
+**/.pytest_cache/
+
 # Databases (Local SQLite, etc.)
 *.db
 *.sqlite

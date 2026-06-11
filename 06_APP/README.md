@@ -63,5 +63,20 @@ C:\MATINE\
 `flask`, `flask-login`, `pandas`, `openpyxl`, `keyring` (ver `requirements.txt`).
 Se faltar alguma, o app exibe instrução amigável no startup em vez de stack trace.
 
+## 🧪 Testes
+
+Suíte automatizada com **pytest** (rede de regressão para auth, migrations,
+multiusuário e processamento). Os testes rodam **isolados**: usam um banco temporário
+via `MATINE_DATA_DIR` e **nunca tocam** os dados de produção em `C:\MATINE`.
+
+```
+pip install -r requirements-dev.txt
+pytest
+```
+
+Cobertura por arquivo (`tests/`): `test_processing` (CSV/valores/gênero/consolidação),
+`test_migrations` (runner + up/down da 007), `test_auth` (login/guard/logout/open-redirect),
+`test_usuarios` (CRUD + anti-lockout), `test_conta` (nome + senha).
+
 ---
 *Parte do EPIC-01 (Sprint Zero). Gestão do projeto: `MEMORY.md` / `PLANO_DE_ACAO.md` / `ROADMAP.md` na raiz.*
