@@ -14,7 +14,7 @@
 - **Extra (10/06 noite):** Gestão de múltiplos usuários — autenticação migrada do `.env` para a tabela `usuarios` (migration 007); telas `/usuarios` (admin) e `/conta` (trocar própria senha); admin inicial `luana` semeado do `.env`. Ver `docs/stories/story-multiusuario.md`.
 - **Extra (10/06 noite):** UI — cards de filtro rápido das abas **Base** e **Resultado** agora com altura/proporção uniformes (preenchem a coluna; rótulo reserva 2 linhas), independentemente do tamanho do texto. Em Resultado, o estilo mira só `.stat-card.stat-filtro` para não afetar o card totalizador.
 - **⚠️ Reiniciar o app** para ver as novidades (templates ficam em cache com `debug=False`).
-- **Último commit no remoto:** `ca98e4f` (será atualizado ao push do ajuste de Resultado).
+- **Último commit no remoto:** `eb0f3be` (UI cards da Resultado).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup; `.env` (gitignored) gerado na 1ª execução com a `FLASK_SECRET_KEY`.
 - **Sessão 10/06/2026 (manhã):** Correções de UI (R1/R2/B1/B2) + STORY-01-01 (Quick Wins) + STORY-01-02 (Indicadores de empresa). Nova STORY-01-07 (first-run setup) adicionada ao backlog.
 - **Sessão 10/06/2026 (tarde):** STORY-01-03 (Loading states) + STORY-01-05 (Schema migrations + índices + WAL) + STORY-01-04 (senha SMTP via keyring). Banco real de produção migrado (versionamento + WAL + senha movida ao keyring); backup `inadimplencia_backup_20260610_204730.db` criado. Regra de sincronia git↔plano adicionada ao frame global (`~/.claude/CLAUDE.md`).
@@ -34,8 +34,9 @@ verificado em 10/06/2026 noite).
 - `78f6b4c..2719016` — Central de Ajuda (`/ajuda`)
 - `0adb7ce..e0e589e` — Gestão de múltiplos usuários (migration 007, `/usuarios`, `/conta`)
 - `4b35c88..ca98e4f` — UI: cards de filtro da aba Base uniformes
+- `761df9d..eb0f3be` — UI: cards de filtro da aba Resultado uniformes
 
-Topo do remoto = `ca98e4f`. (recompute sempre com `git fetch` — não confie nesta lista.)
+Topo do remoto = `eb0f3be`. (recompute sempre com `git fetch` — não confie nesta lista.)
 
 ---
 
