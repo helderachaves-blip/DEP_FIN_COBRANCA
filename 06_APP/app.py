@@ -339,8 +339,9 @@ def setup_inicial() -> bool:
 
     # Bootstrap da autenticação multi-usuário (migration 007): se a tabela `usuarios`
     # estiver vazia, cria o admin inicial a partir das credenciais do .env (APP_USUARIO/
-    # APP_SENHA). A partir daí a gestão é feita pela tela /usuarios.
-    if db.seed_usuario_admin(APP_USUARIO, 'Administrador', APP_SENHA_HASH):
+    # APP_SENHA). O nome de exibição usa o login capitalizado (evita "Administrador"
+    # genérico, redundante com o badge Admin). A partir daí a gestão é feita em /usuarios.
+    if db.seed_usuario_admin(APP_USUARIO, APP_USUARIO.capitalize(), APP_SENHA_HASH):
         _log(f"Usuário admin inicial criado: {APP_USUARIO}")
 
     if primeira_vez:
