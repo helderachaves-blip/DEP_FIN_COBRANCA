@@ -1,0 +1,221 @@
+"""Testes da fundação backend da STORY-H-01 (WhatsApp via Google Drive + Kommo).
+
+Cobre: migration 008 (up/down + runner), config_whatsapp (round-trip com credencial
+fora do banco) e o módulo gdrive (degradação graciosa + lógica create/replace).
+"""
+import sqlite3
+
+import gdrive
+
+
+def _tabelas(conn) -> set:
+    rows = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    ).fetchall()
+    return {r[0] for r in rows}
+
+
+# ── Migration 008 ────────────────────────────────────────────────────────────
+
+def test_config_whatsapp_no_schema(db):
+    """init_db (rodou no import do app) criou config_whatsapp e aplicou a migration 8."""
+    with db.get_conn() as conn:
+        assert 'config_whatsapp' in _tabelas(conn)
+        versoes = {r[0] for r in conn.execute(
+            "SELECT version FROM schema_migrations").fetchall()}
+    assert 8 in versoes
+
+
+def test_runner_aplica_ate_008(tmp_path, db):
+    """Banco novo aplica 1-8 e a 2ª passada é no-op."""
+    conn = sqlite3.connect(str(tmp_path / 'fresh.db'))
+    conn.isolation_level = None
+    try:
+        aplicadas = db.runner.apply_pending(conn, db.MIGRATIONS_DIR)
+        assert aplicadas == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert 'config_whatsapp' in _tabelas(conn)
+        assert db.runner.apply_pending(conn, db.MIGRATIONS_DIR) == []
+    finally:
+        conn.close()
+
+
+def test_migration_008_up_down(tmp_path, db):
+    """A migration 008 cria e remove a tabela config_whatsapp."""
+    mods = {m.version: m for m in db.runner.discover(db.MIGRATIONS_DIR)}
+    m008 = mods[8]
+    assert m008.name == 'add_config_whatsapp'
+
+    conn = sqlite3.connect(str(tmp_path / 'm008.db'))
+    try:
+        m008.up(conn)
+        assert 'config_whatsapp' in _tabelas(conn)
+        cols = {r[1] for r in conn.execute(
+            "PRAGMA table_info(config_whatsapp)").fetchall()}
+        assert {'empresa', 'gdrive_folder_id', 'gdrive_credentials',
+                'kommo_webhook_url', 'exportar_automatico'}.issubset(cols)
+
+        m008.down(conn)
+        assert 'config_whatsapp' not in _tabelas(conn)
+    finally:
+        conn.close()
+
+
+# ── config_whatsapp: round-trip e segurança da credencial ────────────────────
+
+def test_config_whatsapp_round_trip(db):
+    """Salva e lê a config; a credencial vai para arquivo (não para o banco)."""
+    empresa = 'INEPROTEC'
+    db.salvar_config_whatsapp(
+        empresa=empresa, folder_id='FOLDER_123',
+        filename_template='cobrancas_{empresa}_{data}.xlsx',
+        kommo_webhook_url='https://hook.make/abc', kommo_pipeline_id='42',
+        exportar_automatico=False, credentials_json='{"type":"service_account"}',
+    )
+    cfg = db.get_config_whatsapp(empresa)
+    assert cfg is not None
+    assert cfg['gdrive_folder_id'] == 'FOLDER_123'
+    assert cfg['kommo_webhook_url'] == 'https://hook.make/abc'
+    assert cfg['exportar_automatico'] == 0
+    assert cfg['tem_credenciais'] is True
+    # A credencial nunca é devolvida em texto.
+    assert 'gdrive_credentials' not in cfg
+    # O JSON foi para o arquivo em secrets/, não para a coluna do banco.
+    with db.get_conn() as conn:
+        col = conn.execute(
+            "SELECT gdrive_credentials FROM config_whatsapp WHERE empresa=?",
+            (empresa,)).fetchone()[0]
+    assert col == db.GDRIVE_CRED_MARKER
+    assert db.get_gdrive_credentials_path(empresa).read_text(encoding='utf-8') \
+        == '{"type":"service_account"}'
+
+
+def test_config_whatsapp_credencial_vazia_preserva(db):
+    """Salvar com credentials_json vazio preserva a credencial anterior."""
+    empresa = 'MATRICULAEAD'
+    db.salvar_config_whatsapp(
+        empresa=empresa, folder_id='F1', filename_template='x_{data}.xlsx',
+        kommo_webhook_url='', kommo_pipeline_id='',
+        exportar_automatico=True, credentials_json='{"k":"v1"}',
+    )
+    # Segundo save sem credencial — não deve apagar o arquivo existente.
+    db.salvar_config_whatsapp(
+        empresa=empresa, folder_id='F2', filename_template='y_{data}.xlsx',
+        kommo_webhook_url='', kommo_pipeline_id='',
+        exportar_automatico=True, credentials_json=None,
+    )
+    cfg = db.get_config_whatsapp(empresa)
+    assert cfg['gdrive_folder_id'] == 'F2'
+    assert cfg['tem_credenciais'] is True
+    assert db.get_gdrive_credentials_path(empresa).read_text(encoding='utf-8') == '{"k":"v1"}'
+
+
+def test_config_whatsapp_inexistente_retorna_none(db):
+    assert db.get_config_whatsapp('EMPRESA_QUE_NAO_EXISTE') is None
+
+
+# ── gdrive: degradação graciosa e lógica de upload ───────────────────────────
+
+def test_gdrive_disponivel_retorna_bool():
+    assert isinstance(gdrive.disponivel(), bool)
+
+
+def test_gdrive_sem_libs_erro_claro(monkeypatch):
+    """Sem as libs do Google, as operações retornam erro instrutivo (não quebram)."""
+    monkeypatch.setattr(gdrive, '_GOOGLE_OK', False)
+    ok, msg = gdrive.testar_conexao('qualquer.json', 'FOLDER')
+    assert ok is False and 'pip install' in msg
+    ok, msg = gdrive.upload_xlsx('c.json', 'F', 'arq.xlsx', 'r.xlsx')
+    assert ok is False and 'pip install' in msg
+
+
+def test_gdrive_testar_conexao_credencial_ausente(monkeypatch):
+    """Com libs presentes mas credencial inexistente: erro claro, sem chamar a API."""
+    monkeypatch.setattr(gdrive, '_GOOGLE_OK', True)
+    ok, msg = gdrive.testar_conexao('caminho/inexistente.json', 'FOLDER')
+    assert ok is False and 'não encontrada' in msg.lower()
+
+
+def test_gdrive_upload_arquivo_local_ausente(monkeypatch):
+    monkeypatch.setattr(gdrive, '_GOOGLE_OK', True)
+    ok, msg = gdrive.upload_xlsx('c.json', 'F', 'nao/existe.xlsx', 'r.xlsx')
+    assert ok is False and 'não encontrado' in msg.lower()
+
+
+def test_gdrive_upload_cria_quando_nao_existe(monkeypatch, tmp_path):
+    """Sem arquivo de mesmo nome na pasta, faz create (não update)."""
+    chamadas = {'create': 0, 'update': 0}
+
+    class _FakeFiles:
+        def list(self, **kw):
+            return _Exec({'files': []})
+
+        def create(self, **kw):
+            chamadas['create'] += 1
+            return _Exec({'id': 'NEW', 'webViewLink': 'http://drive/NEW'})
+
+        def update(self, **kw):
+            chamadas['update'] += 1
+            return _Exec({'id': 'UPD', 'webViewLink': 'http://drive/UPD'})
+
+    class _Exec:
+        def __init__(self, payload):
+            self._p = payload
+
+        def execute(self):
+            return self._p
+
+    class _FakeService:
+        def files(self):
+            return _FakeFiles()
+
+    local = tmp_path / 'planilha.xlsx'
+    local.write_text('conteudo', encoding='utf-8')
+
+    monkeypatch.setattr(gdrive, '_GOOGLE_OK', True)
+    monkeypatch.setattr(gdrive, '_MediaFileUpload', lambda *a, **k: object())
+    monkeypatch.setattr(gdrive, '_build_service', lambda *a, **k: _FakeService())
+
+    ok, link = gdrive.upload_xlsx('c.json', 'FOLDER', str(local), 'planilha.xlsx')
+    assert ok is True
+    assert link == 'http://drive/NEW'
+    assert chamadas == {'create': 1, 'update': 0}
+
+
+def test_gdrive_upload_substitui_quando_existe(monkeypatch, tmp_path):
+    """Com arquivo de mesmo nome na pasta, faz update (substitui, não duplica)."""
+    chamadas = {'create': 0, 'update': 0}
+
+    class _Exec:
+        def __init__(self, payload):
+            self._p = payload
+
+        def execute(self):
+            return self._p
+
+    class _FakeFiles:
+        def list(self, **kw):
+            return _Exec({'files': [{'id': 'OLD', 'name': 'planilha.xlsx'}]})
+
+        def create(self, **kw):
+            chamadas['create'] += 1
+            return _Exec({'id': 'NEW', 'webViewLink': 'http://drive/NEW'})
+
+        def update(self, **kw):
+            chamadas['update'] += 1
+            return _Exec({'id': 'OLD', 'webViewLink': 'http://drive/OLD'})
+
+    class _FakeService:
+        def files(self):
+            return _FakeFiles()
+
+    local = tmp_path / 'planilha.xlsx'
+    local.write_text('conteudo', encoding='utf-8')
+
+    monkeypatch.setattr(gdrive, '_GOOGLE_OK', True)
+    monkeypatch.setattr(gdrive, '_MediaFileUpload', lambda *a, **k: object())
+    monkeypatch.setattr(gdrive, '_build_service', lambda *a, **k: _FakeService())
+
+    ok, link = gdrive.upload_xlsx('c.json', 'FOLDER', str(local), 'planilha.xlsx')
+    assert ok is True
+    assert link == 'http://drive/OLD'
+    assert chamadas == {'create': 0, 'update': 1}

@@ -1,7 +1,7 @@
 # ROADMAP — MAT-INE Inadimplência 2026
 
 > Linha do tempo completa. Itens entregues nunca são deletados — apenas marcados ✅.
-> Última atualização: 11/06/2026
+> Última atualização: 15/06/2026
 
 ---
 
@@ -269,18 +269,37 @@ tipo de mensagem definido pela tag_crm
 
 Tags mapeiam para templates no Kommo: `INADIMPLENTE_NOVO`, `INADIMPLENTE_REGUA`, `INADIMPLENTE_30DIAS`.
 
+**Onda 1 — Fundação backend ✅ (15/06/2026):**
+- [x] Migration `008_add_config_whatsapp` — tabela `config_whatsapp` por empresa
+- [x] `gdrive.py` — módulo modular (Service Account + Shared Drive, `supportsAllDrives=True`): `testar_conexao`, `upload_xlsx` (cria/substitui), `disponivel`. Imports Google protegidos (app não quebra sem as libs); camada de auth isolada para OAuth na v2
+- [x] `database.py` — `salvar_config_whatsapp` / `get_config_whatsapp` + credencial em `C:\MATINE\secrets\gdrive_{empresa}.json` (coluna guarda só o marcador `[file]`; JSON nunca em HTML)
+- [x] `requirements.txt` — `google-api-python-client`, `google-auth`, `google-auth-httplib2`
+- [x] `tests/test_whatsapp.py` — 12 testes (migration, config round-trip, gdrive create/replace). Suíte total: 64 verdes
+
+**Onda 2 — UI + fluxo 🔲 (próxima):**
 - [ ] **Aba de Configuração WhatsApp** — nova seção em Configurações:
-  - *Bloco Google Drive:* método de auth (Service Account JSON ou OAuth), ID da pasta de destino, nome do arquivo gerado (`cobrancas_{empresa}_{DDMMYYYY}.xlsx`), botão Testar Conexão
+  - *Bloco Google Drive:* upload do JSON da SA, ID da pasta no Shared Drive, nome do arquivo, botão Testar Conexão (AJAX → `gdrive.testar_conexao`)
   - *Bloco Kommo:* URL do webhook ou ID do pipeline, tag CRM padrão (já existe `tag_crm` nos templates)
   - *Bloco Comportamento:* geração **sob demanda** via botão em Envio de Mensagens (não automático — decisão de 11/06)
-- [ ] Botão **"Exportar para WhatsApp"** na tela de Envio de Mensagens — gera XLSX + faz upload no Drive
+- [ ] Botão **"Exportar para WhatsApp"** na tela de Envio de Mensagens — gera Planilha CRM + `gdrive.upload_xlsx`
 - [ ] Registro do envio na tabela `envios` (canal=`whatsapp_crm`)
-- [ ] Migration `008_add_config_whatsapp` — tabela `config_whatsapp` por empresa
 
 ### Sprint H-2 — Agendamento + Dashboard
 
 - [ ] Agendamento via Windows Task Scheduler — consolidação + exportação automática em horário configurável
 - [ ] Dashboard analítico básico: evolução semanal de inadimplentes, taxa de quitação pós-cobrança, mensagens enviadas × conversões
+
+### Sprint H-3 — Canais de Comunicação + SMS *(novo — 15/06/2026)*
+
+Reorganização de UX em Configurações: hoje E-mail (Fase G) e WhatsApp (H-1) ficam como abas soltas. Agrupar tudo sob um submenu único e somar SMS como terceiro canal.
+
+- [ ] Submenu **"Canais de Comunicação"** em Configurações, agrupando os três canais
+- [ ] Mover aba **E-mail** (existente, Fase G) para dentro do submenu
+- [ ] Mover aba **WhatsApp** (H-1) para dentro do submenu
+- [ ] Nova aba **SMS** — configuração de provider (provider TBD: Twilio / Zenvia / Comtele etc.)
+- [ ] Envio SMS individual + em lote, com registro na tabela `envios` (`canal='sms'`)
+
+> Alinha com a visão SaaS: multi-canal (WhatsApp + E-mail + SMS) é funcionalidade universal, independente do segmento.
 
 ---
 

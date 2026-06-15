@@ -596,6 +596,94 @@ def get_config_email(empresa: str) -> dict | None:
     return cfg
 
 
+# ── Config WhatsApp / Google Drive (STORY-H-01) ──────────────────────────────
+# A credencial da Service Account (JSON) é sensível e NÃO fica no banco. É gravada
+# em DATA_DIR/secrets/gdrive_{empresa}.json (fora do git e do banco) e a coluna
+# `gdrive_credentials` carrega apenas o marcador `[file]` — mesmo espírito da senha
+# SMTP via keyring (STORY-01-04). O JSON da SA passa do limite do Windows Credential
+# Store, por isso aqui usamos arquivo em vez de keyring.
+
+SECRETS_DIR = DATA_DIR / 'secrets'
+GDRIVE_CRED_MARKER = '[file]'
+
+
+def _gdrive_cred_path(empresa: str) -> Path:
+    return SECRETS_DIR / f'gdrive_{empresa}.json'
+
+
+def gravar_gdrive_credentials(empresa: str, credentials_json: str) -> bool:
+    """Grava o JSON da Service Account em DATA_DIR/secrets/. Retorna True em sucesso."""
+    try:
+        SECRETS_DIR.mkdir(parents=True, exist_ok=True)
+        _gdrive_cred_path(empresa).write_text(credentials_json, encoding='utf-8')
+        return True
+    except Exception as e:  # pragma: no cover - falha de filesystem
+        print(f"[gdrive] falha ao gravar credencial de {empresa}: {e}")
+        return False
+
+
+def get_gdrive_credentials_path(empresa: str) -> Path | None:
+    """Caminho do JSON da Service Account, ou None se ainda não configurado."""
+    p = _gdrive_cred_path(empresa)
+    return p if p.exists() else None
+
+
+def tem_gdrive_credentials(empresa: str) -> bool:
+    return get_gdrive_credentials_path(empresa) is not None
+
+
+def salvar_config_whatsapp(empresa: str, folder_id: str, filename_template: str,
+                           kommo_webhook_url: str, kommo_pipeline_id: str,
+                           exportar_automatico: bool,
+                           credentials_json: str | None = None,
+                           auth_method: str = 'service_account'):
+    """Salva (upsert) a config WhatsApp da empresa.
+
+    `credentials_json` só é gravado quando vem preenchido — campo vazio preserva a
+    credencial atual (espelha o comportamento da senha SMTP). A coluna recebe o
+    marcador `[file]` quando há credencial em disco.
+    """
+    if credentials_json:
+        gravar_gdrive_credentials(empresa, credentials_json)
+    cred_marker = GDRIVE_CRED_MARKER if tem_gdrive_credentials(empresa) else None
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO config_whatsapp
+                (empresa, gdrive_auth_method, gdrive_credentials, gdrive_folder_id,
+                 gdrive_filename_template, kommo_webhook_url, kommo_pipeline_id,
+                 exportar_automatico, atualizado_em)
+            VALUES (?,?,?,?,?,?,?,?, datetime('now'))
+            ON CONFLICT(empresa) DO UPDATE SET
+                gdrive_auth_method=excluded.gdrive_auth_method,
+                gdrive_credentials=excluded.gdrive_credentials,
+                gdrive_folder_id=excluded.gdrive_folder_id,
+                gdrive_filename_template=excluded.gdrive_filename_template,
+                kommo_webhook_url=excluded.kommo_webhook_url,
+                kommo_pipeline_id=excluded.kommo_pipeline_id,
+                exportar_automatico=excluded.exportar_automatico,
+                atualizado_em=datetime('now')
+        """, (empresa, auth_method, cred_marker, folder_id, filename_template,
+              kommo_webhook_url, kommo_pipeline_id, 1 if exportar_automatico else 0))
+        conn.commit()
+
+
+def get_config_whatsapp(empresa: str) -> dict | None:
+    """Config WhatsApp da empresa. A credencial nunca é devolvida em texto: apenas
+    o flag `tem_credenciais` e o caminho do arquivo (`credentials_path`)."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM config_whatsapp WHERE empresa=?", (empresa,)
+        ).fetchone()
+    if not row:
+        return None
+    cfg = dict(row)
+    cfg.pop('gdrive_credentials', None)  # nunca expor o marcador/conteúdo
+    cfg['tem_credenciais'] = tem_gdrive_credentials(empresa)
+    cred = get_gdrive_credentials_path(empresa)
+    cfg['credentials_path'] = str(cred) if cred else None
+    return cfg
+
+
 def salvar_assunto_template(template_id: int, assunto: str, empresa: str):
     with get_conn() as conn:
         conn.execute(

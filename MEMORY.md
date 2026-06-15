@@ -1,7 +1,7 @@
 # MEMORY — MAT-INE Inadimplência 2026
 
 > Contexto permanente do projeto. Atualizar apenas quando algo estrutural mudar.
-> Última atualização: 11/06/2026
+> Última atualização: 15/06/2026
 
 ---
 
@@ -75,6 +75,7 @@ C:\MATINE\
 ├── uploads\{EMPRESA}\{tipo}\    # arquivos importados (detecção por pasta)
 ├── relatorios\{EMPRESA}\{ano}\{mes}\{dia}\   # relatórios gerados
 ├── crm-exports\                 # planilhas de tagging CRM
+├── secrets\                     # JSON da Service Account do Drive (gdrive_{empresa}.json) — STORY-H-01
 ├── estado\                      # sessão pickle (consolidado, avencer, stats)
 └── logs\
 ```
@@ -138,10 +139,11 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 | `historico_atualizacoes` | Log de atualizações da base |
 | `schema_migrations` | Controle de versão do schema (version, name, applied_at) — STORY-01-05 |
 | `usuarios` | Login por pessoa (usuario único, nome, senha_hash pbkdf2, is_admin, ativo) — STORY-MULTIUSUARIO (migration 007) |
+| `config_whatsapp` | Config WhatsApp/Drive por empresa (migration 008, STORY-H-01). **Credencial da SA NÃO fica aqui** — JSON vai para `C:\MATINE\secrets\gdrive_{empresa}.json`; a coluna `gdrive_credentials` guarda só o marcador `[file]` |
 
 **Autenticação (STORY-01-06 → STORY-MULTIUSUARIO):** multi-usuário via tabela `usuarios`. Login/`user_loader` consultam o banco; senha sempre hash pbkdf2. O `.env` (`APP_USUARIO`/`APP_SENHA`) serve **só como semente** do 1º admin na tabela vazia — depois disso a gestão é pela tela `/usuarios` (admin) e cada um troca a própria senha em `/conta`. Admin default inicial: `luana` / `matine2026` (trocar em produção). Proteções anti-lockout: não remover/rebaixar o último admin nem a própria conta.
 
-**Migrations (STORY-01-05):** o schema é versionado em `06_APP/migrations/` (scripts `001`–`007`, cada um com `up`/`down`; 007 = tabela `usuarios`). `init_db()` aplica só as pendentes via `migrations/runner.py` (atômicas, BEGIN/COMMIT por script). `get_conn()` habilita **WAL** + `foreign_keys=ON`. Banco sem `schema_migrations` é tratado como legado (001–004 marcadas sem re-executar). Nova migration = novo arquivo `NNN_nome.py` com `version` crescente.
+**Migrations (STORY-01-05):** o schema é versionado em `06_APP/migrations/` (scripts `001`–`008`, cada um com `up`/`down`; 007 = `usuarios`, 008 = `config_whatsapp`). `init_db()` aplica só as pendentes via `migrations/runner.py` (atômicas, BEGIN/COMMIT por script). `get_conn()` habilita **WAL** + `foreign_keys=ON`. Banco sem `schema_migrations` é tratado como legado (001–004 marcadas sem re-executar). Nova migration = novo arquivo `NNN_nome.py` com `version` crescente.
 
 ---
 
@@ -170,8 +172,9 @@ Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Min
 |---------|-----------------|
 | `06_APP/app.py` | Rotas Flask, lógica de negócio, autenticação (Flask-Login), `setup_inicial()` |
 | `06_APP/database.py` | SQLite — `get_conn` (WAL+FK), `init_db` (runner), queries, usuários. `DATA_DIR`/`DB_PATH` leem `MATINE_DATA_DIR` (default `C:\MATINE`) |
-| `06_APP/migrations/` | Migrations versionadas (`runner.py` + `001`–`007`; 007 = `usuarios`) |
-| `06_APP/processing.py` | Consolidação, geração de TXT/XLSX/CRM |
+| `06_APP/migrations/` | Migrations versionadas (`runner.py` + `001`–`008`; 007 = `usuarios`, 008 = `config_whatsapp`) |
+| `06_APP/processing.py` | Consolidação, geração de TXT/XLSX/CRM (`gerar_planilha_crm` — base da exportação WhatsApp) |
+| `06_APP/gdrive.py` | Upload da planilha no Google Drive (Service Account + Shared Drive, modular p/ OAuth) — STORY-H-01 |
 | `06_APP/backup_db.py` | Backup do banco com retenção (WAL-safe, `--keep`) |
 | `06_APP/templates/layout.html` | Sidebar, topbar, dropdown do usuário, CSS global (Bootstrap 5.3.3) |
 | `06_APP/templates/login.html` | Tela de login standalone (sem sidebar) |
@@ -184,7 +187,7 @@ Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Min
 | `06_APP/templates/usuarios.html` · `conta.html` | Gestão de usuários (admin) · Minha conta |
 | `06_APP/conftest.py` · `pytest.ini` · `tests/` | Suíte de testes pytest (banco isolado via `MATINE_DATA_DIR`) |
 
-**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (52 testes; nunca tocam produção).
+**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (64 testes; nunca tocam produção).
 
 ---
 
@@ -219,16 +222,18 @@ dispara WhatsApp pelo número conectado ao Kommo →
 tipo de mensagem definido pela tag_crm
 ```
 
-**Estrutura da planilha (a validar com Kommo):**
+**Formato da planilha — DECIDIDO (15/06/2026):** reaproveitar a **Planilha CRM** existente (`proc.gerar_planilha_crm`, botão "Planilha CRM" em Envio de Mensagens). XLSX `CRM_{empresa}_{data}.xlsx` em `C:\MATINE\crm-exports\`, com 2 abas:
+- `Inadimplentes`: Nome · CPF · Telefone · E-mail · Categoria · Dias Atraso · Valor (R$) · **Tag CRM** (vem do template que casa com os dias de atraso via `_encontrar_template_crm`)
+- `Saídos_Quitados`: Nome · CPF · Telefone · E-mail · Status · Ação CRM (`REMOVER_TAG`)
 
-| telefone | nome | tag_crm | empresa | categoria | vencimento | valor |
-|----------|------|---------|---------|-----------|------------|-------|
-| 5511... | João | INADIMPLENTE_REGUA | INEPROTEC | Régua | 01/06/2026 | R$350 |
+O Kommo lê a aba `Inadimplentes` — `Telefone` + `Tag CRM` são o essencial para o disparo. Não criar formato novo.
 
-**Tags definidas:** `INADIMPLENTE_NOVO`, `INADIMPLENTE_REGUA`, `INADIMPLENTE_30DIAS`
+**Tag CRM:** já existe campo `tag_crm` por template. Tags exemplo: `INADIMPLENTE_NOVO`, `INADIMPLENTE_REGUA`, `INADIMPLENTE_30DIAS`.
 
-**Aba de Configuração WhatsApp** (nova seção em Configurações — migration 008):
-- Bloco Google Drive: Service Account JSON ou OAuth, ID da pasta, nome do arquivo, botão Testar Conexão
+**Auth Google Drive — DECIDIDO (15/06/2026):** **Service Account** (JSON) + **Shared Drive** (Edilvo tem Google Workspace, domínio `@ineprotec.com.br`). No Shared Drive os arquivos pertencem à organização (não à SA) → elimina `storageQuotaExceeded`. SA entra como membro Gerenciador de conteúdo; chamadas da API com `supportsAllDrives=True`. JSON guardado em `C:\MATINE\secrets\` (fora do git e do banco). OAuth fica para a v2 SaaS (cada tenant conecta o próprio Drive); `gdrive.py` deve ser **modular** para a troca SA→OAuth ser barata.
+
+**Aba de Configuração WhatsApp** (nova seção em Configurações — migration 008, por empresa):
+- Bloco Google Drive: upload do JSON da SA, ID da pasta (no Shared Drive), nome do arquivo, botão Testar Conexão
 - Bloco Kommo: URL do webhook ou ID do pipeline, tag CRM padrão
 - Bloco Comportamento: geração **sob demanda** via botão em Envio de Mensagens (não automático)
 

@@ -4,7 +4,7 @@ import sqlite3
 
 _TABELAS_ESPERADAS = {
     'schema_migrations', 'inadimplentes', 'templates', 'envios',
-    'config_email', 'historico_atualizacoes', 'usuarios',
+    'config_email', 'historico_atualizacoes', 'usuarios', 'config_whatsapp',
 }
 
 
@@ -16,22 +16,22 @@ def _tabelas(conn) -> set:
 
 
 def test_schema_completo_apos_init(db):
-    """init_db (rodou no import do app) deixou todas as tabelas e migrations 1-7."""
+    """init_db (rodou no import do app) deixou todas as tabelas e migrations 1-8."""
     with db.get_conn() as conn:
         tabelas = _tabelas(conn)
         versoes = {r[0] for r in conn.execute(
             "SELECT version FROM schema_migrations").fetchall()}
     assert _TABELAS_ESPERADAS.issubset(tabelas)
-    assert {1, 2, 3, 4, 5, 6, 7}.issubset(versoes)
+    assert {1, 2, 3, 4, 5, 6, 7, 8}.issubset(versoes)
 
 
 def test_runner_fresh_e_idempotente(tmp_path, db):
-    """Em um banco novo, aplica 1-7 e a 2ª passada não aplica nada."""
+    """Em um banco novo, aplica 1-8 e a 2ª passada não aplica nada."""
     conn = sqlite3.connect(str(tmp_path / 'fresh.db'))
     conn.isolation_level = None  # runner controla as transações
     try:
         aplicadas = db.runner.apply_pending(conn, db.MIGRATIONS_DIR)
-        assert aplicadas == [1, 2, 3, 4, 5, 6, 7]
+        assert aplicadas == [1, 2, 3, 4, 5, 6, 7, 8]
         assert 'usuarios' in _tabelas(conn)
 
         de_novo = db.runner.apply_pending(conn, db.MIGRATIONS_DIR)
