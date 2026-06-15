@@ -10,8 +10,8 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **em implementação** (status InProgress): **Onda 1 (fundação backend) entregue em 15/06/2026**. Falta a Onda 2 (UI + fluxo).
-- **Último commit no remoto:** preencher após o push desta sessão (ver Histórico 15/06)
-- **Pendente de push:** STORY-H-01 Onda 1 + atualizações de gestão (reconciliar com `git log origin/homologacao..HEAD` após commit)
+- **Último commit no remoto:** `c529919` — feat: STORY-H-01 Onda 1 — fundação backend WhatsApp/Drive
+- **Pendente de push:** nada — `origin/homologacao` sincronizado (verificado: `git log origin/homologacao..HEAD` vazio)
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
 
 ---
@@ -55,7 +55,7 @@ Onda 1 (fundação backend) já entregue e testada. Retomar pela UI:
   `gdrive.py` (SA + Shared Drive, modular), helpers no `database.py` (credencial em `secrets/`),
   libs Google no `requirements.txt`, `tests/test_whatsapp.py` (12 testes). **Suíte: 64 verdes.**
 - Story → InProgress; PLANO, MEMORY e ROADMAP atualizados
-- Commit + push desta leva (preencher hash após reconciliar com o git)
+- Commit `c529919` + push para `origin/homologacao` (verificado, sincronizado)
 
 ### Sessão 11/06/2026 — Brainstorm Fase H
 - Brainstorm completo da Fase H com Helder
