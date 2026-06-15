@@ -9,10 +9,10 @@
 ## Estado Atual
 
 - **Branch:** `homologacao`
-- **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): **Onda 1 (backend) + Onda 2 (UI + fluxo) entregues em 15/06/2026**. Falta apenas o onboarding real (criar Service Account + Shared Drive e testar ponta a ponta com o Kommo).
-- **Commit de entrega da Onda 2:** `440ccfc` (feat). Commits de docs/sincronia seguem como tip do remoto.
-- **Pendente de push:** nada — `origin/homologacao` sincronizado (verificado: `git rev-list origin/homologacao...HEAD` = 0/0).
-- **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
+- **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
+- **Decisão estratégica 15/06/2026 (esta sessão):** disponibilizar o app por **URL** para o Edilvo/Luana validarem → escolhido o **Caminho B — Cloud-Native Stateless** (ponte para a v2), host **Render**, banco **PostgreSQL gerenciado**. Plano detalhado em `docs/stories/epic-02-cloud-native-stateless.md`. **Nenhum código alterado ainda** — implementação começa na próxima janela.
+- **Pendente de push:** (preencher após o commit desta sessão — verificar contra `origin/homologacao`).
+- **App (hoje):** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
 
 ---
 
@@ -28,27 +28,39 @@
 
 ---
 
-## Próxima Sessão (nova janela) — STORY-H-01: onboarding real + QA gate
+## Próxima Sessão (nova janela) — EPIC-02 Cloud-Native Stateless: Onda 0 + Onda 1
 
-Código da STORY-H-01 (Ondas 1 e 2) completo e testado (71 testes verdes). Falta operacionalizar:
+Iniciar a implementação do **EPIC-02** (`docs/stories/epic-02-cloud-native-stateless.md`).
+Caminho B (stateless), host Render, Postgres gerenciado, modelo de 2 empresas mantido.
 
-1. **Commit + push** da Onda 2 (via @devops — working tree tem `app.py`, templates e teste).
-2. **Onboarding Google (manual, com Helder/Edilvo)** — ⏳ *Helder fará o teste depois:*
-   - Criar **Service Account** no Google Cloud (projeto da org `@ineprotec.com.br`) e gerar o JSON.
-   - Criar/escolher a **pasta no Shared Drive** e adicionar a SA como *Gerenciador de conteúdo*.
-   - Em Configurações → WhatsApp: subir o JSON, colar o ID da pasta, **Testar Conexão**.
-   - Em Envio de Mensagens: **Exportar para WhatsApp** e validar o arquivo no Drive.
-3. **Validar ponta a ponta com o Kommo:** confirmar que ele lê a aba `Inadimplentes` e dispara pelas tags.
-   Ajustar colunas/tags se o Kommo pedir (a planilha reusa `proc.gerar_planilha_crm`).
-4. **QA gate** da STORY-H-01 (InReview → Done) após o teste real.
+1. **Onda 0 — Preparação (~0,5h):** adicionar `psycopg[binary]` + `psycopg_pool` ao
+   `requirements.txt`; introduzir o switch de dialeto (`DATABASE_URL`/`DIALECT`) em `database.py`
+   **sem usá-lo ainda**. SQLite continua 100% — suíte verde.
+2. **Onda 1 — Wrapper + placeholders (~5h):** wrapper conn/cursor unificado; `get_conn()` ramifica
+   (SQLite como hoje / Postgres via `psycopg_pool` + `dict_row`); helper `?`→`%s`; padronizar
+   acessos posicionais `[0]`→alias (`database.py:484,521,706,793`; `runner.py:37,42`).
+   Validar SQLite verde após cada passo.
 
-**Pontos de entrada do código:** UI em `configuracoes.html` (aba WhatsApp) e `envio_mensagens.html`
-(botão Exportar). Rotas em `app.py`: `/whatsapp/configurar`, `/whatsapp/testar`, `/whatsapp/exportar`.
-Backend em `06_APP/gdrive.py` + `db.get_config_whatsapp` / `db.salvar_config_whatsapp`.
+> **Estratégia dual-dialect:** SQLite em dev/testes (rápido, zero infra) + Postgres na nuvem,
+> selecionado por `DATABASE_URL`. Rollback trivial; preserva os ~91 testes locais.
+
+**Pendência paralela (não bloqueia o EPIC-02) — STORY-H-01 onboarding real:** criar Service
+Account + Shared Drive, testar conexão/exportação e validar com o Kommo → QA gate (InReview → Done).
+Helder fará quando o ambiente estiver no ar. Entradas: `configuracoes.html` (aba WhatsApp),
+`envio_mensagens.html` (botão Exportar), rotas `/whatsapp/*` em `app.py`, `06_APP/gdrive.py`.
 
 ---
 
 ## Histórico de Sessões
+
+### Sessão 15/06/2026 (planejamento) — Estratégia de disponibilização + EPIC-02
+- Pergunta de partida: como disponibilizar o app para o Edilvo/Luana validarem (deploy/versionamento/local)
+- Esclarecido: versionamento ≠ deploy ≠ disponibilização; "acessível por várias máquinas" = 1 URL (não exige multi-instância); Vercel descartada (serverless não serve Flask/pandas com estado)
+- Investigação completa (3 Explore agents): camada SQLite, acoplamentos com filesystem/keyring/pickle, multi-tenancy hardcoded (2 empresas)
+- Decisão: **Caminho B — Cloud-Native Stateless**, host **Render**, **Postgres** gerenciado; modelo de 2 empresas mantido (multi-tenant fica para v2)
+- Plano detalhado em 8 ondas criado em `docs/stories/epic-02-cloud-native-stateless.md` (~30h)
+- **Sem alteração de código** — só gestão + spec. Implementação inicia na próxima janela (Ondas 0–1)
+- PLANO, MEMORY e ROADMAP atualizados
 
 ### Sessão 15/06/2026 (continuação) — Onda 2 da STORY-H-01 (UI + fluxo)
 - **Aba "WhatsApp" em Configurações** (blocos Google Drive + Kommo + Comportamento) + sublink na sidebar
@@ -156,6 +168,23 @@ Backend em `06_APP/gdrive.py` + `db.get_config_whatsapp` / `db.salvar_config_wha
 | Mover aba **WhatsApp** (criada na H-1) para dentro do submenu | 🔲 |
 | Nova aba **SMS** — config de provider (provider TBD: Twilio / Zenvia / Comtele etc.) | 🔲 |
 | Envio SMS individual + em lote + registro em `envios` (`canal='sms'`) | 🔲 |
+
+---
+
+## EPIC-02 — Cloud-Native Stateless (ponte para v2) 🔲
+
+> Decidido 15/06/2026. Caminho B (stateless), Render, Postgres. Spec: `docs/stories/epic-02-cloud-native-stateless.md`. Esforço total ~30h (~3–4 janelas).
+
+| Onda | Objetivo | Status |
+|------|----------|--------|
+| 0 | Deps (`psycopg`, `psycopg_pool`) + switch de dialeto (`DATABASE_URL`) sem uso | 🔲 Próxima sessão |
+| 1 | Wrapper conn/cursor + `get_conn()` ramifica + placeholders `?`→`%s` + acessos `[0]`→alias | 🔲 Próxima sessão |
+| 2 | Migrations cross-dialect (`ddl.py`, AUTOINCREMENT, `datetime`, `ON CONFLICT`, `RETURNING`) | 🔲 |
+| 3 | Matar o pickle: estado → tabela `estado_consolidacao` (BYTEA) no Postgres | 🔲 |
+| 4 | Stateless de arquivos: upload em memória + relatórios via download (ZIP) + remover `os.startfile` + logs stdout | 🔲 |
+| 5 | Segredos → env vars + Secret File do Drive; blindar keyring | 🔲 |
+| 6 | Testes dual-dialect (conftest parametrizado + Postgres efêmero) | 🔲 |
+| 7 | Deploy Render (Web Service + Postgres + env + Procfile/runtime) + smoke test | 🔲 |
 
 ---
 

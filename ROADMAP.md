@@ -307,6 +307,31 @@ Reorganização de UX em Configurações: hoje E-mail (Fase G) e WhatsApp (H-1) 
 
 ---
 
+## 🔲 EPIC-02 — Cloud-Native / Stateless (ponte para a v2) *(decisão 15/06/2026)*
+
+> Objetivo: disponibilizar o app por **URL** (Edilvo/Luana validam de qualquer máquina) tornando-o
+> **stateless** — alicerce comum entre "rodar na nuvem" e a v2 SaaS. Mantém o modelo de **2 empresas**
+> (multi-tenant real fica para o v2). Host **Render**, banco **PostgreSQL** gerenciado.
+> Spec completa: `docs/stories/epic-02-cloud-native-stateless.md`. Esforço ~30h (~3–4 janelas).
+
+**Por que stateless (e não só "SQLite num disco"):** resolve a preocupação de "não guardar
+arquivos dos clientes no meu servidor" e remove os acoplamentos que quebram na nuvem — pickle de
+estado (por-processo), arquivos em disco efêmero, keyring do Windows, `os.startfile` (derruba no Linux).
+
+- [ ] **Onda 0** — Deps (`psycopg`, `psycopg_pool`) + switch de dialeto (`DATABASE_URL`) sem uso
+- [ ] **Onda 1** — Wrapper conn/cursor + `get_conn()` dual-dialect + placeholders `?`→`%s` + acessos `[0]`→alias
+- [ ] **Onda 2** — Migrations cross-dialect (`ddl.py`, AUTOINCREMENT→IDENTITY, `datetime`→`CURRENT_TIMESTAMP`, `ON CONFLICT`, `RETURNING`)
+- [ ] **Onda 3** — Estado de sessão: pickle → tabela `estado_consolidacao` (BYTEA) no Postgres
+- [ ] **Onda 4** — Stateless de arquivos: upload em memória + relatórios via download (ZIP) + remover `os.startfile` + logs stdout
+- [ ] **Onda 5** — Segredos → env vars + Secret File do Drive; blindar keyring
+- [ ] **Onda 6** — Testes dual-dialect (conftest parametrizado + Postgres efêmero)
+- [ ] **Onda 7** — Deploy Render (Web Service + Postgres + env + Procfile/runtime) + smoke test
+
+> Reaproveita 100% no v2: o banco já em Postgres e o app já stateless são pré-requisitos diretos
+> da visão SaaS multi-tenant abaixo. Falta, depois, generalizar "2 empresas" → "N tenants".
+
+---
+
 ## 💡 INSIGHTS — Próxima Versão
 
 Observações e aprendizados do uso real. Serão tratados após Fase H como backlog da v2.

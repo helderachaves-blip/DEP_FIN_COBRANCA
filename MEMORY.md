@@ -208,10 +208,19 @@ O produto evoluirá das escolas do Edilvo para uma **plataforma SaaS de cobranç
 **Roadmap de evolução arquitetural (v2):**
 - SQLite → PostgreSQL
 - `C:\MATINE\` → storage cloud (S3 ou similar por tenant)
-- Flask local Windows → deploy cloud (Railway / Render / AWS — TBD)
+- Flask local Windows → deploy cloud (**Render — decidido 15/06/2026**)
 - Keyring Windows → vault cloud
 - 2 empresas hardcoded → N tenants
 - Fonte Synapta → importação genérica com mapeamento de colunas configurável
+
+**Ponte para a v2 — EPIC-02 Cloud-Native Stateless *(decidido 15/06/2026)*:** antes do multi-tenant,
+o app será tornado **stateless** e migrado para **Postgres no Render**, mantendo o modelo de 2 empresas.
+É o passo que disponibiliza o app por URL (validação Edilvo/Luana) **e** adianta o alicerce do v2
+(banco em Postgres + app sem estado). Estratégia **dual-dialect**: SQLite em dev/testes, Postgres na
+nuvem, selecionado por `DATABASE_URL`. Spec e ondas em `docs/stories/epic-02-cloud-native-stateless.md`.
+Decisões: Vercel descartada (serverless não serve Flask/pandas com estado); "arquivos na máquina do
+cliente" é inviável num app web (sandbox) → resolvido tornando o app stateless (upload em memória,
+relatórios via download, nada retido no servidor).
 
 ---
 
