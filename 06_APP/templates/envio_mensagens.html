@@ -40,6 +40,19 @@
         <i class="bi bi-file-earmark-spreadsheet me-1"></i>Planilha CRM
       </button>
     </form>
+    {% if tem_whatsapp_cfg %}
+    <form action="/whatsapp/exportar" method="post" data-loading>
+      <button type="submit" class="btn btn-success btn-sm" data-loading-text="Enviando ao Drive..."
+              onclick="return confirm('Gerar a planilha CRM e subir no Google Drive para o Kommo disparar pelo WhatsApp?')">
+        <i class="bi bi-cloud-arrow-up me-1"></i>Exportar para WhatsApp
+      </button>
+    </form>
+    {% else %}
+    <a href="/configuracoes#tab-whatsapp" class="btn btn-outline-secondary btn-sm"
+       title="Configure o Google Drive para habilitar a exportação para WhatsApp">
+      <i class="bi bi-whatsapp me-1"></i>Configurar WhatsApp
+    </a>
+    {% endif %}
     <form action="/whatsapp/marcar-todos" method="post">
       <button type="submit" class="btn btn-outline-success btn-sm"
               onclick="return confirm('Marcar todos como enviados pelo WhatsApp?')">

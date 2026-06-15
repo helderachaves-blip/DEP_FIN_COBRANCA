@@ -1,7 +1,7 @@
 # STORY-H-01 — Integração WhatsApp via Google Drive + Kommo
 
 **Epic:** Fase H — Integrações  
-**Status:** InProgress  
+**Status:** InReview  
 **Prioridade:** P0 — Primeira entrega da Fase H  
 **Criado em:** 11/06/2026  
 **Fonte:** Brainstorm Helder + Claude — 11/06/2026  
@@ -122,14 +122,14 @@ google-auth-httplib2>=0.1.1
 
 ## Critérios de Aceite
 
-- [ ] Aba "WhatsApp" aparece em Configurações para ambas as empresas
-- [ ] Testar Conexão com Google Drive retorna sucesso/erro claro
-- [ ] Credenciais da Service Account não aparecem em nenhum HTML renderizado
-- [ ] Botão "Exportar para WhatsApp" aparece em Envio de Mensagens apenas quando configurado
-- [ ] Planilha gerada tem as colunas corretas e telefones no formato internacional
-- [ ] Upload no Drive cria/substitui o arquivo na pasta configurada
-- [ ] Envio registrado na tabela `envios` com `canal='whatsapp_crm'`
-- [ ] Funciona para INEPROTEC e MATRÍCULA EAD independentemente
+- [x] Aba "WhatsApp" aparece em Configurações para ambas as empresas
+- [x] Testar Conexão com Google Drive retorna sucesso/erro claro (AJAX → `gdrive.testar_conexao`)
+- [x] Credenciais da Service Account não aparecem em nenhum HTML renderizado (teste de regressão)
+- [x] Botão "Exportar para WhatsApp" aparece em Envio de Mensagens apenas quando configurado
+- [x] Planilha gerada tem as colunas corretas e telefones no formato internacional (reusa Planilha CRM)
+- [x] Upload no Drive cria/substitui o arquivo na pasta configurada (Onda 1 + fluxo na Onda 2)
+- [x] Envio registrado na tabela `envios` com `canal='whatsapp_crm'`
+- [x] Funciona para INEPROTEC e MATRÍCULA EAD independentemente (config por empresa)
 
 ---
 
@@ -169,22 +169,35 @@ CLI-First: a camada de dados + upload funciona e é testada antes da UI.
 - [x] **`requirements.txt`** — `google-api-python-client`, `google-auth`, `google-auth-httplib2`
 - [x] **`tests/test_whatsapp.py`** — 12 testes (migration, config, gdrive). Suíte total: **64 verdes**
 
-### 🔲 Onda 2 — UI + fluxo (próxima sessão / nova janela)
+### ✅ Onda 2 — UI + fluxo (15/06/2026)
 
-- [ ] Aba "WhatsApp" em `configuracoes.html` (blocos Drive + Kommo + Comportamento) + rotas
-- [ ] Botão **Testar Conexão** (AJAX, padrão SMTP) chamando `gdrive.testar_conexao`
-- [ ] Botão **"Exportar para WhatsApp"** em `envio_mensagens.html` → gera Planilha CRM + `gdrive.upload_xlsx`
-- [ ] Registro em `envios` com `canal='whatsapp_crm'`
-- [ ] Garantir que a credencial nunca apareça em HTML renderizado (AC)
+- [x] Aba "WhatsApp" em `configuracoes.html` (blocos Drive + Kommo + Comportamento) + sublink na sidebar
+- [x] Rotas: `POST /whatsapp/configurar` (upload do JSON + valida), `POST /whatsapp/testar` (AJAX → JSON),
+      `POST /whatsapp/exportar` (gera Planilha CRM + `gdrive.upload_xlsx` + registra envios)
+- [x] Botão **Testar Conexão** (AJAX, padrão SMTP) chamando `gdrive.testar_conexao`
+- [x] Botão **"Exportar para WhatsApp"** em `envio_mensagens.html` → gera Planilha CRM + `gdrive.upload_xlsx`
+      (aparece só quando Drive configurado; senão mostra "Configurar WhatsApp")
+- [x] Registro em `envios` com `canal='whatsapp_crm'` (um por inadimplente)
+- [x] Credencial nunca aparece em HTML renderizado (AC) — coberto por teste de regressão
+- [x] **7 testes de rota** em `tests/test_whatsapp.py` (aba, configurar, JSON inválido, credencial fora do HTML,
+      testar sem credencial, exportar sem config, exportar registra envios)
 
 ## File List
 
+**Onda 1 (backend):**
 - `06_APP/migrations/008_add_config_whatsapp.py` (novo)
 - `06_APP/gdrive.py` (novo)
 - `06_APP/tests/test_whatsapp.py` (novo)
 - `06_APP/database.py` (config_whatsapp + helpers de credencial)
 - `06_APP/requirements.txt` (libs Google)
 - `06_APP/tests/test_migrations.py` (expectativa migration 8)
+
+**Onda 2 (UI + fluxo):**
+- `06_APP/app.py` (import gdrive; rotas `/whatsapp/configurar|testar|exportar`; flags em `/configuracoes` e `/envio-mensagens`)
+- `06_APP/templates/configuracoes.html` (aba WhatsApp + JS de Testar Conexão)
+- `06_APP/templates/envio_mensagens.html` (botão "Exportar para WhatsApp")
+- `06_APP/templates/layout.html` (sublink WhatsApp na sidebar)
+- `06_APP/tests/test_whatsapp.py` (+7 testes de rota)
 
 ## Change Log
 
@@ -193,6 +206,7 @@ CLI-First: a camada de dados + upload funciona e é testada antes da UI.
 | 11/06/2026 | @sm | Story criada (Draft) a partir do brainstorm da Fase H |
 | 15/06/2026 | Helder | Bloqueadores resolvidos: formato (Planilha CRM) + auth (Service Account + Shared Drive) |
 | 15/06/2026 | @dev | Ready → InProgress; Onda 1 (fundação backend) implementada e testada (64 testes verdes) |
+| 15/06/2026 | @dev | Onda 2 (UI + fluxo) implementada: aba WhatsApp, rotas configurar/testar/exportar, botão Exportar; +7 testes. InProgress → InReview |
 
 ---
 

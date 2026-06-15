@@ -9,9 +9,9 @@
 ## Estado Atual
 
 - **Branch:** `homologacao`
-- **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **em implementação** (status InProgress): **Onda 1 (fundação backend) entregue em 15/06/2026**. Falta a Onda 2 (UI + fluxo).
+- **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): **Onda 1 (backend) + Onda 2 (UI + fluxo) entregues em 15/06/2026**. Falta apenas o onboarding real (criar Service Account + Shared Drive e testar ponta a ponta com o Kommo).
 - **Último commit no remoto:** `c529919` — feat: STORY-H-01 Onda 1 — fundação backend WhatsApp/Drive
-- **Pendente de push:** nada — `origin/homologacao` sincronizado (verificado: `git log origin/homologacao..HEAD` vazio)
+- **Pendente de push:** Onda 2 **commitada localmente** nesta sessão (hash registrado no Histórico abaixo) — `origin/homologacao` ainda em `c529919`. **Aguarda push** (exclusivo do @devops).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
 
 ---
@@ -19,8 +19,8 @@
 ## O Que Está Pendente
 
 ### Pendente de implementação
-- **STORY-H-01 — Onda 2 (UI + fluxo)** — Onda 1 (backend) ✅. Falta: aba "WhatsApp" em Configurações (Drive + Kommo + Comportamento) + rotas, botão Testar Conexão (AJAX → `gdrive.testar_conexao`), botão "Exportar para WhatsApp" em Envio de Mensagens (Planilha CRM + `gdrive.upload_xlsx`), registro em `envios` (`canal='whatsapp_crm'`). Ver `docs/stories/story-h1-whatsapp-gdrive-kommo.md`
-- **Submenu "Canais de Comunicação" + aba SMS** — reorganizar Configurações: agrupar E-mail (Fase G ✅), WhatsApp (H-1) e SMS (novo) sob um submenu "Canais de Comunicação". Inclui criar a aba de configuração de SMS (provider TBD). Ver Sprint H-3.
+- **STORY-H-01 — Onda 2 (UI + fluxo)** ✅ **ENTREGUE 15/06** — aba "WhatsApp" em Configurações (Drive + Kommo + Comportamento) + sublink, rotas `/whatsapp/configurar|testar|exportar`, botão Testar Conexão (AJAX), botão "Exportar para WhatsApp" em Envio de Mensagens, registro em `envios` (`canal='whatsapp_crm'`). +7 testes. **Falta só o onboarding real** (ver Próxima Sessão).
+- **Submenu "Canais de Comunicação" + aba SMS** — reorganizar Configurações: agrupar E-mail (Fase G ✅), WhatsApp (H-1 ✅) e SMS (novo) sob um submenu "Canais de Comunicação". Inclui criar a aba de configuração de SMS (provider TBD). Ver Sprint H-3.
 
 ### Decisões dos bloqueadores da STORY-H-01 — ✅ RESOLVIDOS (15/06/2026)
 1. ✅ **Formato da planilha:** reaproveitar a **Planilha CRM** existente (`proc.gerar_planilha_crm`), gerada em Envio de Mensagens → botão "Planilha CRM". XLSX com 2 abas: `Inadimplentes` (Nome, CPF, Telefone, E-mail, Categoria, Dias Atraso, Valor, Tag CRM) + `Saídos_Quitados`. O Kommo lê a aba `Inadimplentes` (Telefone + Tag CRM são o essencial).
@@ -28,24 +28,41 @@
 
 ---
 
-## Próxima Sessão (nova janela) — STORY-H-01 Onda 2 (UI + fluxo)
+## Próxima Sessão (nova janela) — STORY-H-01: onboarding real + QA gate
 
-Onda 1 (fundação backend) já entregue e testada. Retomar pela UI:
+Código da STORY-H-01 (Ondas 1 e 2) completo e testado (71 testes verdes). Falta operacionalizar:
 
-1. ✅ ~~Migration `008_add_config_whatsapp`~~ — feito (Onda 1)
-2. ✅ ~~Módulo `gdrive.py` (upload + testar conexão)~~ — feito (Onda 1)
-3. ✅ ~~`database.py` config_whatsapp + credencial em `secrets/`~~ — feito (Onda 1)
-4. 🔲 Aba "WhatsApp" em `configuracoes.html` (Drive + Kommo + Comportamento) + rotas GET/POST
-5. 🔲 Botão **Testar Conexão** (AJAX, padrão SMTP) → `gdrive.testar_conexao`
-6. 🔲 Botão **"Exportar para WhatsApp"** em `envio_mensagens.html` → gera Planilha CRM (`proc.gerar_planilha_crm`) + `gdrive.upload_xlsx`
-7. 🔲 Registro na tabela `envios` com `canal='whatsapp_crm'`
-8. 🔲 Onboarding: criar a Service Account no Google Cloud + Shared Drive e salvar o JSON pela aba
+1. **Commit + push** da Onda 2 (via @devops — working tree tem `app.py`, templates e teste).
+2. **Onboarding Google (manual, com Helder/Edilvo)** — ⏳ *Helder fará o teste depois:*
+   - Criar **Service Account** no Google Cloud (projeto da org `@ineprotec.com.br`) e gerar o JSON.
+   - Criar/escolher a **pasta no Shared Drive** e adicionar a SA como *Gerenciador de conteúdo*.
+   - Em Configurações → WhatsApp: subir o JSON, colar o ID da pasta, **Testar Conexão**.
+   - Em Envio de Mensagens: **Exportar para WhatsApp** e validar o arquivo no Drive.
+3. **Validar ponta a ponta com o Kommo:** confirmar que ele lê a aba `Inadimplentes` e dispara pelas tags.
+   Ajustar colunas/tags se o Kommo pedir (a planilha reusa `proc.gerar_planilha_crm`).
+4. **QA gate** da STORY-H-01 (InReview → Done) após o teste real.
 
-**Ponto de entrada do código (Onda 1):** `06_APP/gdrive.py` (`testar_conexao`, `upload_xlsx`, `disponivel`), `db.get_config_whatsapp` / `db.salvar_config_whatsapp`.
+**Pontos de entrada do código:** UI em `configuracoes.html` (aba WhatsApp) e `envio_mensagens.html`
+(botão Exportar). Rotas em `app.py`: `/whatsapp/configurar`, `/whatsapp/testar`, `/whatsapp/exportar`.
+Backend em `06_APP/gdrive.py` + `db.get_config_whatsapp` / `db.salvar_config_whatsapp`.
 
 ---
 
 ## Histórico de Sessões
+
+### Sessão 15/06/2026 (continuação) — Onda 2 da STORY-H-01 (UI + fluxo)
+- **Aba "WhatsApp" em Configurações** (blocos Google Drive + Kommo + Comportamento) + sublink na sidebar
+- **Rotas novas em `app.py`:** `/whatsapp/configurar` (upload do JSON com validação),
+  `/whatsapp/testar` (AJAX → JSON, chama `gdrive.testar_conexao`),
+  `/whatsapp/exportar` (gera Planilha CRM → `gdrive.upload_xlsx` → registra `envios` canal `whatsapp_crm`)
+- **Botão "Exportar para WhatsApp"** em Envio de Mensagens (só aparece quando o Drive está configurado)
+- **Botão Testar Conexão** (AJAX, padrão SMTP) com feedback inline
+- Credencial nunca renderizada no HTML (AC) — coberto por teste de regressão
+- **+7 testes de rota** em `test_whatsapp.py`. **Suíte: 71 verdes.**
+- Limpeza: `wizard_whatsapp.html` (órfão, não referenciado) movido para `UTILITARIOS/TEMP/`
+- Story H-01 → InReview; PLANO, ROADMAP e story atualizados
+- Commit local `__HASH_ONDA2__` (Onda 2) — **aguarda push** para `origin/homologacao` (@devops)
+- Onboarding real (SA + Shared Drive + teste com Kommo) — Helder fará depois
 
 ### Sessão 15/06/2026 — Destrava + Onda 1 da STORY-H-01
 - Bloqueador #1 (formato da planilha) resolvido: reaproveitar a Planilha CRM existente
@@ -114,9 +131,12 @@ Onda 1 (fundação backend) já entregue e testada. Retomar pela UI:
 | Módulo `gdrive.py` (upload + testar conexão) | ✅ Onda 1 |
 | `database.py` config_whatsapp + credencial em `secrets/` | ✅ Onda 1 |
 | Testes `test_whatsapp.py` (12 testes) | ✅ Onda 1 |
-| Aba "WhatsApp" em Configurações + rotas | 🔲 Onda 2 |
-| Botão "Exportar para WhatsApp" em Envio de Mensagens | 🔲 Onda 2 |
-| Registro em `envios` (`canal='whatsapp_crm'`) | 🔲 Onda 2 |
+| Aba "WhatsApp" em Configurações + rotas | ✅ Onda 2 |
+| Botão Testar Conexão (AJAX → `gdrive.testar_conexao`) | ✅ Onda 2 |
+| Botão "Exportar para WhatsApp" em Envio de Mensagens | ✅ Onda 2 |
+| Registro em `envios` (`canal='whatsapp_crm'`) | ✅ Onda 2 |
+| Testes de rota (`test_whatsapp.py`, +7) | ✅ Onda 2 |
+| Onboarding real (SA + Shared Drive + teste com Kommo) | 🔲 Próxima sessão |
 
 ## Sprint H-2 — Agendamento + Dashboard 🔲
 

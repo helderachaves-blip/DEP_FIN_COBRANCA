@@ -44,6 +44,7 @@ from flask_login import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import database as db
+import gdrive
 import processing as proc
 from processing import fmt_brl
 
@@ -866,11 +867,16 @@ def configuracoes():
     # decidir entre mostrar bullets ("já configurada") ou pedir a senha.
     smtp_senha_set = bool(config_email.get('smtp_senha'))
     config_email = {**config_email, 'smtp_senha': ''}
+    # WhatsApp/Drive (STORY-H-01 Onda 2). get_config_whatsapp nunca devolve a credencial,
+    # apenas o flag tem_credenciais — segue o mesmo padrão da senha SMTP.
+    config_whatsapp = db.get_config_whatsapp(empresa) or {}
     return render_template('configuracoes.html',
                            templates=templates,
                            auto_alunos=auto_alunos,
                            config_email=config_email,
-                           smtp_senha_set=smtp_senha_set)
+                           smtp_senha_set=smtp_senha_set,
+                           config_whatsapp=config_whatsapp,
+                           gdrive_disponivel=gdrive.disponivel())
 
 
 def _encontrar_template(dias_atraso: int, templates: list) -> dict | None:
@@ -983,6 +989,9 @@ def envio_mensagens():
     emails_hoje    = {e['cpf'] for e in db.get_envios_hoje(empresa, 'email')}
     tem_email_cfg  = bool(db.get_config_email(empresa) and
                           db.get_config_email(empresa).get('smtp_host'))
+    # Botão "Exportar para WhatsApp" só aparece com Drive configurado (credencial + pasta).
+    cfg_wpp        = db.get_config_whatsapp(empresa) or {}
+    tem_whatsapp_cfg = bool(cfg_wpp.get('tem_credenciais') and cfg_wpp.get('gdrive_folder_id'))
 
     linhas = []
     for _, row in consolidado.iterrows():
@@ -1047,6 +1056,7 @@ def envio_mensagens():
         total_enviados=total_enviados,
         pct=pct,
         tem_email_cfg=tem_email_cfg,
+        tem_whatsapp_cfg=tem_whatsapp_cfg,
     )
 
 
@@ -1365,6 +1375,123 @@ def crm_gerar_planilha():
         _log(f"[{empresa}] ERRO CRM: {e}")
         flash(f"Erro ao gerar planilha CRM: {e}", "danger")
 
+    return redirect(url_for('envio_mensagens'))
+
+
+# ---------------------------------------------------------------------------
+# Fase H — WhatsApp via Google Drive + Kommo (STORY-H-01 Onda 2)
+# ---------------------------------------------------------------------------
+
+def _nome_remoto_whatsapp(cfg: dict, empresa: str) -> str:
+    """Nome do arquivo no Drive a partir do template configurado.
+
+    Substitui {empresa} e {data}/{ddmmyyyy} pela data do dia (mesmo nome a cada dia →
+    o upload substitui em vez de acumular versões). Garante a extensão .xlsx.
+    """
+    template = cfg.get('gdrive_filename_template') or 'cobrancas_{empresa}_{ddmmyyyy}.xlsx'
+    data = datetime.now().strftime('%d%m%Y')
+    nome = (template.replace('{empresa}', empresa)
+                    .replace('{ddmmyyyy}', data)
+                    .replace('{data}', data))
+    if not nome.lower().endswith('.xlsx'):
+        nome += '.xlsx'
+    return nome
+
+
+@app.route('/whatsapp/configurar', methods=['POST'])
+def whatsapp_configurar():
+    empresa           = get_empresa()
+    folder_id         = request.form.get('gdrive_folder_id', '').strip()
+    filename_template = request.form.get('gdrive_filename_template', '').strip()
+    kommo_webhook     = request.form.get('kommo_webhook_url', '').strip()
+    kommo_pipeline    = request.form.get('kommo_pipeline_id', '').strip()
+    exportar_auto     = request.form.get('exportar_automatico') == '1'
+
+    # Credencial da Service Account: só processa se um novo JSON foi enviado.
+    # Campo vazio preserva a credencial atual (mesmo espírito da senha SMTP).
+    credentials_json = None
+    arquivo = request.files.get('gdrive_credentials_file')
+    if arquivo and arquivo.filename:
+        try:
+            conteudo = arquivo.read().decode('utf-8')
+            json.loads(conteudo)  # valida que é JSON antes de gravar
+            credentials_json = conteudo
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            flash("❌ O arquivo de credencial não é um JSON válido da Service Account.", "danger")
+            return redirect(url_for('configuracoes') + '#tab-whatsapp')
+
+    db.salvar_config_whatsapp(
+        empresa, folder_id, filename_template, kommo_webhook, kommo_pipeline,
+        exportar_auto, credentials_json,
+    )
+    flash("✅ Configurações do WhatsApp/Google Drive salvas com sucesso.", "success")
+    return redirect(url_for('configuracoes') + '#tab-whatsapp')
+
+
+@app.route('/whatsapp/testar', methods=['POST'])
+def whatsapp_testar():
+    """Testa credencial + acesso à pasta no Drive. Responde JSON (padrão AJAX)."""
+    empresa = get_empresa()
+    if not gdrive.disponivel():
+        return jsonify(ok=False, msg="Bibliotecas do Google não instaladas. "
+                                     "Rode: pip install -r requirements.txt")
+    cfg = db.get_config_whatsapp(empresa)
+    if not cfg or not cfg.get('credentials_path'):
+        return jsonify(ok=False, msg="Envie a credencial da Service Account e salve antes de testar.")
+    ok, msg = gdrive.testar_conexao(cfg['credentials_path'], cfg.get('gdrive_folder_id'))
+    return jsonify(ok=ok, msg=msg)
+
+
+@app.route('/whatsapp/exportar', methods=['POST'])
+def whatsapp_exportar():
+    """Gera a Planilha CRM dos inadimplentes e sobe no Google Drive (para o Kommo ler)."""
+    empresa = get_empresa()
+    cfg = db.get_config_whatsapp(empresa)
+    if not cfg or not cfg.get('tem_credenciais') or not cfg.get('gdrive_folder_id'):
+        flash("Configure o Google Drive (credencial + pasta) antes de exportar.", "warning")
+        return redirect(url_for('configuracoes') + '#tab-whatsapp')
+    if not gdrive.disponivel():
+        flash("Bibliotecas do Google não instaladas. Rode: pip install -r requirements.txt", "danger")
+        return redirect(url_for('envio_mensagens'))
+
+    consolidado, _, _, _ = _carregar_estado(empresa)
+    if consolidado is None:
+        flash("Consolide primeiro para exportar para o WhatsApp.", "warning")
+        return redirect(url_for('envio_mensagens'))
+
+    templates_list = db.get_templates_completo(empresa)
+    base_df        = db.carregar_base(empresa)
+    CRM_PASTA.mkdir(parents=True, exist_ok=True)
+    data_str       = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
+
+    try:
+        nome_arq = proc.gerar_planilha_crm(
+            consolidado, base_df, templates_list, CRM_PASTA, data_str, empresa
+        )
+    except Exception as e:
+        _log(f"[{empresa}] ERRO ao gerar planilha p/ WhatsApp: {e}")
+        flash(f"Erro ao gerar a planilha: {e}", "danger")
+        return redirect(url_for('envio_mensagens'))
+
+    remote_name = _nome_remoto_whatsapp(cfg, empresa)
+    ok, link = gdrive.upload_xlsx(
+        cfg['credentials_path'], cfg['gdrive_folder_id'], nome_arq, remote_name
+    )
+    if not ok:
+        _log(f"[{empresa}] ERRO no upload p/ Drive: {link}")
+        flash(f"❌ Falha no upload para o Drive: {link}", "danger")
+        return redirect(url_for('envio_mensagens'))
+
+    # Registra um envio por inadimplente no canal whatsapp_crm.
+    qtd = 0
+    for _, row in consolidado.iterrows():
+        tmpl = _encontrar_template(int(row['Dias_Atraso']), templates_list)
+        titulo = tmpl['titulo'] if tmpl else None
+        db.registrar_envio(str(row['CPF']).zfill(11), empresa, 'whatsapp_crm', titulo)
+        qtd += 1
+
+    _log(f"[{empresa}] Exportado p/ WhatsApp ({qtd} clientes): {remote_name} → {link}")
+    flash(f"✅ Planilha enviada ao Drive ({qtd} clientes). Link: {link}", "success")
     return redirect(url_for('envio_mensagens'))
 
 

@@ -276,13 +276,17 @@ Tags mapeiam para templates no Kommo: `INADIMPLENTE_NOVO`, `INADIMPLENTE_REGUA`,
 - [x] `requirements.txt` — `google-api-python-client`, `google-auth`, `google-auth-httplib2`
 - [x] `tests/test_whatsapp.py` — 12 testes (migration, config round-trip, gdrive create/replace). Suíte total: 64 verdes
 
-**Onda 2 — UI + fluxo 🔲 (próxima):**
-- [ ] **Aba de Configuração WhatsApp** — nova seção em Configurações:
-  - *Bloco Google Drive:* upload do JSON da SA, ID da pasta no Shared Drive, nome do arquivo, botão Testar Conexão (AJAX → `gdrive.testar_conexao`)
-  - *Bloco Kommo:* URL do webhook ou ID do pipeline, tag CRM padrão (já existe `tag_crm` nos templates)
-  - *Bloco Comportamento:* geração **sob demanda** via botão em Envio de Mensagens (não automático — decisão de 11/06)
-- [ ] Botão **"Exportar para WhatsApp"** na tela de Envio de Mensagens — gera Planilha CRM + `gdrive.upload_xlsx`
-- [ ] Registro do envio na tabela `envios` (canal=`whatsapp_crm`)
+**Onda 2 — UI + fluxo ✅ (15/06/2026):**
+- [x] **Aba de Configuração WhatsApp** em Configurações + sublink na sidebar:
+  - *Bloco Google Drive:* upload do JSON da SA (validado), ID da pasta no Shared Drive, template do nome do arquivo, botão Testar Conexão (AJAX → `gdrive.testar_conexao`)
+  - *Bloco Kommo:* URL do webhook ou ID do pipeline
+  - *Bloco Comportamento:* toggle de exportação automática (default OFF — geração **sob demanda**, decisão de 11/06)
+- [x] **Rotas** `POST /whatsapp/configurar` (upload + validação JSON), `POST /whatsapp/testar` (AJAX → JSON), `POST /whatsapp/exportar`
+- [x] Botão **"Exportar para WhatsApp"** em Envio de Mensagens — gera Planilha CRM + `gdrive.upload_xlsx` (aparece só quando o Drive está configurado)
+- [x] Registro do envio na tabela `envios` (canal=`whatsapp_crm`, um por inadimplente)
+- [x] Credencial nunca renderizada em HTML (AC) + **7 testes de rota**. Suíte total: **71 verdes**
+
+**Falta para fechar a STORY-H-01 (próxima sessão):** onboarding real (criar Service Account + Shared Drive, testar conexão e exportação) e validação ponta a ponta com o Kommo → QA gate (InReview → Done).
 
 ### Sprint H-2 — Agendamento + Dashboard
 

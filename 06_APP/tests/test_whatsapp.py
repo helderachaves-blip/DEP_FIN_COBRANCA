@@ -1,9 +1,13 @@
 """Testes da fundação backend da STORY-H-01 (WhatsApp via Google Drive + Kommo).
 
 Cobre: migration 008 (up/down + runner), config_whatsapp (round-trip com credencial
-fora do banco) e o módulo gdrive (degradação graciosa + lógica create/replace).
+fora do banco), o módulo gdrive (degradação graciosa + lógica create/replace) e as
+rotas da Onda 2 (UI + fluxo: configurar, testar, exportar).
 """
+import io
 import sqlite3
+
+import pandas as pd
 
 import gdrive
 
@@ -219,3 +223,121 @@ def test_gdrive_upload_substitui_quando_existe(monkeypatch, tmp_path):
     assert ok is True
     assert link == 'http://drive/OLD'
     assert chamadas == {'create': 0, 'update': 1}
+
+
+# ── Onda 2: rotas (configurar / testar / exportar) ───────────────────────────
+
+def test_aba_whatsapp_em_configuracoes(client, users, login):
+    """A aba WhatsApp aparece na página de Configurações."""
+    login('admin', 'admin123')
+    html = client.get('/configuracoes').get_data(as_text=True)
+    assert 'tab-whatsapp' in html
+    assert '/whatsapp/configurar' in html
+
+
+def test_whatsapp_configurar_salva(client, db, users, login):
+    """POST salva folder/template e grava a credencial fora do banco."""
+    login('admin', 'admin123')
+    data = {
+        'gdrive_folder_id': 'FOLDER_ABC',
+        'gdrive_filename_template': 'cob_{empresa}_{ddmmyyyy}.xlsx',
+        'kommo_webhook_url': 'https://hook.make/x',
+        'gdrive_credentials_file': (
+            io.BytesIO(b'{"type":"service_account","private_key":"SECRET_TEST_KEY"}'),
+            'sa.json'),
+    }
+    client.post('/whatsapp/configurar', data=data,
+                content_type='multipart/form-data', follow_redirects=True)
+    cfg = db.get_config_whatsapp('INEPROTEC')
+    assert cfg['gdrive_folder_id'] == 'FOLDER_ABC'
+    assert cfg['kommo_webhook_url'] == 'https://hook.make/x'
+    assert cfg['tem_credenciais'] is True
+
+
+def test_whatsapp_configurar_json_invalido(client, db, users, login):
+    """Credencial que não é JSON válido é rejeitada com mensagem clara."""
+    login('admin', 'admin123')
+    data = {
+        'gdrive_folder_id': 'F',
+        'gdrive_credentials_file': (io.BytesIO(b'isto nao e json'), 'ruim.json'),
+    }
+    html = client.post('/whatsapp/configurar', data=data,
+                       content_type='multipart/form-data',
+                       follow_redirects=True).get_data(as_text=True)
+    assert 'JSON válido' in html
+
+
+def test_credencial_nunca_aparece_no_html(client, db, users, login):
+    """AC: o conteúdo da credencial nunca é renderizado em Configurações."""
+    login('admin', 'admin123')
+    segredo = 'SUPER_SECRET_PRIVATE_KEY_42'
+    data = {
+        'gdrive_folder_id': 'F',
+        'gdrive_credentials_file': (
+            io.BytesIO(f'{{"type":"service_account","private_key":"{segredo}"}}'.encode()),
+            'sa.json'),
+    }
+    client.post('/whatsapp/configurar', data=data,
+                content_type='multipart/form-data', follow_redirects=True)
+    html = client.get('/configuracoes').get_data(as_text=True)
+    assert segredo not in html
+
+
+def test_whatsapp_testar_sem_credencial(client, db, app, users, login, monkeypatch):
+    """Sem credencial salva, /whatsapp/testar responde JSON ok=False (sem chamar API)."""
+    monkeypatch.setattr(app.gdrive, 'disponivel', lambda: True)
+    with db.get_conn() as conn:
+        conn.execute("DELETE FROM config_whatsapp WHERE empresa='INEPROTEC'")
+        conn.commit()
+    cred = db.get_gdrive_credentials_path('INEPROTEC')
+    if cred:
+        cred.unlink()
+    login('admin', 'admin123')
+    resp = client.post('/whatsapp/testar')
+    body = resp.get_json()
+    assert body['ok'] is False
+    assert 'credencial' in body['msg'].lower()
+
+
+def test_whatsapp_exportar_sem_config_redireciona(client, db, users, login):
+    """Sem Drive configurado, exportar avisa para configurar antes."""
+    with db.get_conn() as conn:
+        conn.execute("DELETE FROM config_whatsapp WHERE empresa='INEPROTEC'")
+        conn.commit()
+    cred = db.get_gdrive_credentials_path('INEPROTEC')
+    if cred:
+        cred.unlink()
+    login('admin', 'admin123')
+    html = client.post('/whatsapp/exportar', follow_redirects=True).get_data(as_text=True)
+    assert 'Configure o Google Drive' in html
+
+
+def test_whatsapp_exportar_registra_envios(client, db, app, users, login, monkeypatch, tmp_path):
+    """Fluxo feliz: gera planilha, sobe no Drive e registra um envio por inadimplente."""
+    empresa = 'INEPROTEC'
+    db.salvar_config_whatsapp(
+        empresa=empresa, folder_id='FOLDER_OK', filename_template='c_{ddmmyyyy}.xlsx',
+        kommo_webhook_url='', kommo_pipeline_id='', exportar_automatico=False,
+        credentials_json='{"type":"service_account"}',
+    )
+    with db.get_conn() as conn:
+        conn.execute("DELETE FROM envios WHERE empresa=? AND canal='whatsapp_crm'", (empresa,))
+        conn.commit()
+
+    consolidado = pd.DataFrame([
+        {'CPF': '12345678901', 'Dias_Atraso': 5},
+        {'CPF': '98765432100', 'Dias_Atraso': 40},
+    ])
+    monkeypatch.setattr(app, '_carregar_estado', lambda emp: (consolidado, {}, None, {}))
+    monkeypatch.setattr(app.proc, 'gerar_planilha_crm',
+                        lambda *a, **k: tmp_path / 'planilha.xlsx')
+    monkeypatch.setattr(app.gdrive, 'disponivel', lambda: True)
+    monkeypatch.setattr(app.gdrive, 'upload_xlsx',
+                        lambda *a, **k: (True, 'http://drive/OK'))
+
+    login('admin', 'admin123')
+    resp = client.post('/whatsapp/exportar')  # sem seguir redirect (não re-renderiza a tela)
+    assert resp.status_code == 302
+    assert '/envio-mensagens' in resp.headers['Location']
+    envios = db.get_envios_hoje(empresa, 'whatsapp_crm')
+    assert len(envios) == 2

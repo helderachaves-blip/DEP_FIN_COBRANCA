@@ -37,6 +37,12 @@
         </button>
       </li>
       <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-whatsapp-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-whatsapp" type="button" role="tab">
+          <i class="bi bi-whatsapp me-1"></i>WhatsApp
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
         <button class="nav-link text-danger" id="tab-risco-btn" data-bs-toggle="tab"
                 data-bs-target="#tab-risco" type="button" role="tab">
           <i class="bi bi-exclamation-triangle me-1"></i>Zona de Risco
@@ -383,6 +389,121 @@
 
       </div><!-- /tab-email -->
 
+      <!-- ── TAB WHATSAPP (Google Drive + Kommo) ────────────────────────── -->
+      <div class="tab-pane fade" id="tab-whatsapp" role="tabpanel">
+
+        <h5 class="fw-bold mb-1"><i class="bi bi-whatsapp text-success me-2"></i>WhatsApp via Kommo</h5>
+        <p class="text-muted small mb-3">
+          O app gera a <strong>Planilha CRM</strong> dos inadimplentes e sobe no Google Drive.
+          O Kommo lê essa planilha e dispara as mensagens pelo WhatsApp conectado, usando a
+          <em>Tag CRM</em> de cada mensagem (aba <a href="#" onclick="document.getElementById('tab-mensagens-btn').click(); return false;">Mensagens</a>).
+        </p>
+
+        {% if not gdrive_disponivel %}
+        <div class="alert alert-warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          As bibliotecas do Google não estão instaladas. Rode
+          <code>pip install -r requirements.txt</code> e reinicie o app para habilitar o upload.
+        </div>
+        {% endif %}
+
+        <form method="post" action="/whatsapp/configurar" enctype="multipart/form-data" data-loading>
+
+          <!-- BLOCO GOOGLE DRIVE -->
+          <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-google me-2"></i>Google Drive (Service Account)</div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-7">
+                  <label class="form-label fw-semibold">Credencial da Service Account (JSON)
+                    {% if not config_whatsapp.get('tem_credenciais') %}<span class="text-danger">*</span>{% endif %}
+                  </label>
+                  <input type="file" class="form-control" name="gdrive_credentials_file" accept=".json">
+                  <div class="form-text">
+                    {% if config_whatsapp.get('tem_credenciais') %}
+                      <i class="bi bi-shield-lock-fill text-success me-1"></i>Credencial salva com segurança (fora do banco). Deixe em branco para manter.
+                    {% else %}
+                      JSON gerado no Google Cloud. Guardado em <code>C:\MATINE\secrets\</code>, nunca no banco nem no HTML.
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label fw-semibold">ID da Pasta de Destino <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" name="gdrive_folder_id"
+                         value="{{ config_whatsapp.get('gdrive_folder_id', '') }}"
+                         placeholder="ID da pasta no Shared Drive">
+                  <div class="form-text">Trecho final da URL da pasta no Drive.</div>
+                </div>
+                <div class="col-md-7">
+                  <label class="form-label fw-semibold">Template do nome do arquivo</label>
+                  <input type="text" class="form-control" name="gdrive_filename_template"
+                         value="{{ config_whatsapp.get('gdrive_filename_template', '') }}"
+                         placeholder="cobrancas_{empresa}_{ddmmyyyy}.xlsx">
+                  <div class="form-text">Use <code>{empresa}</code> e <code>{ddmmyyyy}</code>. O arquivo do dia é substituído (não acumula versões).</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOCO KOMMO -->
+          <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-diagram-3 me-2"></i>Kommo (opcional)</div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <label class="form-label fw-semibold">URL do Webhook (Make) ou endpoint</label>
+                  <input type="text" class="form-control" name="kommo_webhook_url"
+                         value="{{ config_whatsapp.get('kommo_webhook_url', '') }}"
+                         placeholder="https://hook.make.com/...">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold">ID do Pipeline</label>
+                  <input type="text" class="form-control" name="kommo_pipeline_id"
+                         value="{{ config_whatsapp.get('kommo_pipeline_id', '') }}"
+                         placeholder="opcional">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOCO COMPORTAMENTO -->
+          <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-sliders me-2"></i>Comportamento</div>
+            <div class="card-body">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="exportar_automatico" value="1"
+                       id="exportarAuto"
+                       {{ 'checked' if config_whatsapp.get('exportar_automatico') else '' }}>
+                <label class="form-check-label" for="exportarAuto">
+                  Gerar e subir a planilha automaticamente ao gerar o relatório
+                </label>
+              </div>
+              <div class="form-text">Desligado: a planilha é gerada sob demanda pelo botão <strong>Exportar para WhatsApp</strong> em Envio de Mensagens.</div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm" data-loading-text="Salvando...">
+              <i class="bi bi-floppy me-1"></i>Salvar Configurações
+            </button>
+            {% if config_whatsapp.get('tem_credenciais') %}
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnTestarWpp">
+              <i class="bi bi-plug me-1"></i>Testar Conexão
+            </button>
+            {% endif %}
+            <span id="testarWppResultado" class="align-self-center small"></span>
+          </div>
+        </form>
+
+        <div class="alert alert-info mt-4 mb-0">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Como usar:</strong> salve a credencial e a pasta, clique em <strong>Testar Conexão</strong>,
+          e o botão <strong>Exportar para WhatsApp</strong> aparece na tela de
+          <a href="/envio-mensagens">Envio de Mensagens</a>.
+        </div>
+
+      </div><!-- /tab-whatsapp -->
+
       <!-- ── TAB ZONA DE RISCO ──────────────────────────────────────────── -->
       <div class="tab-pane fade" id="tab-risco" role="tabpanel">
 
@@ -623,6 +744,30 @@ document.getElementById('modalExcluirMsg').addEventListener('show.bs.modal', fun
   document.getElementById('excluirMsgTitulo').textContent = titulo;
   document.getElementById('formExcluirMsg').action = '/configuracoes/template/' + tid + '/excluir';
 });
+
+// Testar Conexão com o Google Drive (AJAX, padrão SMTP)
+const btnTestarWpp = document.getElementById('btnTestarWpp');
+if (btnTestarWpp) {
+  btnTestarWpp.addEventListener('click', async () => {
+    const out  = document.getElementById('testarWppResultado');
+    const orig = btnTestarWpp.innerHTML;
+    btnTestarWpp.disabled = true;
+    btnTestarWpp.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testando...';
+    out.textContent = '';
+    try {
+      const res  = await fetch('/whatsapp/testar', { method: 'POST' });
+      const data = await res.json();
+      out.className = 'align-self-center small fw-semibold ' + (data.ok ? 'text-success' : 'text-danger');
+      out.textContent = (data.ok ? '✓ ' : '✗ ') + data.msg;
+    } catch (e) {
+      out.className = 'align-self-center small fw-semibold text-danger';
+      out.textContent = '✗ Erro de conexão ao testar.';
+    } finally {
+      btnTestarWpp.disabled = false;
+      btnTestarWpp.innerHTML = orig;
+    }
+  });
+}
 
 // Abre a aba correta pelo hash (carga inicial ou troca via sidebar)
 function abrirTabPorHash(hash) {
