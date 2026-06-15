@@ -10,8 +10,8 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): **Onda 1 (backend) + Onda 2 (UI + fluxo) entregues em 15/06/2026**. Falta apenas o onboarding real (criar Service Account + Shared Drive e testar ponta a ponta com o Kommo).
-- **Último commit no remoto:** `c529919` — feat: STORY-H-01 Onda 1 — fundação backend WhatsApp/Drive
-- **Pendente de push:** Onda 2 **commitada localmente** nesta sessão (hash registrado no Histórico abaixo) — `origin/homologacao` ainda em `c529919`. **Aguarda push** (exclusivo do @devops).
+- **Último commit no remoto:** `24ed9fc` — docs: registra hash 440ccfc da Onda 2 (sincronia git). Onda 2 (feat) em `440ccfc`.
+- **Pendente de push:** nada — `origin/homologacao` sincronizado (verificado: `git rev-list origin/homologacao...HEAD` = 0/0).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
 
 ---
@@ -61,7 +61,7 @@ Backend em `06_APP/gdrive.py` + `db.get_config_whatsapp` / `db.salvar_config_wha
 - **+7 testes de rota** em `test_whatsapp.py`. **Suíte: 71 verdes.**
 - Limpeza: `wizard_whatsapp.html` (órfão, não referenciado) movido para `UTILITARIOS/TEMP/`
 - Story H-01 → InReview; PLANO, ROADMAP e story atualizados
-- Commit local `440ccfc` (Onda 2) — **aguarda push** para `origin/homologacao` (@devops)
+- Commits `440ccfc` (Onda 2) + `24ed9fc` (sincronia) — **push concluído** por @devops (`d93bc4b..24ed9fc`)
 - Onboarding real (SA + Shared Drive + teste com Kommo) — Helder fará depois
 
 ### Sessão 15/06/2026 — Destrava + Onda 1 da STORY-H-01
