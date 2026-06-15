@@ -10,7 +10,7 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): **Onda 1 (backend) + Onda 2 (UI + fluxo) entregues em 15/06/2026**. Falta apenas o onboarding real (criar Service Account + Shared Drive e testar ponta a ponta com o Kommo).
-- **Último commit no remoto:** `24ed9fc` — docs: registra hash 440ccfc da Onda 2 (sincronia git). Onda 2 (feat) em `440ccfc`.
+- **Commit de entrega da Onda 2:** `440ccfc` (feat). Commits de docs/sincronia seguem como tip do remoto.
 - **Pendente de push:** nada — `origin/homologacao` sincronizado (verificado: `git rev-list origin/homologacao...HEAD` = 0/0).
 - **App:** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
 
