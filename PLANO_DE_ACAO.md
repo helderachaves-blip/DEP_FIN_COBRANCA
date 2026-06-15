@@ -11,7 +11,7 @@
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
 - **Decisão estratégica 15/06/2026 (esta sessão):** disponibilizar o app por **URL** para o Edilvo/Luana validarem → escolhido o **Caminho B — Cloud-Native Stateless** (ponte para a v2), host **Render**, banco **PostgreSQL gerenciado**. Plano detalhado em `docs/stories/epic-02-cloud-native-stateless.md`. **Nenhum código alterado ainda** — implementação começa na próxima janela.
-- **Pendente de push:** (preencher após o commit desta sessão — verificar contra `origin/homologacao`).
+- **Pendente de push:** nada — commit de planejamento `e3ebf06` em `origin/homologacao` (verificado: ahead/behind 0/0).
 - **App (hoje):** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
 
 ---
