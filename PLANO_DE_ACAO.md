@@ -61,7 +61,7 @@ Backend em `06_APP/gdrive.py` + `db.get_config_whatsapp` / `db.salvar_config_wha
 - **+7 testes de rota** em `test_whatsapp.py`. **Suíte: 71 verdes.**
 - Limpeza: `wizard_whatsapp.html` (órfão, não referenciado) movido para `UTILITARIOS/TEMP/`
 - Story H-01 → InReview; PLANO, ROADMAP e story atualizados
-- Commit local `__HASH_ONDA2__` (Onda 2) — **aguarda push** para `origin/homologacao` (@devops)
+- Commit local `440ccfc` (Onda 2) — **aguarda push** para `origin/homologacao` (@devops)
 - Onboarding real (SA + Shared Drive + teste com Kommo) — Helder fará depois
 
 ### Sessão 15/06/2026 — Destrava + Onda 1 da STORY-H-01
