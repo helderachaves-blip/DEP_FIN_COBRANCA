@@ -156,8 +156,11 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 | `/resultado` | Resultado da consolidação com filtros |
 | `/envio-mensagens` | Wizard de envio (WhatsApp + E-mail) |
 | `/base` | Base de inadimplentes persistida |
-| `/configuracoes` | Templates, SMTP, Régua, Clientes, Zona de Risco |
-| `/crm/gerar-planilha` | Gera XLSX de tagging Kommo |
+| `/configuracoes` | Templates, SMTP, Régua, Clientes, **WhatsApp**, Zona de Risco |
+| `/crm/gerar-planilha` | Gera XLSX de tagging Kommo (abre a pasta local) |
+| `/whatsapp/configurar` | Salva config WhatsApp/Drive + upload do JSON da SA (POST) — STORY-H-01 |
+| `/whatsapp/testar` | Testa credencial + acesso à pasta no Drive (AJAX → JSON) — STORY-H-01 |
+| `/whatsapp/exportar` | Gera Planilha CRM → `gdrive.upload_xlsx` → registra `envios` (`canal='whatsapp_crm'`) — STORY-H-01 |
 | `/ajuda` | Central de Ajuda (índice lateral + conteúdo por tela) |
 | `/conta` · `/conta/nome` · `/conta/senha` | Minha conta — edita o próprio nome e senha |
 | `/usuarios` (+ `/criar`, `/<id>/senha`, `/<id>/admin`, `/<id>/remover`) | Gestão de usuários (admin) |
@@ -182,12 +185,12 @@ Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Min
 | `06_APP/templates/resultado.html` | Tabela de resultado com filtros |
 | `06_APP/templates/envio_mensagens.html` | Wizard de envio (WhatsApp + E-mail) |
 | `06_APP/templates/base.html` | Base persistida com cards de filtro |
-| `06_APP/templates/configuracoes.html` | Configurações gerais |
+| `06_APP/templates/configuracoes.html` | Configurações gerais (inclui a aba **WhatsApp**: Drive + Kommo + Comportamento, com Testar Conexão via AJAX) |
 | `06_APP/templates/ajuda.html` | Central de Ajuda |
 | `06_APP/templates/usuarios.html` · `conta.html` | Gestão de usuários (admin) · Minha conta |
 | `06_APP/conftest.py` · `pytest.ini` · `tests/` | Suíte de testes pytest (banco isolado via `MATINE_DATA_DIR`) |
 
-**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (64 testes; nunca tocam produção).
+**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (71 testes; nunca tocam produção).
 
 ---
 
@@ -232,12 +235,17 @@ O Kommo lê a aba `Inadimplentes` — `Telefone` + `Tag CRM` são o essencial pa
 
 **Auth Google Drive — DECIDIDO (15/06/2026):** **Service Account** (JSON) + **Shared Drive** (Edilvo tem Google Workspace, domínio `@ineprotec.com.br`). No Shared Drive os arquivos pertencem à organização (não à SA) → elimina `storageQuotaExceeded`. SA entra como membro Gerenciador de conteúdo; chamadas da API com `supportsAllDrives=True`. JSON guardado em `C:\MATINE\secrets\` (fora do git e do banco). OAuth fica para a v2 SaaS (cada tenant conecta o próprio Drive); `gdrive.py` deve ser **modular** para a troca SA→OAuth ser barata.
 
-**Aba de Configuração WhatsApp** (nova seção em Configurações — migration 008, por empresa):
-- Bloco Google Drive: upload do JSON da SA, ID da pasta (no Shared Drive), nome do arquivo, botão Testar Conexão
-- Bloco Kommo: URL do webhook ou ID do pipeline, tag CRM padrão
-- Bloco Comportamento: geração **sob demanda** via botão em Envio de Mensagens (não automático)
+**Aba de Configuração WhatsApp** — ✅ **IMPLEMENTADA (Onda 2, 15/06/2026)**. Seção em Configurações (migration 008, config por empresa):
+- Bloco Google Drive: upload do JSON da SA (validado), ID da pasta (no Shared Drive), template do nome do arquivo, botão Testar Conexão (AJAX → `/whatsapp/testar`)
+- Bloco Kommo: URL do webhook ou ID do pipeline
+- Bloco Comportamento: toggle de exportação automática (default OFF — geração **sob demanda** via botão em Envio de Mensagens)
+- Salva via `POST /whatsapp/configurar`; campo de credencial vazio preserva a credencial atual (espelha a senha SMTP)
+
+**Fluxo de exportação** — ✅ **IMPLEMENTADO (Onda 2)**: botão **"Exportar para WhatsApp"** em Envio de Mensagens (só aparece com Drive configurado) → `POST /whatsapp/exportar` → `proc.gerar_planilha_crm` → `gdrive.upload_xlsx` (cria/substitui o arquivo do dia) → registra um `envios` por inadimplente.
 
 **Canal registrado na tabela `envios`:** `canal='whatsapp_crm'`
+
+**Estado da STORY-H-01:** código completo (Onda 1 backend + Onda 2 UI/fluxo), status **InReview**. Falta o onboarding real (criar Service Account + Shared Drive, testar conexão/exportação, validar ponta a ponta com o Kommo) → QA gate fecha a story. Commits no remoto: `440ccfc` (feat Onda 2). Detalhes operacionais em `PLANO_DE_ACAO.md`.
 
 ---
 
