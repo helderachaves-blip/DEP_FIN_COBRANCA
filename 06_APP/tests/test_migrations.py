@@ -29,6 +29,7 @@ def test_schema_completo_apos_init(db):
 def test_runner_fresh_e_idempotente(tmp_path, db):
     """Em um banco novo, aplica 1-10 e a 2ª passada não aplica nada."""
     conn = sqlite3.connect(str(tmp_path / 'fresh.db'))
+    conn.row_factory = sqlite3.Row  # runner usa acesso por nome (r['version'])
     conn.isolation_level = None  # runner controla as transações
     try:
         aplicadas = db.runner.apply_pending(conn, db.MIGRATIONS_DIR)

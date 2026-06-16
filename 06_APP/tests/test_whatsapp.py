@@ -33,6 +33,7 @@ def test_config_whatsapp_no_schema(db):
 def test_runner_aplica_ate_008(tmp_path, db):
     """Banco novo aplica 1-10 e a 2ª passada é no-op."""
     conn = sqlite3.connect(str(tmp_path / 'fresh.db'))
+    conn.row_factory = sqlite3.Row  # runner usa acesso por nome (r['version'])
     conn.isolation_level = None
     try:
         aplicadas = db.runner.apply_pending(conn, db.MIGRATIONS_DIR)

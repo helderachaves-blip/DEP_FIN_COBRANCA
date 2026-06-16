@@ -319,7 +319,7 @@ arquivos dos clientes no meu servidor" e remove os acoplamentos que quebram na n
 estado (por-processo), arquivos em disco efêmero, keyring do Windows, `os.startfile` (derruba no Linux).
 
 - [x] **Onda 0** — Deps (`psycopg[binary]`, `psycopg_pool`) + `DATABASE_URL`/`DIALECT` em `database.py`; import protegido; suíte 90 verdes ✅ 16/06
-- [ ] **Onda 1** — Wrapper conn/cursor + `get_conn()` dual-dialect + placeholders `?`→`%s` + acessos `[0]`→alias
+- [x] **Onda 1** — `_PGConn` wrapper (`?`→`%s`, commit/rollback, isolation_level); `get_conn()` ramifica SQLite↔Postgres; 4 COUNT aliases (`[0]`→`['cnt']`); runner `r['version']`/`row['max_ver']`; `_IntegrityError` cross-dialect; `_table_exists` guarda Postgres ✅ 16/06
 - [ ] **Onda 2** — Migrations cross-dialect (`ddl.py`, AUTOINCREMENT→IDENTITY, `datetime`→`CURRENT_TIMESTAMP`, `ON CONFLICT`, `RETURNING`)
 - [x] **Onda 3** — Estado de sessão: pickle → tabela `estado_consolidacao` (BLOB/BYTEA) ✅ 15/06 — migration 009, `_salvar/_carregar/_limpar_estado` via blob no banco, `estado_existe`, +8 testes (suíte 79 verdes). Roda em SQLite hoje; pronta p/ Postgres
 - [x] **Onda 4** — Stateless de arquivos ✅ 16/06 — migration 010 (`uploads_staging`: bytes do upload por empresa+tipo no banco); `/upload` grava no staging (não em disco), `/consolidar` e `/atualizar-base` leem em memória (`BytesIO` via `processing._ler_csv`); relatórios → **download ZIP** e Planilha CRM → **download xlsx** (geração em tmp, apagada após enviar); `os.startfile` e a rota `/abrir-relatorios` removidos; `_log` → stdout (arquivo só em modo local, via `EM_NUVEM`/`DATABASE_URL`). +13 testes (`test_uploads.py`). **Suíte: 90 verdes.** Roda em SQLite hoje; staging pronto p/ Postgres (BLOB→BYTEA)

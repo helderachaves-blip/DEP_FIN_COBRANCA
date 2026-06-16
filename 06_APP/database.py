@@ -20,11 +20,78 @@ DIALECT = 'postgres' if DATABASE_URL else 'sqlite'
 # Import protegido: psycopg só é necessário quando DIALECT == 'postgres'.
 # Em dev/testes o pacote pode não estar instalado e o app continua funcionando.
 try:
-    import psycopg  # noqa: F401 — usado na Onda 1
-    import psycopg_pool  # noqa: F401 — usado na Onda 1
+    import psycopg as _psycopg
+    from psycopg.rows import dict_row as _pg_dict_row
+    from psycopg.errors import UniqueViolation as _PGUniqueViolation
+    import psycopg_pool as _psycopg_pool  # noqa: F401 — pool, usado na Onda 7
     _PSYCOPG_OK = True
 except ImportError:
+    _psycopg = _pg_dict_row = _PGUniqueViolation = _psycopg_pool = None
     _PSYCOPG_OK = False
+
+# Erros de unicidade capturados em criar_usuario()
+_IntegrityError = (sqlite3.IntegrityError,) + (
+    (_PGUniqueViolation,) if _PGUniqueViolation else ()
+)
+
+
+class _PGConn:
+    """Wraps psycopg Connection para espelhar a API sqlite3 usada neste módulo.
+
+    - ? → %s antes de cada execute/executemany.
+    - isolation_level = None mapeia para conn.autocommit = True (runner de migrations).
+    - __exit__ faz commit/rollback + fecha conexão (evita leak em Postgres).
+    """
+
+    def __init__(self, pg_conn):
+        self._conn = pg_conn
+        self._closed = False
+
+    @staticmethod
+    def _sql(s: str) -> str:
+        return s.replace('?', '%s')
+
+    def execute(self, sql, params=()):
+        return self._conn.execute(self._sql(sql), params)
+
+    def executemany(self, sql, params_seq):
+        return self._conn.executemany(self._sql(sql), list(params_seq))
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        if not self._closed:
+            self._conn.close()
+            self._closed = True
+
+    @property
+    def isolation_level(self):
+        return None
+
+    @isolation_level.setter
+    def isolation_level(self, value):
+        self._conn.autocommit = (value is None)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            try:
+                self._conn.rollback()
+            except Exception:
+                pass
+        else:
+            try:
+                self._conn.commit()
+            except Exception:
+                pass
+        self.close()
+        return False
 
 # Diretório de dados configurável por ambiente (default: C:\MATINE — produção
 # inalterada). Os testes definem MATINE_DATA_DIR para um temp e nunca tocam o
@@ -248,19 +315,28 @@ TEMPLATES_PADRAO = {
 }
 
 
-def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    # Pragmas por conexão (STORY-01-05 AC-05). Executados em conexão recém-aberta,
-    # antes de qualquer transação:
-    #  - WAL: leituras concorrentes durante escritas (persistente no arquivo do banco)
-    #  - foreign_keys=ON: por-conexão; prepara o banco para constraints formais
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+def get_conn():
+    """Retorna conexão SQLite ou Postgres conforme DIALECT (definido por DATABASE_URL).
+
+    SQLite  → sqlite3.Connection com row_factory=Row e pragmas WAL+FK.
+    Postgres → _PGConn wrapping psycopg.Connection com dict_row.
+    """
+    if DIALECT == 'sqlite':
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        return conn
+    if not _PSYCOPG_OK:
+        raise RuntimeError(
+            "psycopg não instalado. Instale: pip install 'psycopg[binary]' psycopg-pool"
+        )
+    return _PGConn(_psycopg.connect(DATABASE_URL, row_factory=_pg_dict_row))
 
 
 def _table_exists(conn, name: str) -> bool:
+    if DIALECT != 'sqlite':
+        return False  # sem banco legado em Postgres — aplica todas as migrations
     return conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", (name,)
     ).fetchone() is not None
@@ -496,8 +572,8 @@ def salvar_base(novo_consolidado: pd.DataFrame, empresa: str,
             ))
 
         total_base = conn.execute(
-            "SELECT COUNT(*) FROM inadimplentes WHERE empresa = ?", (empresa,)
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS cnt FROM inadimplentes WHERE empresa = ?", (empresa,)
+        ).fetchone()['cnt']
         conn.execute(
             "INSERT INTO historico_atualizacoes (data, total_base, novos, saidos, continuam, empresa) "
             "VALUES (?,?,?,?,?,?)",
@@ -535,8 +611,8 @@ def atualizar_status_aluno(cpf: str, status: str, empresa: str):
 def status_base(empresa: str) -> dict:
     with get_conn() as conn:
         total = conn.execute(
-            "SELECT COUNT(*) FROM inadimplentes WHERE empresa = ?", (empresa,)
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS cnt FROM inadimplentes WHERE empresa = ?", (empresa,)
+        ).fetchone()['cnt']
         ult = conn.execute(
             "SELECT data FROM historico_atualizacoes WHERE empresa = ? ORDER BY id DESC LIMIT 1",
             (empresa,)
@@ -719,7 +795,7 @@ def seed_usuario_admin(usuario: str, nome: str, senha_hash: str) -> bool:
     de usuário único para multi-usuário. Retorna True se criou.
     """
     with get_conn() as conn:
-        total = conn.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) AS cnt FROM usuarios").fetchone()['cnt']
         if total == 0:
             conn.execute(
                 "INSERT INTO usuarios (usuario, nome, senha_hash, is_admin) VALUES (?,?,?,1)",
@@ -768,7 +844,7 @@ def criar_usuario(usuario: str, nome: str, senha_hash: str,
             )
             conn.commit()
         return True, ""
-    except sqlite3.IntegrityError:
+    except _IntegrityError:
         return False, f"Já existe um usuário com o login '{usuario}'."
 
 
@@ -805,8 +881,8 @@ def is_ultimo_admin(user_id) -> bool:
         if not row or not row['is_admin']:
             return False
         admins = conn.execute(
-            "SELECT COUNT(*) FROM usuarios WHERE is_admin = 1 AND ativo = 1"
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS cnt FROM usuarios WHERE is_admin = 1 AND ativo = 1"
+        ).fetchone()['cnt']
     return admins <= 1
 
 

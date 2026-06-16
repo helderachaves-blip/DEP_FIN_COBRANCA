@@ -1,5 +1,5 @@
 """
-Runner de migrations SQLite (STORY-01-05).
+Runner de migrations dual-dialect (STORY-01-05 / EPIC-02 Onda 1).
 
 Cada migration e um arquivo `NNN_nome.py` neste diretorio, com:
     version       : int            - numero da migration (unico, crescente)
@@ -34,12 +34,12 @@ def ensure_migrations_table(conn) -> None:
 
 def applied_versions(conn) -> set:
     rows = conn.execute("SELECT version FROM schema_migrations").fetchall()
-    return {r[0] for r in rows}
+    return {r['version'] for r in rows}
 
 
 def current_version(conn) -> int:
-    row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
-    return (row[0] or 0) if row else 0
+    row = conn.execute("SELECT MAX(version) AS max_ver FROM schema_migrations").fetchone()
+    return (row['max_ver'] or 0) if row else 0
 
 
 def discover(migrations_dir: Path) -> list:
