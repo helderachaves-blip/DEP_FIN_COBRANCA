@@ -56,7 +56,6 @@ DATA_DIR    = Path(os.environ.get('MATINE_DATA_DIR', r'C:\MATINE'))  # configur�
 UPLOADS_DIR = DATA_DIR / 'uploads'    # uploads/{EMPRESA}/{tipo}/  ← detecção por pasta
 RELATORIOS  = DATA_DIR / 'relatorios' # relatorios/{EMPRESA}/{ano}/{mes}/{dia}/
 LOGS_DIR    = DATA_DIR / 'logs'
-ESTADO_DIR  = DATA_DIR / 'estado'
 BANCO_DIR   = DATA_DIR / 'banco'
 CRM_PASTA   = DATA_DIR / 'crm-exports'
 ENV_PATH    = Path(__file__).resolve().parent / '.env'
@@ -210,7 +209,7 @@ def inject_empresa():
         'empresa_ativa':  emp,
         'empresa_label':  EMPRESA_LABELS.get(emp, emp),
         'empresa_labels': EMPRESA_LABELS,
-        'sessao_ativa':   _estado_file(emp).exists(),
+        'sessao_ativa':   db.estado_existe(emp),
     }
 
 
@@ -255,32 +254,29 @@ def _detectar_arquivo(tipo: str, empresa: str) -> Path | None:
     return max(arquivos, key=lambda f: f.stat().st_mtime) if arquivos else None
 
 
-def _estado_file(empresa: str) -> Path:
-    return ESTADO_DIR / f"estado_{empresa.lower()}.pkl"
-
-
 def _salvar_estado(consolidado: pd.DataFrame, stats: dict, empresa: str,
                    avencer: pd.DataFrame | None = None,
                    stats_avencer: dict | None = None):
-    with open(_estado_file(empresa), 'wb') as f:
-        pickle.dump({
-            'consolidado':   consolidado,
-            'stats':         stats,
-            'avencer':       avencer,
-            'stats_avencer': stats_avencer,
-        }, f)
+    # EPIC-02 Onda 3: o estado vai para um blob no banco (não mais pickle em disco),
+    # tirando o app da dependência do filesystem local. Mesmo pickle.dumps de antes.
+    payload = pickle.dumps({
+        'consolidado':   consolidado,
+        'stats':         stats,
+        'avencer':       avencer,
+        'stats_avencer': stats_avencer,
+    })
+    db.salvar_estado_blob(empresa, payload)
 
 
 def _carregar_estado(empresa: str) -> tuple[
     pd.DataFrame | None, dict | None,
     pd.DataFrame | None, dict | None
 ]:
-    arq = _estado_file(empresa)
-    if not arq.exists():
+    payload = db.carregar_estado_blob(empresa)
+    if payload is None:
         return None, None, None, None
     try:
-        with open(arq, 'rb') as f:
-            estado = pickle.load(f)
+        estado = pickle.loads(payload)
         consolidado   = estado['consolidado']
         stats         = estado['stats']
         avencer       = estado.get('avencer')
@@ -306,9 +302,7 @@ def _carregar_estado(empresa: str) -> tuple[
 
 
 def _limpar_estado(empresa: str):
-    arq = _estado_file(empresa)
-    if arq.exists():
-        arq.unlink()
+    db.limpar_estado_blob(empresa)
 
 
 # ---------------------------------------------------------------------------
@@ -333,7 +327,7 @@ def setup_inicial() -> bool:
         for _tipo in ('vencidos', 'avencer', 'alunos', 'pagos_cancelados'):
             (UPLOADS_DIR / _emp / _tipo).mkdir(parents=True, exist_ok=True)
         (RELATORIOS / _emp).mkdir(parents=True, exist_ok=True)
-    for _dir in (ESTADO_DIR, LOGS_DIR, BANCO_DIR, CRM_PASTA):
+    for _dir in (LOGS_DIR, BANCO_DIR, CRM_PASTA):
         _dir.mkdir(parents=True, exist_ok=True)
 
     db.init_db()

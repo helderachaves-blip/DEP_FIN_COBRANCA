@@ -792,3 +792,50 @@ def is_ultimo_admin(user_id) -> bool:
             "SELECT COUNT(*) FROM usuarios WHERE is_admin = 1 AND ativo = 1"
         ).fetchone()[0]
     return admins <= 1
+
+
+# ── Estado de consolidação (EPIC-02 Onda 3 — blob no banco, não mais pickle em disco) ─
+# O estado da sessão de consolidação por empresa (DataFrames + stats) é serializado
+# com pickle em app.py e persistido aqui como blob. Tira o app da dependência do disco
+# local — pré-requisito para rodar stateless na nuvem. Um estado por empresa (PK).
+
+def salvar_estado_blob(empresa: str, payload: bytes):
+    """Grava (ou substitui) o estado serializado da empresa."""
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO estado_consolidacao (empresa, payload, atualizado_em) "
+            "VALUES (?, ?, datetime('now')) "
+            "ON CONFLICT(empresa) DO UPDATE SET "
+            "    payload=excluded.payload, atualizado_em=excluded.atualizado_em",
+            (empresa, payload)
+        )
+        conn.commit()
+
+
+def carregar_estado_blob(empresa: str) -> bytes | None:
+    """Lê o estado serializado da empresa. None se não houver."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT payload FROM estado_consolidacao WHERE empresa = ?", (empresa,)
+        ).fetchone()
+    if not row:
+        return None
+    payload = row['payload']
+    # sqlite3 entrega BLOB como bytes; normaliza memoryview (psycopg/BYTEA na nuvem).
+    return bytes(payload) if payload is not None else None
+
+
+def limpar_estado_blob(empresa: str):
+    """Remove o estado da empresa (equivalente ao antigo unlink do .pkl)."""
+    with get_conn() as conn:
+        conn.execute("DELETE FROM estado_consolidacao WHERE empresa = ?", (empresa,))
+        conn.commit()
+
+
+def estado_existe(empresa: str) -> bool:
+    """Existe estado para a empresa? Check leve (não carrega o blob) — usado a cada request."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM estado_consolidacao WHERE empresa = ?", (empresa,)
+        ).fetchone()
+    return row is not None

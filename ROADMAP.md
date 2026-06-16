@@ -321,7 +321,7 @@ estado (por-processo), arquivos em disco efêmero, keyring do Windows, `os.start
 - [ ] **Onda 0** — Deps (`psycopg`, `psycopg_pool`) + switch de dialeto (`DATABASE_URL`) sem uso
 - [ ] **Onda 1** — Wrapper conn/cursor + `get_conn()` dual-dialect + placeholders `?`→`%s` + acessos `[0]`→alias
 - [ ] **Onda 2** — Migrations cross-dialect (`ddl.py`, AUTOINCREMENT→IDENTITY, `datetime`→`CURRENT_TIMESTAMP`, `ON CONFLICT`, `RETURNING`)
-- [ ] **Onda 3** — Estado de sessão: pickle → tabela `estado_consolidacao` (BYTEA) no Postgres
+- [x] **Onda 3** — Estado de sessão: pickle → tabela `estado_consolidacao` (BLOB/BYTEA) ✅ 15/06 — migration 009, `_salvar/_carregar/_limpar_estado` via blob no banco, `estado_existe`, +8 testes (suíte 79 verdes). Roda em SQLite hoje; pronta p/ Postgres
 - [ ] **Onda 4** — Stateless de arquivos: upload em memória + relatórios via download (ZIP) + remover `os.startfile` + logs stdout
 - [ ] **Onda 5** — Segredos → env vars + Secret File do Drive; blindar keyring
 - [ ] **Onda 6** — Testes dual-dialect (conftest parametrizado + Postgres efêmero)

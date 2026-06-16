@@ -10,8 +10,8 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
-- **Decisão estratégica 15/06/2026 (esta sessão):** disponibilizar o app por **URL** para o Edilvo/Luana validarem → escolhido o **Caminho B — Cloud-Native Stateless** (ponte para a v2), host **Render**, banco **PostgreSQL gerenciado**. Plano detalhado em `docs/stories/epic-02-cloud-native-stateless.md`. **Nenhum código alterado ainda** — implementação começa na próxima janela.
-- **Pendente de push:** nada — commit de planejamento `e3ebf06` em `origin/homologacao` (verificado: ahead/behind 0/0).
+- **EPIC-02 em implementação:** **Onda 3 (matar o pickle)** ✅ entregue (15/06) — estado de consolidação migrado de pickle em disco para blob no banco (migration 009, `estado_consolidacao`). Suíte: **79 verdes**. Ondas 0–2 (dual-dialect) ainda não feitas; a Onda 3 roda em SQLite hoje e fica pronta para Postgres (BLOB→BYTEA na Onda 2).
+- **Pendente de push:** aguardando commit da Onda 3 (será preenchido após commitar + `git fetch`).
 - **App (hoje):** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
 
 ---
@@ -28,21 +28,24 @@
 
 ---
 
-## Próxima Sessão (nova janela) — EPIC-02 Cloud-Native Stateless: Onda 0 + Onda 1
+## Próxima Sessão (nova janela) — EPIC-02: Onda 4 (stateless de arquivos)
 
-Iniciar a implementação do **EPIC-02** (`docs/stories/epic-02-cloud-native-stateless.md`).
-Caminho B (stateless), host Render, Postgres gerenciado, modelo de 2 empresas mantido.
+> Nota de ordem: a Onda 3 (matar o pickle) foi feita antes das Ondas 0–2 a pedido do Helder
+> (foco em "matar pickle e arquivos"). Ela roda em SQLite hoje e fica pronta para Postgres.
+> As Ondas 0–2 (dual-dialect) continuam pendentes e podem ser feitas em qualquer ordem antes
+> do deploy (Onda 7), pois a 009 já usa `ON CONFLICT` e BLOB (→BYTEA trivial na Onda 2).
 
-1. **Onda 0 — Preparação (~0,5h):** adicionar `psycopg[binary]` + `psycopg_pool` ao
-   `requirements.txt`; introduzir o switch de dialeto (`DATABASE_URL`/`DIALECT`) em `database.py`
-   **sem usá-lo ainda**. SQLite continua 100% — suíte verde.
-2. **Onda 1 — Wrapper + placeholders (~5h):** wrapper conn/cursor unificado; `get_conn()` ramifica
-   (SQLite como hoje / Postgres via `psycopg_pool` + `dict_row`); helper `?`→`%s`; padronizar
-   acessos posicionais `[0]`→alias (`database.py:484,521,706,793`; `runner.py:37,42`).
-   Validar SQLite verde após cada passo.
+**Onda 4 — Stateless de arquivos (~6h):** muda o fluxo da operadora (download em vez de abrir
+pasta local). Acoplado: remover `os.startfile` exige entregar o download no lugar.
+1. **Upload em memória** — `processing._ler_csv` (`processing.py:48`) lê do stream; handler de
+   upload deixa de gravar o CSV bruto em `UPLOADS_DIR`.
+2. **Relatórios/Planilha CRM via download (ZIP)** — em vez de gravar em `RELATORIOS`/`CRM_PASTA`
+   e abrir o Explorer.
+3. **Remover `os.startfile`** (`app.py:~940` e `~1370`) — quebra no Linux.
+4. **Logs → stdout** (o Render captura); arquivo só em modo local.
 
-> **Estratégia dual-dialect:** SQLite em dev/testes (rápido, zero infra) + Postgres na nuvem,
-> selecionado por `DATABASE_URL`. Rollback trivial; preserva os ~91 testes locais.
+> **Estratégia dual-dialect (Ondas 0–2, ainda pendentes):** SQLite em dev/testes + Postgres na
+> nuvem, selecionado por `DATABASE_URL`. Rollback trivial; preserva os testes locais.
 
 **Pendência paralela (não bloqueia o EPIC-02) — STORY-H-01 onboarding real:** criar Service
 Account + Shared Drive, testar conexão/exportação e validar com o Kommo → QA gate (InReview → Done).
@@ -52,6 +55,16 @@ Helder fará quando o ambiente estiver no ar. Entradas: `configuracoes.html` (ab
 ---
 
 ## Histórico de Sessões
+
+### Sessão 15/06/2026 — EPIC-02 Onda 3 (matar o pickle)
+- Revisão da spec do EPIC-02 (coerente, bem sequenciada) antes de implementar
+- A pedido do Helder ("matar pickle e arquivos"), priorizada a Onda 3 fora da ordem 0→1→2
+- **Migration 009** (`estado_consolidacao`: empresa PK, payload BLOB, atualizado_em) — cross-dialect (BLOB→BYTEA)
+- **`database.py`**: `salvar_estado_blob` / `carregar_estado_blob` / `limpar_estado_blob` / `estado_existe` (`ON CONFLICT(empresa)`)
+- **`app.py`**: `_salvar/_carregar/_limpar_estado` agora usam o blob no banco (mesmo `pickle.dumps/loads`); `sessao_ativa` via `db.estado_existe`; removidos `_estado_file`, `ESTADO_DIR` e a criação da pasta `estado/`
+- **+8 testes** (`tests/test_estado.py`): round-trip, substituição, isolamento por empresa, limpeza, migração de categorias antigas, **nenhum `.pkl` em disco**. Asserções de lista de migrations (`test_migrations.py`, `test_whatsapp.py`) atualizadas p/ incluir a 009. **Suíte: 79 verdes.**
+- Decisão: parar na Onda 3 e commitar; Onda 4 (stateless de arquivos) em sessão futura
+- Estados `.pkl` legados em produção serão ignorados após deploy (estado é regenerável; dados persistentes ficam em `inadimplentes`)
 
 ### Sessão 15/06/2026 (planejamento) — Estratégia de disponibilização + EPIC-02
 - Pergunta de partida: como disponibilizar o app para o Edilvo/Luana validarem (deploy/versionamento/local)
@@ -180,8 +193,8 @@ Helder fará quando o ambiente estiver no ar. Entradas: `configuracoes.html` (ab
 | 0 | Deps (`psycopg`, `psycopg_pool`) + switch de dialeto (`DATABASE_URL`) sem uso | 🔲 Próxima sessão |
 | 1 | Wrapper conn/cursor + `get_conn()` ramifica + placeholders `?`→`%s` + acessos `[0]`→alias | 🔲 Próxima sessão |
 | 2 | Migrations cross-dialect (`ddl.py`, AUTOINCREMENT, `datetime`, `ON CONFLICT`, `RETURNING`) | 🔲 |
-| 3 | Matar o pickle: estado → tabela `estado_consolidacao` (BYTEA) no Postgres | 🔲 |
-| 4 | Stateless de arquivos: upload em memória + relatórios via download (ZIP) + remover `os.startfile` + logs stdout | 🔲 |
+| 3 | Matar o pickle: estado → tabela `estado_consolidacao` (BLOB/BYTEA); `_salvar/_carregar/_limpar_estado` via `db.*_estado_blob` + `estado_existe`; +8 testes | ✅ 15/06 |
+| 4 | Stateless de arquivos: upload em memória + relatórios via download (ZIP) + remover `os.startfile` + logs stdout | 🔲 Próxima |
 | 5 | Segredos → env vars + Secret File do Drive; blindar keyring | 🔲 |
 | 6 | Testes dual-dialect (conftest parametrizado + Postgres efêmero) | 🔲 |
 | 7 | Deploy Render (Web Service + Postgres + env + Procfile/runtime) + smoke test | 🔲 |
