@@ -376,7 +376,8 @@ def init_db():
         if not runner.applied_versions(conn) and _table_exists(conn, 'inadimplentes'):
             for v, n in _BASELINE_LEGADO:
                 conn.execute(
-                    "INSERT OR IGNORE INTO schema_migrations (version, name) VALUES (?, ?)",
+                    "INSERT INTO schema_migrations (version, name) VALUES (?, ?) "
+                    "ON CONFLICT DO NOTHING",
                     (v, n)
                 )
             print("[db] banco legado detectado - migrations 001-004 marcadas como aplicadas")
@@ -423,11 +424,12 @@ def criar_template(titulo: str, conteudo: str, empresa: str,
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO templates (categoria, titulo, conteudo, empresa, dias_de, dias_ate, tag_crm) "
-            "VALUES ('Custom',?,?,?,?,?,?)",
+            "VALUES ('Custom',?,?,?,?,?,?) RETURNING id",
             (titulo, conteudo, empresa, dias_de, dias_ate, tag_crm or None)
         )
+        new_id = cur.fetchone()['id']
         conn.commit()
-        return cur.lastrowid
+        return new_id
 
 
 def excluir_template(template_id: int, empresa: str):
@@ -739,12 +741,13 @@ def salvar_config_whatsapp(empresa: str, folder_id: str, filename_template: str,
         gravar_gdrive_credentials(empresa, credentials_json)
     cred_marker = GDRIVE_CRED_MARKER if tem_gdrive_credentials(empresa) else None
     with get_conn() as conn:
+        now_ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         conn.execute("""
             INSERT INTO config_whatsapp
                 (empresa, gdrive_auth_method, gdrive_credentials, gdrive_folder_id,
                  gdrive_filename_template, kommo_webhook_url, kommo_pipeline_id,
                  exportar_automatico, atualizado_em)
-            VALUES (?,?,?,?,?,?,?,?, datetime('now'))
+            VALUES (?,?,?,?,?,?,?,?,?)
             ON CONFLICT(empresa) DO UPDATE SET
                 gdrive_auth_method=excluded.gdrive_auth_method,
                 gdrive_credentials=excluded.gdrive_credentials,
@@ -753,9 +756,9 @@ def salvar_config_whatsapp(empresa: str, folder_id: str, filename_template: str,
                 kommo_webhook_url=excluded.kommo_webhook_url,
                 kommo_pipeline_id=excluded.kommo_pipeline_id,
                 exportar_automatico=excluded.exportar_automatico,
-                atualizado_em=datetime('now')
+                atualizado_em=excluded.atualizado_em
         """, (empresa, auth_method, cred_marker, folder_id, filename_template,
-              kommo_webhook_url, kommo_pipeline_id, 1 if exportar_automatico else 0))
+              kommo_webhook_url, kommo_pipeline_id, 1 if exportar_automatico else 0, now_ts))
         conn.commit()
 
 
@@ -893,13 +896,14 @@ def is_ultimo_admin(user_id) -> bool:
 
 def salvar_estado_blob(empresa: str, payload: bytes):
     """Grava (ou substitui) o estado serializado da empresa."""
+    now_ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with get_conn() as conn:
         conn.execute(
             "INSERT INTO estado_consolidacao (empresa, payload, atualizado_em) "
-            "VALUES (?, ?, datetime('now')) "
+            "VALUES (?, ?, ?) "
             "ON CONFLICT(empresa) DO UPDATE SET "
             "    payload=excluded.payload, atualizado_em=excluded.atualizado_em",
-            (empresa, payload)
+            (empresa, payload, now_ts)
         )
         conn.commit()
 
@@ -944,14 +948,15 @@ TIPOS_UPLOAD = ('vencidos', 'avencer', 'alunos', 'pagos_cancelados')
 
 def salvar_upload_staging(empresa: str, tipo: str, filename: str, conteudo: bytes):
     """Grava (ou substitui) os bytes do arquivo importado para a empresa/tipo."""
+    now_ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with get_conn() as conn:
         conn.execute(
             "INSERT INTO uploads_staging (empresa, tipo, filename, conteudo, atualizado_em) "
-            "VALUES (?, ?, ?, ?, datetime('now')) "
+            "VALUES (?, ?, ?, ?, ?) "
             "ON CONFLICT(empresa, tipo) DO UPDATE SET "
             "    filename=excluded.filename, conteudo=excluded.conteudo, "
             "    atualizado_em=excluded.atualizado_em",
-            (empresa, tipo, filename, conteudo)
+            (empresa, tipo, filename, conteudo, now_ts)
         )
         conn.commit()
 

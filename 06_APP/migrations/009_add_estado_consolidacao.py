@@ -7,8 +7,9 @@ blob versionado por empresa nesta tabela.
 
 A coluna `payload` guarda o mesmo `pickle.dumps(dict)` de antes (zero perda de dtype).
 PK = empresa (1 estado por empresa). Cross-dialect: BLOB no SQLite vira BYTEA no
-Postgres na Onda 2 (ddl.py); `ON CONFLICT(empresa)` ja e suportado em ambos.
+Postgres (ddl.blob()); `ON CONFLICT(empresa)` suportado em ambos.
 """
+import ddl
 
 version = 9
 name = "add_estado_consolidacao"
@@ -16,11 +17,11 @@ name = "add_estado_consolidacao"
 
 def up(conn):
     conn.execute(
-        """
+        f"""
         CREATE TABLE IF NOT EXISTS estado_consolidacao (
             empresa       TEXT NOT NULL PRIMARY KEY,
-            payload       BLOB NOT NULL,
-            atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+            payload       {ddl.blob()} NOT NULL,
+            atualizado_em TEXT NOT NULL {ddl.ts_default()}
         )
         """
     )

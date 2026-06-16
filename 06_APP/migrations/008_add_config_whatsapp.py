@@ -6,6 +6,7 @@ o JSON da Service Account e gravado em C:\\MATINE\\secrets\\gdrive_{empresa}.jso
 coluna `gdrive_credentials` carrega apenas o marcador `[file]` (espelha o padrao da
 senha SMTP, que usa keyring). Ver database.py:salvar_config_whatsapp.
 """
+import ddl
 
 version = 8
 name = "add_config_whatsapp"
@@ -13,23 +14,19 @@ name = "add_config_whatsapp"
 
 def up(conn):
     conn.execute(
-        """
+        f"""
         CREATE TABLE IF NOT EXISTS config_whatsapp (
-            id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+            id                       {ddl.pk_int()},
             empresa                  TEXT NOT NULL UNIQUE,
-            -- Google Drive
             gdrive_auth_method       TEXT NOT NULL DEFAULT 'service_account',
-            gdrive_credentials       TEXT,            -- marcador '[file]' (JSON fica em secrets/)
-            gdrive_folder_id         TEXT,            -- ID da pasta no Shared Drive
-            gdrive_filename_template TEXT NOT NULL DEFAULT 'cobrancas_{empresa}_{data}.xlsx',
-            -- Kommo
+            gdrive_credentials       TEXT,
+            gdrive_folder_id         TEXT,
+            gdrive_filename_template TEXT NOT NULL DEFAULT 'cobrancas_{{empresa}}_{{data}}.xlsx',
             kommo_webhook_url        TEXT,
             kommo_pipeline_id        TEXT,
-            -- Comportamento
-            exportar_automatico      INTEGER NOT NULL DEFAULT 0,  -- 0 = sob demanda
-            -- Controle
-            criado_em                TEXT NOT NULL DEFAULT (datetime('now')),
-            atualizado_em            TEXT NOT NULL DEFAULT (datetime('now'))
+            exportar_automatico      INTEGER NOT NULL DEFAULT 0,
+            criado_em                TEXT NOT NULL {ddl.ts_default()},
+            atualizado_em            TEXT NOT NULL {ddl.ts_default()}
         )
         """
     )

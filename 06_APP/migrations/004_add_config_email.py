@@ -1,4 +1,5 @@
 """004 - Tabela config_email (SMTP por empresa)."""
+import ddl
 
 version = 4
 name = "add_config_email"
@@ -6,9 +7,9 @@ name = "add_config_email"
 
 def up(conn):
     conn.execute(
-        """
+        f"""
         CREATE TABLE IF NOT EXISTS config_email (
-            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            id             {ddl.pk_int()},
             empresa        TEXT NOT NULL UNIQUE,
             smtp_host      TEXT DEFAULT '',
             smtp_port      INTEGER DEFAULT 587,

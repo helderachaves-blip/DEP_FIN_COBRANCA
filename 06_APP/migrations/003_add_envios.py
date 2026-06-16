@@ -1,4 +1,5 @@
 """003 - Tabela envios (historico de envios por canal/empresa)."""
+import ddl
 
 version = 3
 name = "add_envios"
@@ -6,9 +7,9 @@ name = "add_envios"
 
 def up(conn):
     conn.execute(
-        """
+        f"""
         CREATE TABLE IF NOT EXISTS envios (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            id              {ddl.pk_int()},
             cpf             TEXT NOT NULL,
             empresa         TEXT NOT NULL,
             canal           TEXT NOT NULL,

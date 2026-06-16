@@ -1,4 +1,5 @@
 """001 - Schema base: inadimplentes + templates (forma final, multi-empresa)."""
+import ddl
 
 version = 1
 name = "initial_schema"
@@ -27,9 +28,9 @@ def up(conn):
         """
     )
     conn.execute(
-        """
+        f"""
         CREATE TABLE IF NOT EXISTS templates (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            id            {ddl.pk_int()},
             categoria     TEXT NOT NULL,
             titulo        TEXT NOT NULL,
             conteudo      TEXT NOT NULL,

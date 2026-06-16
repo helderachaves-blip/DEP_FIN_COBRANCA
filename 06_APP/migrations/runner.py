@@ -1,5 +1,5 @@
 """
-Runner de migrations dual-dialect (STORY-01-05 / EPIC-02 Onda 1).
+Runner de migrations dual-dialect (STORY-01-05 / EPIC-02 Onda 1–2).
 
 Cada migration e um arquivo `NNN_nome.py` neste diretorio, com:
     version       : int            - numero da migration (unico, crescente)
@@ -19,7 +19,16 @@ Regras importantes:
 """
 
 import importlib.util
+import sys
 from pathlib import Path
+
+# Garante que migrations/ esteja no sys.path para que os arquivos de migration
+# possam fazer `import ddl` sem caminhos absolutos.
+_MIGRATIONS_DIR = str(Path(__file__).parent)
+if _MIGRATIONS_DIR not in sys.path:
+    sys.path.insert(0, _MIGRATIONS_DIR)
+
+import ddl  # noqa: E402 — precisa vir após o sys.path acima
 
 
 def ensure_migrations_table(conn) -> None:
@@ -27,7 +36,7 @@ def ensure_migrations_table(conn) -> None:
         "CREATE TABLE IF NOT EXISTS schema_migrations ("
         " version INTEGER PRIMARY KEY,"
         " name TEXT NOT NULL,"
-        " applied_at TEXT NOT NULL DEFAULT (datetime('now'))"
+        f" applied_at TEXT NOT NULL {ddl.ts_default()}"
         ")"
     )
 

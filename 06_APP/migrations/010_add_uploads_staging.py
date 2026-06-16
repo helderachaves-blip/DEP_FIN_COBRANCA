@@ -9,8 +9,9 @@ para a base persistente `inadimplentes`; o bruto e substituido a cada novo uploa
 
 A coluna `conteudo` guarda os bytes crus do arquivo (CSV/XLSX). PK = (empresa, tipo):
 1 arquivo corrente por tipo por empresa. Cross-dialect: BLOB no SQLite vira BYTEA no
-Postgres na Onda 2 (ddl.py); `ON CONFLICT(empresa, tipo)` ja e suportado em ambos.
+Postgres (ddl.blob()); `ON CONFLICT(empresa, tipo)` suportado em ambos.
 """
+import ddl
 
 version = 10
 name = "add_uploads_staging"
@@ -18,13 +19,13 @@ name = "add_uploads_staging"
 
 def up(conn):
     conn.execute(
-        """
+        f"""
         CREATE TABLE IF NOT EXISTS uploads_staging (
             empresa       TEXT NOT NULL,
             tipo          TEXT NOT NULL,
             filename      TEXT NOT NULL,
-            conteudo      BLOB NOT NULL,
-            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            conteudo      {ddl.blob()} NOT NULL,
+            atualizado_em TEXT NOT NULL {ddl.ts_default()},
             PRIMARY KEY (empresa, tipo)
         )
         """
