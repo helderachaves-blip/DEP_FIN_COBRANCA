@@ -10,8 +10,8 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
-- **EPIC-02 em implementação:** **Ondas 3 e 4 entregues.** Onda 3 (15/06) matou o pickle (estado → blob no banco, migration 009). **Onda 4 (16/06)** tornou os arquivos stateless: upload → staging no banco (migration 010, `uploads_staging`), consolidação/atualização lendo em memória (`BytesIO`), relatórios/CRM via **download** (ZIP/xlsx), `os.startfile` e `/abrir-relatorios` removidos, `_log` → stdout. Suíte: **90 verdes** (+13 em `test_uploads.py`). Ondas 0–2 (dual-dialect) ainda não feitas; tudo roda em SQLite hoje e fica pronto para Postgres (BLOB→BYTEA na Onda 2).
-- **Pendente de push:** nada — Onda 4 (feat `65bf8c3`) em `origin/homologacao` (push `1365447..65bf8c3` por @devops; `git fetch` confirma 0 ahead/0 behind).
+- **EPIC-02 em implementação:** **Ondas 0–5 entregues.** Ondas 0–2 (16/06): dual-dialect SQLite↔Postgres (`_PGConn`, `get_conn`, `ddl.py`, migrations cross-dialect, `?`→`%s`). **Onda 5 (16/06):** segredos → env vars: `_env_get` prioriza `os.environ`; keyring blindado no Postgres (skip + log); `get_gdrive_credentials_path` lê `GOOGLE_SA_{empresa}_JSON_PATH` primeiro (Secret File do Render). Suíte: **90 verdes**.
+- **Pendente de push:** Ondas 0–2 (e5561c8) + Onda 5 (commit a fazer nesta sessão).
 - **App (hoje):** roda com `python app.py` em `06_APP/` → http://localhost:5000. Só `logs\` e `banco\` (SQLite) usam disco local; uploads/relatórios não tocam mais o filesystem.
 
 ---
@@ -28,21 +28,19 @@
 
 ---
 
-## Próxima Sessão (nova janela) — EPIC-02: Ondas 0–2 (dual-dialect) ou Onda 5 (segredos)
+## Próxima Sessão (nova janela) — EPIC-02: Onda 6 (testes dual-dialect) + Onda 7 (deploy)
 
-> Com as Ondas 3 e 4 prontas, o app está **stateless** (banco + downloads, sem disco de
-> operação). O que falta para o deploy no Render é tornar o banco **dual-dialect** (Postgres)
-> e mover segredos para env vars. Ordem livre antes da Onda 7 (deploy).
+> Ondas 0–5 entregues. O app já tem dual-dialect, é stateless e os segredos saíram do código.
+> Falta validar o dialeto Postgres com testes e depois fazer o deploy no Render.
 
-**Ondas 0–2 — Dual-dialect (~10h):** SQLite em dev/testes + Postgres na nuvem por `DATABASE_URL`.
-- **Onda 0** — deps (`psycopg[binary]`, `psycopg_pool`) + switch de dialeto sem uso.
-- **Onda 1** — wrapper conn/cursor; `get_conn()` ramifica + pool PG; placeholders `?`→`%s`;
-  acessos posicionais `[0]`→alias. As migrations 009/010 já usam `ON CONFLICT` e BLOB.
-- **Onda 2** — migrations cross-dialect (`ddl.py`, AUTOINCREMENT→IDENTITY, `datetime`→
-  `CURRENT_TIMESTAMP`, `RETURNING`, BLOB→BYTEA).
+**Onda 6 — Testes dual-dialect (~4h):** conftest parametrizado (SQLite + Postgres efêmero via
+testcontainers/Docker); ajustar `PRAGMA table_info`/`sqlite_master` nos testes se aparecerem;
+confirmar suíte 100% verde contra Postgres.
 
-**Onda 5 — Segredos → env (~2h):** `_env_get` prioriza `os.environ`; SMTP via env; Drive via
-Secret File; blindar `keyring.set_password` (não quebrar sem o keyring do Windows).
+**Onda 7 — Deploy Render (~3h):** `Procfile` (gunicorn), `runtime.txt`, Web Service no Render,
+Render Postgres, env vars (`DATABASE_URL`, `FLASK_SECRET_KEY`, `APP_USUARIO`, `APP_SENHA`,
+`SMTP_{empresa}_SENHA`, `GOOGLE_SA_{empresa}_JSON_PATH`), Secret File do Drive; smoke test
+ponta a ponta; trocar senha admin default.
 
 **Pendência paralela (não bloqueia o EPIC-02) — STORY-H-01 onboarding real:** criar Service
 Account + Shared Drive, testar conexão/exportação e validar com o Kommo → QA gate (InReview → Done).
@@ -53,29 +51,17 @@ Helder fará quando o ambiente estiver no ar. Entradas: `configuracoes.html` (ab
 
 ## Histórico de Sessões
 
-### Sessão 16/06/2026 — EPIC-02 Onda 4 (stateless de arquivos)
-- Discussão prévia: disco persistente no Render (pago, prende a 1 instância, contraria
-  "não guardar arquivos do cliente") vs **staging no banco** (escolhido — custo zero, preserva
-  a tela da Luana, funciona entre workers). Confirmado que relatórios via download e remoção
-  do `os.startfile` são obrigatórios para qualquer deploy web, independente de disco.
-- **Migration 010** (`uploads_staging`: empresa+tipo PK, filename, conteudo BLOB) — cross-dialect.
-- **`database.py`**: `salvar/carregar/limpar_upload_staging` + `status_uploads_staging` (`ON CONFLICT`).
-- **`processing.py`**: `_ler_csv` aceita `Path` **ou** `(BytesIO, filename)`; helper `_fonte_nome`
-  para mensagens de erro. Backward-compatible (testes que passam Path seguem verdes).
-- **`app.py`**: `/upload` grava bytes no staging (valida extensão, sem disco); `_fonte_upload`
-  substitui `_detectar_arquivo`; `/consolidar` e `/atualizar-base` leem em memória; `/gerar-relatorio`
-  e `/crm/gerar-planilha` geram em tmp e **devolvem download** (ZIP/xlsx), tmp apagado no `finally`;
-  `/whatsapp/exportar` usa tmp; removidos `os.startfile`, `/abrir-relatorios`, `_pasta_relatorio`,
-  `UPLOADS_DIR/RELATORIOS/CRM_PASTA`; `_log` → stdout (arquivo só local via `EM_NUVEM`).
-- **Templates**: index/resultado/configuracoes ajustados (presença por filename, botões de download
-  sem `data-loading`, card "Abrir Relatórios" removido). README e MEMORY atualizados (estrutura local).
-- **Decisão registrada**: `/atualizar-base` não grava mais TXT/XLSX de novos/saídos em disco
-  (info segue no flash + tela Base). Reexport por download é candidato de v.next.
-- **+13 testes** (`tests/test_uploads.py`): migration 010 up/down, staging round-trip/substituição/
-  isolamento/status/limpeza, `_ler_csv` de buffer, e rota ponta a ponta (upload→staging→consolidar→ZIP).
-  Asserções de lista de migrations (`test_migrations.py`, `test_whatsapp.py`) atualizadas p/ a 010.
-  **Suíte: 90 verdes.**
-- Decisão: parar na Onda 4 e commitar; próximo são Ondas 0–2 (dual-dialect) e/ou Onda 5 (segredos)
+### Sessão 16/06/2026 — EPIC-02 Onda 5 (segredos → env vars)
+- **`app.py` `_env_get`**: agora lê `os.environ` primeiro e cai no `.env` local como fallback — sem isso, `FLASK_SECRET_KEY` regenerava a cada deploy no Render e desloga todos os usuários
+- **`database.py` keyring blindado**: `_gravar_senha_smtp` e `_ler_senha_smtp` ignoram o keyring quando `DIALECT == 'postgres'` (skip + log); no local (SQLite), comportamento inalterado. SMTP na nuvem vem de `SMTP_{empresa}_SENHA` como env var
+- **`database.py` Drive via Secret File**: `get_gdrive_credentials_path` lê `GOOGLE_SA_{empresa}_JSON_PATH` do `os.environ` antes de procurar `DATA_DIR/secrets/`; no Render, montar o Secret File e setar a env var é suficiente para o Drive funcionar
+- **Suíte: 90 verdes** (nenhum teste afetado — lógica local/SQLite inalterada)
+
+### Sessão 16/06/2026 — EPIC-02 Ondas 0–2 (dual-dialect)
+- **Onda 0**: `requirements.txt` + `psycopg[binary]>=3.1.0` / `psycopg-pool>=3.1.0`; `DATABASE_URL`/`DIALECT` em `database.py` (import protegido — sem o pacote, SQLite segue funcionando)
+- **Onda 1**: `_PGConn` wrapper (`?`→`%s`, `isolation_level.setter`→`autocommit`, context-manager); `get_conn()` ramifica SQLite↔Postgres via `_psycopg.connect(row_factory=dict_row)`; 4 COUNT aliases (`r[0]`→`r['cnt']`); `runner.py`: `r['version']`/`row['max_ver']`; `_IntegrityError` cross-dialect; `_table_exists` guarda Postgres. Fix de 2 testes que usavam `sqlite3.connect` raw sem `row_factory`
+- **Onda 2**: `migrations/ddl.py` novo (`pk_int`, `blob`, `ts_default` — lê `DATABASE_URL` direto evitando import circular); runner: `sys.path` + `ddl.ts_default()` em `ensure_migrations_table`; migrations 001–010 com f-strings e `ddl.*`; 006 WAL guard sqlite; `database.py`: `INSERT OR IGNORE→ON CONFLICT DO NOTHING`, `lastrowid→RETURNING id`, 3× `datetime('now')→` param Python
+- **Suíte: 90 verdes** (commits `629949b`, `7851765`, `e5561c8`; push em `origin/homologacao`)
 
 ### Sessão 15/06/2026 — EPIC-02 Onda 3 (matar o pickle)
 - Revisão da spec do EPIC-02 (coerente, bem sequenciada) antes de implementar

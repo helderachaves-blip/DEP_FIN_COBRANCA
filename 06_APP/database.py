@@ -123,7 +123,14 @@ def _env_senha(empresa: str) -> str | None:
 
 
 def _gravar_senha_smtp(empresa: str, senha: str) -> bool:
-    """Grava a senha no keyring. Retorna False (com log) se o keyring falhar."""
+    """Grava a senha no keyring. Retorna False (com log) se o keyring falhar.
+
+    Na nuvem (Postgres/Render) o keyring não existe; a senha deve vir de
+    SMTP_{empresa}_SENHA como variável de ambiente no painel do Render.
+    """
+    if DIALECT == 'postgres':
+        print(f"[smtp] Nuvem: configure SMTP_{empresa}_SENHA como env var no Render.")
+        return False
     if _KEYRING_OK:
         try:
             _keyring.set_password(KEYRING_SERVICE, empresa, senha)
@@ -136,13 +143,13 @@ def _gravar_senha_smtp(empresa: str, senha: str) -> bool:
 
 
 def _ler_senha_smtp(empresa: str, col_fallback: str | None = None) -> str | None:
-    """Lê a senha de forma segura: keyring → variável de ambiente → coluna (legado).
+    """Lê a senha de forma segura: keyring (local) → variável de ambiente → coluna (legado).
 
-    O fallback de coluna só é usado se o keyring/env falharem e a coluna ainda tiver
-    uma senha real (não vazia e não o marcador) — evita regressão em ambientes onde o
-    keyring ainda não migrou. Retorna None se nenhuma fonte tiver a senha.
+    Na nuvem (Postgres/Render) o keyring é ignorado; a senha vem de SMTP_{empresa}_SENHA.
+    O fallback de coluna só é usado se keyring/env falharem e a coluna ainda tiver
+    uma senha real (não vazia, não o marcador) — evita regressão em migração incompleta.
     """
-    if _KEYRING_OK:
+    if DIALECT == 'sqlite' and _KEYRING_OK:
         try:
             v = _keyring.get_password(KEYRING_SERVICE, empresa)
             if v:
@@ -717,7 +724,14 @@ def gravar_gdrive_credentials(empresa: str, credentials_json: str) -> bool:
 
 
 def get_gdrive_credentials_path(empresa: str) -> Path | None:
-    """Caminho do JSON da Service Account, ou None se ainda não configurado."""
+    """Caminho do JSON da Service Account.
+
+    Na nuvem (Render Secret File): GOOGLE_SA_{empresa}_JSON_PATH sobrepõe o path local.
+    """
+    env_path = os.environ.get(f'GOOGLE_SA_{empresa}_JSON_PATH')
+    if env_path:
+        p = Path(env_path)
+        return p if p.exists() else None
     p = _gdrive_cred_path(empresa)
     return p if p.exists() else None
 

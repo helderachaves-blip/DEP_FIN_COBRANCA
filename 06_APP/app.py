@@ -75,7 +75,10 @@ EM_NUVEM = bool(os.environ.get('DATABASE_URL'))
 # ---------------------------------------------------------------------------
 
 def _env_get(chave: str) -> str | None:
-    """Lê uma chave do .env. Retorna None se ausente ou vazia."""
+    """Lê uma chave: os.environ primeiro (Render/CI), depois o .env local."""
+    v = os.environ.get(chave)
+    if v:
+        return v
     if ENV_PATH.exists():
         for linha in ENV_PATH.read_text(encoding='utf-8').splitlines():
             if linha.startswith(chave + '='):
