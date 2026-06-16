@@ -11,7 +11,7 @@
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
 - **EPIC-02 em implementação:** **Onda 3 (matar o pickle)** ✅ entregue (15/06) — estado de consolidação migrado de pickle em disco para blob no banco (migration 009, `estado_consolidacao`). Suíte: **79 verdes**. Ondas 0–2 (dual-dialect) ainda não feitas; a Onda 3 roda em SQLite hoje e fica pronta para Postgres (BLOB→BYTEA na Onda 2).
-- **Pendente de push:** aguardando commit da Onda 3 (será preenchido após commitar + `git fetch`).
+- **Pendente de push:** `43e5727` (feat: matar pickle — EPIC-02 Onda 3) — verificado `origin/homologacao..HEAD` = 1 commit ahead. Push é exclusivo do @devops (`AIOX_ACTIVE_AGENT=devops`).
 - **App (hoje):** roda com `python app.py` em `06_APP/` → http://localhost:5000. Estrutura `C:\MATINE` criada automaticamente no startup.
 
 ---
