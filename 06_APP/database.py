@@ -55,7 +55,8 @@ class _PGConn:
         return self._conn.execute(self._sql(sql), params)
 
     def executemany(self, sql, params_seq):
-        return self._conn.executemany(self._sql(sql), list(params_seq))
+        with self._conn.cursor() as cur:
+            cur.executemany(self._sql(sql), list(params_seq))
 
     def commit(self):
         self._conn.commit()
@@ -341,6 +342,19 @@ def get_conn():
     return _PGConn(_psycopg.connect(DATABASE_URL, row_factory=_pg_dict_row))
 
 
+def _df_query(sql: str, conn, params=()) -> pd.DataFrame:
+    """Execute SELECT e retorna DataFrame — funciona com SQLite e Postgres."""
+    cur = conn.execute(sql, params)
+    rows = cur.fetchall()
+    if not rows:
+        if DIALECT == 'postgres':
+            cols = [d.name for d in (cur.description or [])]
+        else:
+            cols = [d[0] for d in (cur.description or [])]
+        return pd.DataFrame(columns=cols)
+    return pd.DataFrame([dict(r) for r in rows])
+
+
 def _table_exists(conn, name: str) -> bool:
     if DIALECT != 'sqlite':
         return False  # sem banco legado em Postgres — aplica todas as migrations
@@ -476,9 +490,9 @@ def salvar_template(template_id: int, titulo: str, conteudo: str, empresa: str,
 
 def carregar_base(empresa: str) -> pd.DataFrame:
     with get_conn() as conn:
-        df = pd.read_sql(
+        df = _df_query(
             "SELECT * FROM inadimplentes WHERE empresa = ? ORDER BY aluno",
-            conn, params=(empresa,)
+            conn, (empresa,)
         )
     return df
 
@@ -491,9 +505,9 @@ def salvar_base(novo_consolidado: pd.DataFrame, empresa: str,
     agora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
     with get_conn() as conn:
-        base_atual = pd.read_sql(
+        base_atual = _df_query(
             "SELECT cpf, data_entrada, status FROM inadimplentes WHERE empresa = ?",
-            conn, params=(empresa,)
+            conn, (empresa,)
         )
 
     cpfs_base  = set(base_atual['cpf']) if not base_atual.empty else set()

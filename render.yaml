@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: matine-cobranca
+    runtime: python
+    rootDir: 06_APP
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT app:app
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: matine-db
+          property: connectionString
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: MATINE_DATA_DIR
+        value: /tmp/matine
+      - key: APP_USUARIO
+        sync: false
+      - key: APP_SENHA
+        sync: false
+      - key: SMTP_INEPROTEC_SENHA
+        sync: false
+      - key: SMTP_MATRICULAEAD_SENHA
+        sync: false
+
+databases:
+  - name: matine-db
+    databaseName: matine_cobranca
+    user: matine
+    plan: free
