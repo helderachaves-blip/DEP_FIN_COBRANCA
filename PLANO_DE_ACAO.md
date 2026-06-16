@@ -2,7 +2,7 @@
 
 > Sprint atual e próximos passos. Atualizar a cada sessão.
 > Quando um item é entregue: marca ✅ aqui e registra no ROADMAP.md.
-> Última atualização: 15/06/2026
+> Última atualização: 16/06/2026
 
 ---
 

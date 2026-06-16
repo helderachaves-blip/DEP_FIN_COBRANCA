@@ -1,7 +1,7 @@
 # ROADMAP — MAT-INE Inadimplência 2026
 
 > Linha do tempo completa. Itens entregues nunca são deletados — apenas marcados ✅.
-> Última atualização: 15/06/2026
+> Última atualização: 16/06/2026
 
 ---
 

@@ -1,7 +1,7 @@
 # MEMORY — MAT-INE Inadimplência 2026
 
 > Contexto permanente do projeto. Atualizar apenas quando algo estrutural mudar.
-> Última atualização: 15/06/2026
+> Última atualização: 16/06/2026
 
 ---
 
