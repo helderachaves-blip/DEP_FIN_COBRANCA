@@ -11,7 +11,7 @@
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
 - **EPIC-02 em implementação:** **Ondas 3 e 4 entregues.** Onda 3 (15/06) matou o pickle (estado → blob no banco, migration 009). **Onda 4 (16/06)** tornou os arquivos stateless: upload → staging no banco (migration 010, `uploads_staging`), consolidação/atualização lendo em memória (`BytesIO`), relatórios/CRM via **download** (ZIP/xlsx), `os.startfile` e `/abrir-relatorios` removidos, `_log` → stdout. Suíte: **90 verdes** (+13 em `test_uploads.py`). Ondas 0–2 (dual-dialect) ainda não feitas; tudo roda em SQLite hoje e fica pronto para Postgres (BLOB→BYTEA na Onda 2).
-- **Pendente de push:** a ser reconciliado após o commit da Onda 4 (`git fetch` + `git log origin/homologacao..HEAD`).
+- **Pendente de push:** nada — Onda 4 (feat `65bf8c3`) em `origin/homologacao` (push `1365447..65bf8c3` por @devops; `git fetch` confirma 0 ahead/0 behind).
 - **App (hoje):** roda com `python app.py` em `06_APP/` → http://localhost:5000. Só `logs\` e `banco\` (SQLite) usam disco local; uploads/relatórios não tocam mais o filesystem.
 
 ---
