@@ -5,14 +5,22 @@ fora do banco), o módulo gdrive (degradação graciosa + lógica create/replace
 rotas da Onda 2 (UI + fluxo: configurar, testar, exportar).
 """
 import io
+import os
 import sqlite3
 
 import pandas as pd
+import pytest
 
 import gdrive
 
 
 def _tabelas(conn) -> set:
+    """Lista tabelas do banco — cross-dialect (Onda 6)."""
+    if os.environ.get('TEST_DIALECT') == 'postgres':
+        rows = conn.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname='public'"
+        ).fetchall()
+        return {r['tablename'] for r in rows}
     rows = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'"
     ).fetchall()
@@ -25,11 +33,12 @@ def test_config_whatsapp_no_schema(db):
     """init_db (rodou no import do app) criou config_whatsapp e aplicou a migration 8."""
     with db.get_conn() as conn:
         assert 'config_whatsapp' in _tabelas(conn)
-        versoes = {r[0] for r in conn.execute(
+        versoes = {r['version'] for r in conn.execute(
             "SELECT version FROM schema_migrations").fetchall()}
     assert 8 in versoes
 
 
+@pytest.mark.sqlite_only
 def test_runner_aplica_ate_008(tmp_path, db):
     """Banco novo aplica 1-10 e a 2ª passada é no-op."""
     conn = sqlite3.connect(str(tmp_path / 'fresh.db'))
@@ -44,6 +53,7 @@ def test_runner_aplica_ate_008(tmp_path, db):
         conn.close()
 
 
+@pytest.mark.sqlite_only
 def test_migration_008_up_down(tmp_path, db):
     """A migration 008 cria e remove a tabela config_whatsapp."""
     mods = {m.version: m for m in db.runner.discover(db.MIGRATIONS_DIR)}
@@ -88,7 +98,7 @@ def test_config_whatsapp_round_trip(db):
     with db.get_conn() as conn:
         col = conn.execute(
             "SELECT gdrive_credentials FROM config_whatsapp WHERE empresa=?",
-            (empresa,)).fetchone()[0]
+            (empresa,)).fetchone()['gdrive_credentials']
     assert col == db.GDRIVE_CRED_MARKER
     assert db.get_gdrive_credentials_path(empresa).read_text(encoding='utf-8') \
         == '{"type":"service_account"}'

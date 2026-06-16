@@ -1,6 +1,8 @@
 """Testes do backup_db.py — criação de backup válido e retenção."""
 import sqlite3
 
+import pytest
+
 import backup_db
 
 
@@ -10,6 +12,7 @@ def _limpar_backups():
         f.unlink()
 
 
+@pytest.mark.sqlite_only
 def test_backup_cria_arquivo_valido(db):
     """Gera um backup que é um SQLite válido com o schema versionado."""
     assert db.DB_PATH.exists()           # app/init já criou o banco no temp da sessão
@@ -44,6 +47,7 @@ def test_retencao_mantem_apenas_keep(db):
     assert len(removidos) == 3
 
 
+@pytest.mark.sqlite_only
 def test_backup_sem_banco_retorna_none(db, monkeypatch, tmp_path):
     """Se o banco não existe, fazer_backup retorna None sem erro."""
     monkeypatch.setattr(backup_db.db, 'DB_PATH', tmp_path / 'inexistente.db')

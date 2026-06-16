@@ -6,13 +6,22 @@ e o fluxo de rota ponta a ponta (importar → consolidar → baixar relatórios 
 tocar o disco.
 """
 import io
+import os
 import sqlite3
 import zipfile
+
+import pytest
 
 import processing as proc
 
 
 def _tabelas(conn) -> set:
+    """Lista tabelas do banco — cross-dialect (Onda 6)."""
+    if os.environ.get('TEST_DIALECT') == 'postgres':
+        rows = conn.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname='public'"
+        ).fetchall()
+        return {r['tablename'] for r in rows}
     rows = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'"
     ).fetchall()
@@ -33,6 +42,7 @@ _ALUNOS_CSV = (
 
 # ── Migration 010 ────────────────────────────────────────────────────────────
 
+@pytest.mark.sqlite_only
 def test_migration_010_up_down(tmp_path, db):
     """A migration 010 cria e remove a tabela uploads_staging (up/down)."""
     mods = {m.version: m for m in db.runner.discover(db.MIGRATIONS_DIR)}
@@ -77,8 +87,8 @@ def test_staging_substitui_no_reupload(db):
     # Apenas 1 linha para (empresa, tipo).
     with db.get_conn() as conn:
         n = conn.execute(
-            "SELECT COUNT(*) FROM uploads_staging WHERE empresa=? AND tipo=?",
-            ('INEPROTEC', 'vencidos')).fetchone()[0]
+            "SELECT COUNT(*) AS cnt FROM uploads_staging WHERE empresa=? AND tipo=?",
+            ('INEPROTEC', 'vencidos')).fetchone()['cnt']
     assert n == 1
 
 

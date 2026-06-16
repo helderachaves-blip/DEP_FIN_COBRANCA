@@ -4,8 +4,11 @@ CRÍTICO: isola o ambiente do banco de PRODUÇÃO. Define `MATINE_DATA_DIR` para
 diretório temporário ANTES de qualquer import de `app`/`database`, de modo que
 `DATA_DIR`/`DB_PATH` apontem para o temp. Os testes nunca tocam `C:\\MATINE`.
 
-O conftest é carregado pelo pytest antes dos módulos de teste, então o env var
-já está definido quando `app`/`database` forem importados pelos fixtures.
+EPIC-02 Onda 6 — dialeto duplo:
+  SQLite (padrão): nenhuma variável extra.
+  Postgres:        TEST_DIALECT=postgres pytest
+                   → sobe container Postgres efêmero via testcontainers e define
+                     DATABASE_URL antes de qualquer import de app/database.
 """
 import os
 import shutil
@@ -15,13 +18,37 @@ import tempfile
 _TEST_DIR = tempfile.mkdtemp(prefix='matine_test_')
 os.environ['MATINE_DATA_DIR'] = _TEST_DIR
 
+# Onda 6: container Postgres efêmero quando TEST_DIALECT=postgres.
+# Iniciado aqui, no nível de módulo, para que DATABASE_URL esteja definido antes
+# de qualquer import de database.py (que lê DATABASE_URL no nível de módulo).
+_PG_CONTAINER = None
+if os.environ.get('TEST_DIALECT') == 'postgres':
+    from testcontainers.postgres import PostgresContainer
+    _PG_CONTAINER = PostgresContainer('postgres:16-alpine')
+    _PG_CONTAINER.start()
+    _pg_url = _PG_CONTAINER.get_connection_url()
+    # testcontainers retorna URL no formato SQLAlchemy (psycopg2); psycopg3 usa postgresql://
+    os.environ['DATABASE_URL'] = _pg_url.replace('postgresql+psycopg2://', 'postgresql://')
+
 import pytest
 from werkzeug.security import generate_password_hash
 
 
 def pytest_unconfigure(config):
-    """Remove o diretório temporário ao fim da sessão de testes."""
+    """Remove o diretório temporário e para o container Postgres ao fim da sessão."""
     shutil.rmtree(_TEST_DIR, ignore_errors=True)
+    if _PG_CONTAINER is not None:
+        _PG_CONTAINER.stop()
+
+
+def pytest_collection_modifyitems(config, items):
+    """Pula testes marcados sqlite_only quando o dialeto ativo é postgres."""
+    if os.environ.get('TEST_DIALECT') != 'postgres':
+        return
+    skip = pytest.mark.skip(reason="sqlite_only: ignorado no dialeto postgres")
+    for item in items:
+        if item.get_closest_marker('sqlite_only'):
+            item.add_marker(skip)
 
 
 def _hash(senha: str) -> str:

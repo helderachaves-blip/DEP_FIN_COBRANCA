@@ -52,8 +52,8 @@ def test_salvar_substitui_nao_duplica(app, db):
 
     with db.get_conn() as conn:
         n = conn.execute(
-            "SELECT COUNT(*) FROM estado_consolidacao WHERE empresa = ?", ('INEPROTEC',)
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS cnt FROM estado_consolidacao WHERE empresa = ?", ('INEPROTEC',)
+        ).fetchone()['cnt']
     assert n == 1
     _, s, _, _ = app._carregar_estado('INEPROTEC')
     assert s == {'total': 99}

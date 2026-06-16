@@ -10,8 +10,7 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
-- **EPIC-02 em implementação:** **Ondas 0–5 entregues.** Ondas 0–2 (16/06): dual-dialect SQLite↔Postgres (`_PGConn`, `get_conn`, `ddl.py`, migrations cross-dialect, `?`→`%s`). **Onda 5 (16/06):** segredos → env vars: `_env_get` prioriza `os.environ`; keyring blindado no Postgres (skip + log); `get_gdrive_credentials_path` lê `GOOGLE_SA_{empresa}_JSON_PATH` primeiro (Secret File do Render). Suíte: **90 verdes**.
-- **Pendente de push:** Ondas 0–2 (e5561c8) + Onda 5 (commit a fazer nesta sessão).
+- **EPIC-02 em implementação:** **Ondas 0–6 entregues.** Onda 6 (16/06): conftest parametrizado (`TEST_DIALECT=postgres` sobe container Postgres efêmero via testcontainers); `_tabelas()` cross-dialect em 3 arquivos de teste; `r['version']`/`r['cnt']`/`r['coluna']` substituem `r[0]` nos testes que usam `db.get_conn()`; 7 testes marcados `sqlite_only` (raw `sqlite3.connect`, PRAGMA, backup SQLite). Aguardando Docker para rodar contra Postgres. Suíte SQLite: **90 verdes** (inalterada).
 - **App (hoje):** roda com `python app.py` em `06_APP/` → http://localhost:5000. Só `logs\` e `banco\` (SQLite) usam disco local; uploads/relatórios não tocam mais o filesystem.
 
 ---
@@ -28,14 +27,18 @@
 
 ---
 
-## Próxima Sessão (nova janela) — EPIC-02: Onda 6 (testes dual-dialect) + Onda 7 (deploy)
+## Próxima Sessão (nova janela) — EPIC-02: Onda 6 (validar Postgres) + Onda 7 (deploy)
 
-> Ondas 0–5 entregues. O app já tem dual-dialect, é stateless e os segredos saíram do código.
-> Falta validar o dialeto Postgres com testes e depois fazer o deploy no Render.
+> Ondas 0–6 entregues. O código da Onda 6 está pronto; falta só rodar contra Postgres.
+> Docker sendo instalado agora — após reinício, rodar os testes e depois fazer o deploy.
 
-**Onda 6 — Testes dual-dialect (~4h):** conftest parametrizado (SQLite + Postgres efêmero via
-testcontainers/Docker); ajustar `PRAGMA table_info`/`sqlite_master` nos testes se aparecerem;
-confirmar suíte 100% verde contra Postgres.
+**Onda 6 — Validar Postgres (~30 min após Docker instalado):**
+```powershell
+cd "E:\PROJETOS IA\DEP-FINANCEIRO\DEP_FIN_COBRANCA\06_APP"
+pip install -r requirements-dev.txt   # instala testcontainers
+$env:TEST_DIALECT="postgres"; pytest  # sobe container efêmero, roda 90 testes
+```
+Esperado: 83 passed + 7 skipped (sqlite_only). Se algum teste falhar, ajustar antes de avançar.
 
 **Onda 7 — Deploy Render (~3h):** `Procfile` (gunicorn), `runtime.txt`, Web Service no Render,
 Render Postgres, env vars (`DATABASE_URL`, `FLASK_SECRET_KEY`, `APP_USUARIO`, `APP_SENHA`,
@@ -202,7 +205,7 @@ Helder fará quando o ambiente estiver no ar. Entradas: `configuracoes.html` (ab
 | 2 | Migrations cross-dialect (`ddl.py`, AUTOINCREMENT, `datetime`, `ON CONFLICT`, `RETURNING`) | ✅ 16/06 |
 | 3 | Matar o pickle: estado → tabela `estado_consolidacao` (BLOB/BYTEA); `_salvar/_carregar/_limpar_estado` via `db.*_estado_blob` + `estado_existe`; +8 testes | ✅ 15/06 |
 | 4 | Stateless de arquivos: upload → staging (migration 010) lido em memória + relatórios/CRM via download (ZIP/xlsx) + remover `os.startfile`/`/abrir-relatorios` + logs stdout; +13 testes | ✅ 16/06 |
-| 5 | Segredos → env vars + Secret File do Drive; blindar keyring | 🔲 Próxima |
+| 5 | Segredos → env vars + Secret File do Drive; blindar keyring | ✅ 16/06 |
 | 6 | Testes dual-dialect (conftest parametrizado + Postgres efêmero) | 🔲 |
 | 7 | Deploy Render (Web Service + Postgres + env + Procfile/runtime) + smoke test | 🔲 |
 
