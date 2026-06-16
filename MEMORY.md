@@ -72,12 +72,16 @@ Get-Process python* | Stop-Process -Force
 ```
 C:\MATINE\
 ├── banco\inadimplencia.db       # banco SQLite principal
-├── uploads\{EMPRESA}\{tipo}\    # arquivos importados (detecção por pasta)
-├── relatorios\{EMPRESA}\{ano}\{mes}\{dia}\   # relatórios gerados
-├── crm-exports\                 # planilhas de tagging CRM
 ├── secrets\                     # JSON da Service Account do Drive (gdrive_{empresa}.json) — STORY-H-01
-└── logs\
+└── logs\                        # log em arquivo (só modo local; nuvem → stdout)
 ```
+
+**App stateless (EPIC-02 Ondas 3–4):** o disco local **não retém mais** arquivos de
+operação. Uploads ficam em **staging no banco** (`uploads_staging`, Onda 4), o estado da
+sessão é **blob no banco** (`estado_consolidacao`, Onda 3) e relatórios/Planilha CRM são
+entregues por **download** (ZIP/arquivo). Sumiram `uploads\`, `relatorios\`, `crm-exports\`
+e `estado\`, e o `os.startfile` (abrir Explorer) foi removido — pré-requisito p/ rodar por
+URL num servidor Linux. Só `secrets\` (credencial do Drive) e `logs\` (modo local) usam disco.
 
 ---
 
@@ -140,10 +144,11 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 | `usuarios` | Login por pessoa (usuario único, nome, senha_hash pbkdf2, is_admin, ativo) — STORY-MULTIUSUARIO (migration 007) |
 | `config_whatsapp` | Config WhatsApp/Drive por empresa (migration 008, STORY-H-01). **Credencial da SA NÃO fica aqui** — JSON vai para `C:\MATINE\secrets\gdrive_{empresa}.json`; a coluna `gdrive_credentials` guarda só o marcador `[file]` |
 | `estado_consolidacao` | Estado da sessão de consolidação por empresa (migration 009, EPIC-02 Onda 3). Substitui o pickle em disco: `payload` BLOB = `pickle.dumps({consolidado, stats, avencer, stats_avencer})`. PK = empresa. Estado regenerável (reconsolidar). Cross-dialect: BLOB→BYTEA na Onda 2 |
+| `uploads_staging` | Bytes crus dos arquivos importados, por empresa+tipo (migration 010, EPIC-02 Onda 4). Substitui `uploads\{empresa}\{tipo}\` em disco: `conteudo` BLOB + `filename`. PK = (empresa, tipo) → 1 arquivo corrente por tipo, substituído no re-upload. `/consolidar` e `/atualizar-base` leem daqui em memória (`BytesIO`). Cross-dialect: BLOB→BYTEA na Onda 2 |
 
 **Autenticação (STORY-01-06 → STORY-MULTIUSUARIO):** multi-usuário via tabela `usuarios`. Login/`user_loader` consultam o banco; senha sempre hash pbkdf2. O `.env` (`APP_USUARIO`/`APP_SENHA`) serve **só como semente** do 1º admin na tabela vazia — depois disso a gestão é pela tela `/usuarios` (admin) e cada um troca a própria senha em `/conta`. Admin default inicial: `luana` / `matine2026` (trocar em produção). Proteções anti-lockout: não remover/rebaixar o último admin nem a própria conta.
 
-**Migrations (STORY-01-05):** o schema é versionado em `06_APP/migrations/` (scripts `001`–`009`, cada um com `up`/`down`; 007 = `usuarios`, 008 = `config_whatsapp`, 009 = `estado_consolidacao`). `init_db()` aplica só as pendentes via `migrations/runner.py` (atômicas, BEGIN/COMMIT por script). `get_conn()` habilita **WAL** + `foreign_keys=ON`. Banco sem `schema_migrations` é tratado como legado (001–004 marcadas sem re-executar). Nova migration = novo arquivo `NNN_nome.py` com `version` crescente.
+**Migrations (STORY-01-05):** o schema é versionado em `06_APP/migrations/` (scripts `001`–`010`, cada um com `up`/`down`; 007 = `usuarios`, 008 = `config_whatsapp`, 009 = `estado_consolidacao`, 010 = `uploads_staging`). `init_db()` aplica só as pendentes via `migrations/runner.py` (atômicas, BEGIN/COMMIT por script). `get_conn()` habilita **WAL** + `foreign_keys=ON`. Banco sem `schema_migrations` é tratado como legado (001–004 marcadas sem re-executar). Nova migration = novo arquivo `NNN_nome.py` com `version` crescente.
 
 ---
 
@@ -175,7 +180,7 @@ Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Min
 |---------|-----------------|
 | `06_APP/app.py` | Rotas Flask, lógica de negócio, autenticação (Flask-Login), `setup_inicial()` |
 | `06_APP/database.py` | SQLite — `get_conn` (WAL+FK), `init_db` (runner), queries, usuários. `DATA_DIR`/`DB_PATH` leem `MATINE_DATA_DIR` (default `C:\MATINE`) |
-| `06_APP/migrations/` | Migrations versionadas (`runner.py` + `001`–`009`; 007 = `usuarios`, 008 = `config_whatsapp`, 009 = `estado_consolidacao`) |
+| `06_APP/migrations/` | Migrations versionadas (`runner.py` + `001`–`010`; 007 = `usuarios`, 008 = `config_whatsapp`, 009 = `estado_consolidacao`, 010 = `uploads_staging`) |
 | `06_APP/processing.py` | Consolidação, geração de TXT/XLSX/CRM (`gerar_planilha_crm` — base da exportação WhatsApp) |
 | `06_APP/gdrive.py` | Upload da planilha no Google Drive (Service Account + Shared Drive, modular p/ OAuth) — STORY-H-01 |
 | `06_APP/backup_db.py` | Backup do banco com retenção (WAL-safe, `--keep`) |
@@ -190,7 +195,7 @@ Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Min
 | `06_APP/templates/usuarios.html` · `conta.html` | Gestão de usuários (admin) · Minha conta |
 | `06_APP/conftest.py` · `pytest.ini` · `tests/` | Suíte de testes pytest (banco isolado via `MATINE_DATA_DIR`) |
 
-**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (71 testes; nunca tocam produção).
+**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (90 testes; nunca tocam produção).
 
 ---
 

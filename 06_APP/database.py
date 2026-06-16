@@ -839,3 +839,62 @@ def estado_existe(empresa: str) -> bool:
             "SELECT 1 FROM estado_consolidacao WHERE empresa = ?", (empresa,)
         ).fetchone()
     return row is not None
+
+
+# ---------------------------------------------------------------------------
+# Uploads em staging (EPIC-02 Onda 4) — bytes do arquivo importado descansam no
+# banco até a consolidação, no lugar do disco local (uploads/{empresa}/{tipo}/).
+# Um arquivo corrente por (empresa, tipo); substituído a cada novo upload.
+
+# Tipos de arquivo aceitos em staging (mesmos detectados por pasta antes).
+TIPOS_UPLOAD = ('vencidos', 'avencer', 'alunos', 'pagos_cancelados')
+
+
+def salvar_upload_staging(empresa: str, tipo: str, filename: str, conteudo: bytes):
+    """Grava (ou substitui) os bytes do arquivo importado para a empresa/tipo."""
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO uploads_staging (empresa, tipo, filename, conteudo, atualizado_em) "
+            "VALUES (?, ?, ?, ?, datetime('now')) "
+            "ON CONFLICT(empresa, tipo) DO UPDATE SET "
+            "    filename=excluded.filename, conteudo=excluded.conteudo, "
+            "    atualizado_em=excluded.atualizado_em",
+            (empresa, tipo, filename, conteudo)
+        )
+        conn.commit()
+
+
+def carregar_upload_staging(empresa: str, tipo: str) -> tuple[str, bytes] | None:
+    """Lê (filename, bytes) do arquivo em staging. None se não houver."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT filename, conteudo FROM uploads_staging WHERE empresa = ? AND tipo = ?",
+            (empresa, tipo)
+        ).fetchone()
+    if not row:
+        return None
+    conteudo = row['conteudo']
+    # sqlite3 entrega BLOB como bytes; normaliza memoryview (psycopg/BYTEA na nuvem).
+    return row['filename'], (bytes(conteudo) if conteudo is not None else b'')
+
+
+def limpar_upload_staging(empresa: str, tipo: str | None = None):
+    """Remove o(s) arquivo(s) em staging da empresa (um tipo, ou todos se tipo=None)."""
+    with get_conn() as conn:
+        if tipo is None:
+            conn.execute("DELETE FROM uploads_staging WHERE empresa = ?", (empresa,))
+        else:
+            conn.execute(
+                "DELETE FROM uploads_staging WHERE empresa = ? AND tipo = ?",
+                (empresa, tipo)
+            )
+        conn.commit()
+
+
+def status_uploads_staging(empresa: str) -> dict[str, str]:
+    """Retorna {tipo: filename} dos arquivos atualmente em staging (para a UI de presença)."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT tipo, filename FROM uploads_staging WHERE empresa = ?", (empresa,)
+        ).fetchall()
+    return {r['tipo']: r['filename'] for r in rows}

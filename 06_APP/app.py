@@ -3,12 +3,15 @@ Consolidador de Inadimplências — Versão Web
 Multi-empresa: Ineprotec / Matrícula EaD (Fase D)
 """
 
+import io
 import json
 import os
 import pickle
 import secrets
 import shutil
 import smtplib
+import tempfile
+import zipfile
 from datetime import datetime, timedelta
 from functools import wraps
 from email.mime.multipart import MIMEMultipart
@@ -36,7 +39,10 @@ def _checar_dependencias():
 _checar_dependencias()
 
 import pandas as pd
-from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Flask, flash, jsonify, redirect, render_template,
+    request, send_file, session, url_for,
+)
 from flask_login import (
     LoginManager, UserMixin, current_user,
     login_user, logout_user,
@@ -53,12 +59,15 @@ from processing import fmt_brl
 # ---------------------------------------------------------------------------
 
 DATA_DIR    = Path(os.environ.get('MATINE_DATA_DIR', r'C:\MATINE'))  # configurável p/ testes
-UPLOADS_DIR = DATA_DIR / 'uploads'    # uploads/{EMPRESA}/{tipo}/  ← detecção por pasta
-RELATORIOS  = DATA_DIR / 'relatorios' # relatorios/{EMPRESA}/{ano}/{mes}/{dia}/
 LOGS_DIR    = DATA_DIR / 'logs'
 BANCO_DIR   = DATA_DIR / 'banco'
-CRM_PASTA   = DATA_DIR / 'crm-exports'
 ENV_PATH    = Path(__file__).resolve().parent / '.env'
+
+# EPIC-02 Onda 4 — app stateless: uploads ficam em staging no banco (não em disco) e
+# relatórios/Planilha CRM são entregues por download (não gravados/abertos no Explorer).
+# `DATABASE_URL` é o sinal de "rodando na nuvem" (Postgres/Render) usado pelas Ondas 0-2;
+# aqui ele só decide se ainda escrevemos o log em arquivo (local) ou só em stdout (nuvem).
+EM_NUVEM = bool(os.environ.get('DATABASE_URL'))
 
 
 # ---------------------------------------------------------------------------
@@ -180,12 +189,15 @@ def brl_filter(val):
 def _log(msg: str):
     ts = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
     linha = f"[{ts}] {msg}"
-    print(linha)
-    try:
-        with open(LOGS_DIR / "app_web.log", 'a', encoding='utf-8') as f:
-            f.write(linha + "\n")
-    except OSError:
-        pass
+    # stdout é a fonte primária — o Render captura e exibe os logs do serviço (Onda 4).
+    print(linha, flush=True)
+    # Arquivo só em modo local (disco efêmero na nuvem não serve para log persistente).
+    if not EM_NUVEM:
+        try:
+            with open(LOGS_DIR / "app_web.log", 'a', encoding='utf-8') as f:
+                f.write(linha + "\n")
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -225,33 +237,30 @@ def trocar_empresa(nome):
 # Helpers
 # ---------------------------------------------------------------------------
 
-MESES = {
-    1: '01-Janeiro', 2: '02-Fevereiro', 3: '03-Marco',
-    4: '04-Abril',   5: '05-Maio',      6: '06-Junho',
-    7: '07-Julho',   8: '08-Agosto',    9: '09-Setembro',
-    10: '10-Outubro', 11: '11-Novembro', 12: '12-Dezembro',
-}
-
 EXTS_VALIDAS = {'.csv', '.xlsx', '.xls'}
 
 
-def _pasta_relatorio(empresa: str) -> Path:
-    """Pasta datada para os relatórios gerados."""
-    hoje  = datetime.now()
-    pasta = RELATORIOS / empresa / str(hoje.year) / MESES[hoje.month] / f"{hoje.day:02d}"
-    pasta.mkdir(parents=True, exist_ok=True)
-    return pasta
+def _fonte_upload(tipo: str, empresa: str) -> tuple[io.BytesIO, str] | None:
+    """Fonte de leitura do arquivo importado, lida do staging no banco (EPIC-02 Onda 4).
 
-
-def _detectar_arquivo(tipo: str, empresa: str) -> Path | None:
-    """Retorna o arquivo mais recente na pasta de upload do tipo/empresa.
-    Detecção por localização — o nome do arquivo não importa."""
-    pasta = UPLOADS_DIR / empresa / tipo
-    if not pasta.exists():
+    Retorna `(BytesIO, filename)` para o `processing` consumir em memória, ou None se o
+    tipo ainda não foi importado. Substitui a antiga detecção por pasta em disco."""
+    item = db.carregar_upload_staging(empresa, tipo)
+    if item is None:
         return None
-    arquivos = [f for f in pasta.iterdir()
-                if f.is_file() and f.suffix.lower() in EXTS_VALIDAS]
-    return max(arquivos, key=lambda f: f.stat().st_mtime) if arquivos else None
+    filename, conteudo = item
+    return io.BytesIO(conteudo), filename
+
+
+def _zip_pasta(pasta: Path) -> io.BytesIO:
+    """Zipa (em memória) todos os arquivos de `pasta` e devolve o buffer pronto p/ download."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for arq in sorted(pasta.iterdir()):
+            if arq.is_file():
+                zf.write(arq, arcname=arq.name)
+    buf.seek(0)
+    return buf
 
 
 def _salvar_estado(consolidado: pd.DataFrame, stats: dict, empresa: str,
@@ -314,8 +323,9 @@ def setup_inicial() -> bool:
 
     Passos:
       1. Detecta primeira execução (ausência do banco).
-      2. Cria a estrutura de pastas em C:\\MATINE (uploads por empresa/tipo,
-         relatórios, estado, logs, banco, crm-exports).
+      2. Cria a estrutura local mínima (logs + banco SQLite). Uploads, relatórios e
+         CRM não usam mais o disco (EPIC-02 Onda 4: staging no banco + download),
+         então não há pastas a criar para eles. Na nuvem (EM_NUVEM) nada é criado.
       3. db.init_db() — schema versionado (migrations) + templates padrão por empresa.
       4. Loga a conclusão; sinaliza se foi a primeira execução.
 
@@ -323,12 +333,11 @@ def setup_inicial() -> bool:
     """
     primeira_vez = not db.DB_PATH.exists()
 
-    for _emp in db.EMPRESAS:
-        for _tipo in ('vencidos', 'avencer', 'alunos', 'pagos_cancelados'):
-            (UPLOADS_DIR / _emp / _tipo).mkdir(parents=True, exist_ok=True)
-        (RELATORIOS / _emp).mkdir(parents=True, exist_ok=True)
-    for _dir in (LOGS_DIR, BANCO_DIR, CRM_PASTA):
-        _dir.mkdir(parents=True, exist_ok=True)
+    # Só o necessário para o modo local (SQLite em disco + log em arquivo). Na nuvem o
+    # banco é Postgres e os logs vão para stdout — sem pastas locais.
+    if not EM_NUVEM:
+        for _dir in (LOGS_DIR, BANCO_DIR):
+            _dir.mkdir(parents=True, exist_ok=True)
 
     db.init_db()
 
@@ -496,12 +505,9 @@ def usuarios_remover(uid):
 def index():
     empresa = get_empresa()
     consolidado, stats, _, _ = _carregar_estado(empresa)
-    auto = {
-        'alunos':            _detectar_arquivo('alunos',            empresa),
-        'vencidos':          _detectar_arquivo('vencidos',           empresa),
-        'avencer':           _detectar_arquivo('avencer',            empresa),
-        'pagos_cancelados':  _detectar_arquivo('pagos_cancelados',   empresa),
-    }
+    # Presença dos arquivos importados = o que está em staging no banco (Onda 4):
+    # {tipo: filename}. Tipos ausentes simplesmente não aparecem no dict.
+    auto = db.status_uploads_staging(empresa)
     base_info = db.status_base(empresa)
     return render_template(
         'index.html',
@@ -525,12 +531,16 @@ def upload():
         flash("Nenhum arquivo selecionado.", "warning")
         return redirect(url_for('index'))
 
-    pasta_destino = UPLOADS_DIR / empresa / tipo
-    pasta_destino.mkdir(parents=True, exist_ok=True)
-    destino = pasta_destino / arquivo.filename
-    arquivo.save(str(destino))
+    if Path(arquivo.filename).suffix.lower() not in EXTS_VALIDAS:
+        flash("Formato inválido. Envie um arquivo .csv, .xlsx ou .xls.", "danger")
+        return redirect(url_for('index'))
 
-    _log(f"[{empresa}] Arquivo importado ({tipo}): {destino}")
+    # Onda 4 (stateless): os bytes vão para staging no banco — nada gravado em disco.
+    # O arquivo corrente do tipo é substituído (PK empresa+tipo).
+    conteudo = arquivo.read()
+    db.salvar_upload_staging(empresa, tipo, arquivo.filename, conteudo)
+
+    _log(f"[{empresa}] Arquivo importado ({tipo}): {arquivo.filename} ({len(conteudo)} bytes)")
     flash(f"✅ Arquivo '{arquivo.filename}' importado com sucesso!", "success")
     return redirect(url_for('index'))
 
@@ -540,8 +550,8 @@ def consolidar():
     empresa = get_empresa()
     _limpar_estado(empresa)
 
-    path_vencidos = _detectar_arquivo('vencidos', empresa)
-    path_alunos   = _detectar_arquivo('alunos',   empresa)
+    path_vencidos = _fonte_upload('vencidos', empresa)
+    path_alunos   = _fonte_upload('alunos',   empresa)
 
     if not path_vencidos:
         flash("Arquivo de Vencidos não encontrado. Importe-o primeiro.", "danger")
@@ -555,7 +565,7 @@ def consolidar():
 
         # Tentar processar AVENCER se disponível (Fase E)
         avencer, stats_avencer = None, None
-        path_avencer = _detectar_arquivo('avencer', empresa)
+        path_avencer = _fonte_upload('avencer', empresa)
         if path_avencer:
             try:
                 avencer, stats_avencer = proc.consolidar_avencer(path_avencer, path_alunos)
@@ -640,12 +650,14 @@ def gerar_relatorio():
         return redirect(url_for('index'))
 
     templates_list = db.get_templates_completo(empresa)
-    pasta    = _pasta_relatorio(empresa)
     data_str = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
     gerados       = []
     cpfs_cobrados = []
     total_msgs    = 0
 
+    # Onda 4 (stateless): os relatórios são gerados num diretório temporário, zipados em
+    # memória e entregues por download. Nada fica gravado no servidor (o tmp é apagado).
+    pasta = Path(tempfile.mkdtemp(prefix='matine_rel_'))
     try:
         # Agrupar cada aluno no template correspondente ao seu dias_atraso
         grupos: dict[int, dict] = {}   # template_id → {template, rows[]}
@@ -693,21 +705,31 @@ def gerar_relatorio():
             gerados.append(f"A Vencer: {len(avencer)} clientes")
             total_msgs += len(avencer)
 
+        if not gerados:
+            flash("Nenhum relatório gerado — nenhum cliente casou com os templates configurados.",
+                  "warning")
+            return redirect(url_for('resultado'))
+
         if cpfs_cobrados:
             db.incrementar_cobrancas(cpfs_cobrados, empresa)
 
-        _log(f"[{empresa}] Relatórios gerados: {', '.join(gerados)}")
+        zip_buf = _zip_pasta(pasta)
+        _log(f"[{empresa}] Relatórios gerados (download): {', '.join(gerados)}")
         flash(
-            f"✅ Relatórios gerados com sucesso para {empresa}. "
-            f"{total_msgs} mensagens prontas para envio "
-            f"({', '.join(gerados)}) → {pasta}",
+            f"✅ {total_msgs} mensagens prontas para envio "
+            f"({', '.join(gerados)}). Download iniciado.",
             "success"
+        )
+        return send_file(
+            zip_buf, mimetype='application/zip', as_attachment=True,
+            download_name=f"relatorios_{empresa}_{data_str}.zip",
         )
     except Exception as e:
         _log(f"[{empresa}] ERRO gerar-relatorio: {e}")
         flash(f"Erro ao gerar relatórios: {e}", "danger")
-
-    return redirect(url_for('resultado'))
+        return redirect(url_for('resultado'))
+    finally:
+        shutil.rmtree(pasta, ignore_errors=True)
 
 
 @app.route('/atualizar-base', methods=['POST'])
@@ -722,7 +744,7 @@ def atualizar_base():
     # Caso: admin apaga fatura vencida e cria nova com data futura → aluno some dos vencidos
     # mas ainda aparece no A Vencer além dos 3 dias → deve ser RENEGOCIADO, não QUITADO.
     cpfs_avencer = set()
-    path_avencer = _detectar_arquivo('avencer', empresa)
+    path_avencer = _fonte_upload('avencer', empresa)
     if path_avencer:
         try:
             cpfs_avencer = proc.obter_cpfs_avencer(path_avencer)
@@ -735,7 +757,7 @@ def atualizar_base():
                 cpfs_avencer = set(avencer_atual.loc[mask, 'CPF'].astype(str).str.zfill(11))
 
     cpfs_pagos, cpfs_cancelados = None, None
-    path_pc = _detectar_arquivo('pagos_cancelados', empresa)
+    path_pc = _fonte_upload('pagos_cancelados', empresa)
     if path_pc:
         try:
             cpfs_pagos, cpfs_cancelados = proc.processar_pagos_cancelados(path_pc)
@@ -745,29 +767,13 @@ def atualizar_base():
             flash(f"⚠️ Relatório de Pagos/Cancelados não processado: {e_pc}", "warning")
 
     try:
-        base_antes = db.carregar_base(empresa)
-        diff       = db.salvar_base(consolidado, empresa, cpfs_avencer=cpfs_avencer,
-                                    cpfs_pagos=cpfs_pagos, cpfs_cancelados=cpfs_cancelados)
+        diff = db.salvar_base(consolidado, empresa, cpfs_avencer=cpfs_avencer,
+                              cpfs_pagos=cpfs_pagos, cpfs_cancelados=cpfs_cancelados)
 
-        pasta    = _pasta_relatorio(empresa)
-        data_str = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
-
-        novos_df  = consolidado[consolidado['CPF'].astype(str).str.zfill(11).isin(diff['novos'])]
-        saidos_df = base_antes[base_antes['cpf'].isin(diff['saidos'])]
-
-        gerados = []
-        if len(novos_df) > 0:
-            proc.gerar_relatorio_novos(novos_df, data_str, pasta)
-            gerados.append(f"{len(novos_df)} novos inadimplentes")
-
-        if len(saidos_df) > 0:
-            saidos_df = saidos_df.rename(columns={
-                'cpf': 'CPF', 'aluno': 'Aluno', 'telefone': 'Telefone',
-                'email': 'E-mail', 'data_entrada': 'Data_Entrada', 'categoria': 'Categoria'
-            })
-            proc.gerar_relatorio_saidos(saidos_df, data_str, pasta)
-            gerados.append(f"{len(saidos_df)} saíram dos vencidos")
-
+        # Onda 4 (stateless): a atualização da Base persiste tudo no banco — quem entrou,
+        # saiu, quitou ou renegociou fica visível na tela Base (filtros por categoria) e
+        # nos contadores abaixo. Não gravamos mais os TXT/XLSX de novos/saídos em disco
+        # (eram artefato da era "abrir pasta no Explorer", inviável no servidor).
         _log(f"[{empresa}] Base atualizada: total={diff['total']} "
              f"novos={len(diff['novos'])} saidos={len(diff['saidos'])} "
              f"renegociados={len(diff['saidos_renegociados'])} quitados={len(diff['saidos_quitados'])} "
@@ -779,8 +785,6 @@ def atualizar_base():
             f"Continuam: {diff['continuam']}",
             "success"
         )
-        if gerados:
-            flash(f"📁 Relatórios: {', '.join(gerados)} salvos em {pasta}", "info")
 
     except Exception as e:
         _log(f"[{empresa}] ERRO atualizar-base: {e}")
@@ -855,7 +859,8 @@ def atualizar_status():
 def configuracoes():
     empresa      = get_empresa()
     templates    = db.get_templates_completo(empresa)
-    auto_alunos  = _detectar_arquivo('alunos', empresa)
+    # Presença do cadastro de Clientes = arquivo 'alunos' em staging no banco (Onda 4).
+    auto_alunos  = db.status_uploads_staging(empresa).get('alunos')
     config_email = db.get_config_email(empresa) or {}
     # A senha SMTP nunca vai para o HTML (STORY-01-04). Passamos só um flag para a UI
     # decidir entre mostrar bullets ("já configurada") ou pedir a senha.
@@ -930,15 +935,6 @@ def template_excluir(tid: int):
     db.excluir_template(tid, empresa)
     flash("🗑️ Mensagem excluída.", "info")
     return redirect(url_for('configuracoes'))
-
-
-@app.route('/abrir-relatorios')
-def abrir_relatorios():
-    empresa = get_empresa()
-    pasta   = _pasta_relatorio(empresa)
-    os.startfile(str(pasta))
-    flash(f"Pasta de relatórios aberta: {pasta}", "info")
-    return redirect(url_for('resultado') if _carregar_estado(empresa)[0] is not None else url_for('index'))
 
 
 @app.route('/limpar')
@@ -1354,22 +1350,27 @@ def crm_gerar_planilha():
 
     templates_list = db.get_templates_completo(empresa)
     base_df        = db.carregar_base(empresa)
-
-    CRM_PASTA.mkdir(parents=True, exist_ok=True)
     data_str = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
 
+    # Onda 4 (stateless): gera num tmp e entrega por download; nada fica no servidor.
+    pasta = Path(tempfile.mkdtemp(prefix='matine_crm_'))
     try:
         nome_arq = proc.gerar_planilha_crm(
-            consolidado, base_df, templates_list, CRM_PASTA, data_str, empresa
+            consolidado, base_df, templates_list, pasta, data_str, empresa
         )
-        _log(f"[{empresa}] Planilha CRM gerada: {nome_arq}")
-        os.startfile(str(CRM_PASTA))
-        flash(f"✅ Planilha CRM gerada: {nome_arq.name} — pasta aberta automaticamente.", "success")
+        dados = nome_arq.read_bytes()
+        _log(f"[{empresa}] Planilha CRM gerada (download): {nome_arq.name} ({len(dados)} bytes)")
+        return send_file(
+            io.BytesIO(dados),
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True, download_name=nome_arq.name,
+        )
     except Exception as e:
         _log(f"[{empresa}] ERRO CRM: {e}")
         flash(f"Erro ao gerar planilha CRM: {e}", "danger")
-
-    return redirect(url_for('envio_mensagens'))
+        return redirect(url_for('envio_mensagens'))
+    finally:
+        shutil.rmtree(pasta, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1455,38 +1456,42 @@ def whatsapp_exportar():
 
     templates_list = db.get_templates_completo(empresa)
     base_df        = db.carregar_base(empresa)
-    CRM_PASTA.mkdir(parents=True, exist_ok=True)
     data_str       = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
 
+    # Onda 4 (stateless): gera num tmp local só o tempo de subir ao Drive; depois apaga.
+    pasta = Path(tempfile.mkdtemp(prefix='matine_wa_'))
     try:
-        nome_arq = proc.gerar_planilha_crm(
-            consolidado, base_df, templates_list, CRM_PASTA, data_str, empresa
+        try:
+            nome_arq = proc.gerar_planilha_crm(
+                consolidado, base_df, templates_list, pasta, data_str, empresa
+            )
+        except Exception as e:
+            _log(f"[{empresa}] ERRO ao gerar planilha p/ WhatsApp: {e}")
+            flash(f"Erro ao gerar a planilha: {e}", "danger")
+            return redirect(url_for('envio_mensagens'))
+
+        remote_name = _nome_remoto_whatsapp(cfg, empresa)
+        ok, link = gdrive.upload_xlsx(
+            cfg['credentials_path'], cfg['gdrive_folder_id'], nome_arq, remote_name
         )
-    except Exception as e:
-        _log(f"[{empresa}] ERRO ao gerar planilha p/ WhatsApp: {e}")
-        flash(f"Erro ao gerar a planilha: {e}", "danger")
+        if not ok:
+            _log(f"[{empresa}] ERRO no upload p/ Drive: {link}")
+            flash(f"❌ Falha no upload para o Drive: {link}", "danger")
+            return redirect(url_for('envio_mensagens'))
+
+        # Registra um envio por inadimplente no canal whatsapp_crm.
+        qtd = 0
+        for _, row in consolidado.iterrows():
+            tmpl = _encontrar_template(int(row['Dias_Atraso']), templates_list)
+            titulo = tmpl['titulo'] if tmpl else None
+            db.registrar_envio(str(row['CPF']).zfill(11), empresa, 'whatsapp_crm', titulo)
+            qtd += 1
+
+        _log(f"[{empresa}] Exportado p/ WhatsApp ({qtd} clientes): {remote_name} → {link}")
+        flash(f"✅ Planilha enviada ao Drive ({qtd} clientes). Link: {link}", "success")
         return redirect(url_for('envio_mensagens'))
-
-    remote_name = _nome_remoto_whatsapp(cfg, empresa)
-    ok, link = gdrive.upload_xlsx(
-        cfg['credentials_path'], cfg['gdrive_folder_id'], nome_arq, remote_name
-    )
-    if not ok:
-        _log(f"[{empresa}] ERRO no upload p/ Drive: {link}")
-        flash(f"❌ Falha no upload para o Drive: {link}", "danger")
-        return redirect(url_for('envio_mensagens'))
-
-    # Registra um envio por inadimplente no canal whatsapp_crm.
-    qtd = 0
-    for _, row in consolidado.iterrows():
-        tmpl = _encontrar_template(int(row['Dias_Atraso']), templates_list)
-        titulo = tmpl['titulo'] if tmpl else None
-        db.registrar_envio(str(row['CPF']).zfill(11), empresa, 'whatsapp_crm', titulo)
-        qtd += 1
-
-    _log(f"[{empresa}] Exportado p/ WhatsApp ({qtd} clientes): {remote_name} → {link}")
-    flash(f"✅ Planilha enviada ao Drive ({qtd} clientes). Link: {link}", "success")
-    return redirect(url_for('envio_mensagens'))
+    finally:
+        shutil.rmtree(pasta, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------

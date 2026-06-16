@@ -322,7 +322,8 @@ estado (por-processo), arquivos em disco efêmero, keyring do Windows, `os.start
 - [ ] **Onda 1** — Wrapper conn/cursor + `get_conn()` dual-dialect + placeholders `?`→`%s` + acessos `[0]`→alias
 - [ ] **Onda 2** — Migrations cross-dialect (`ddl.py`, AUTOINCREMENT→IDENTITY, `datetime`→`CURRENT_TIMESTAMP`, `ON CONFLICT`, `RETURNING`)
 - [x] **Onda 3** — Estado de sessão: pickle → tabela `estado_consolidacao` (BLOB/BYTEA) ✅ 15/06 — migration 009, `_salvar/_carregar/_limpar_estado` via blob no banco, `estado_existe`, +8 testes (suíte 79 verdes). Roda em SQLite hoje; pronta p/ Postgres
-- [ ] **Onda 4** — Stateless de arquivos: upload em memória + relatórios via download (ZIP) + remover `os.startfile` + logs stdout
+- [x] **Onda 4** — Stateless de arquivos ✅ 16/06 — migration 010 (`uploads_staging`: bytes do upload por empresa+tipo no banco); `/upload` grava no staging (não em disco), `/consolidar` e `/atualizar-base` leem em memória (`BytesIO` via `processing._ler_csv`); relatórios → **download ZIP** e Planilha CRM → **download xlsx** (geração em tmp, apagada após enviar); `os.startfile` e a rota `/abrir-relatorios` removidos; `_log` → stdout (arquivo só em modo local, via `EM_NUVEM`/`DATABASE_URL`). +13 testes (`test_uploads.py`). **Suíte: 90 verdes.** Roda em SQLite hoje; staging pronto p/ Postgres (BLOB→BYTEA)
+  - **Decisão:** `/atualizar-base` deixou de gravar os TXT/XLSX de "novos/saídos" em disco (eram artefato do "abrir pasta"). A informação segue nos contadores do flash e na tela Base por categoria. Reexportar esses recortes como download é candidato de v.next se houver demanda
 - [ ] **Onda 5** — Segredos → env vars + Secret File do Drive; blindar keyring
 - [ ] **Onda 6** — Testes dual-dialect (conftest parametrizado + Postgres efêmero)
 - [ ] **Onda 7** — Deploy Render (Web Service + Postgres + env + Procfile/runtime) + smoke test

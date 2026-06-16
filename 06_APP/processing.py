@@ -3,10 +3,21 @@ Lógica de processamento pandas — extraída do app desktop.
 Sem dependências de tkinter.
 """
 
+import io
 import re
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
+
+# Uma "fonte" de leitura pode ser um Path em disco (uso local/testes) OU os bytes
+# de um upload já em memória — `(BytesIO, filename)` — para o fluxo stateless da
+# nuvem (EPIC-02 Onda 4), onde nada é gravado no filesystem.
+Fonte = "Path | tuple[io.BytesIO, str]"
+
+
+def _fonte_nome(fonte) -> str:
+    """Nome legível da fonte (para mensagens de erro), seja Path ou (buffer, nome)."""
+    return fonte[1] if isinstance(fonte, tuple) else fonte.name
 
 
 class _SafeFormat(dict):
@@ -45,12 +56,30 @@ def _converter_valor(val) -> float:
         return 0.0
 
 
-def _ler_csv(path: Path, coluna_obrigatoria: str) -> pd.DataFrame | None:
+def _ler_csv(fonte, coluna_obrigatoria: str) -> pd.DataFrame | None:
+    """Lê CSV/XLSX de uma fonte (Path em disco OU `(BytesIO, filename)` em memória).
+
+    Testa múltiplos encodings/separadores/skiprows (Synapta é inconsistente). Quando a
+    fonte é um buffer em memória, faz `seek(0)` antes de cada tentativa para reaproveitar
+    os mesmos bytes — nada é gravado em disco (EPIC-02 Onda 4, app stateless)."""
+    if isinstance(fonte, tuple):
+        buf, nome = fonte
+        suffix = Path(nome).suffix.lower()
+
+        def _src():
+            buf.seek(0)
+            return buf
+    else:
+        suffix = fonte.suffix.lower()
+
+        def _src():
+            return str(fonte)
+
     # Excel
-    if path.suffix.lower() in ('.xlsx', '.xls'):
+    if suffix in ('.xlsx', '.xls'):
         for skip in [0, 1]:
             try:
-                df = pd.read_excel(str(path), skiprows=skip or None)
+                df = pd.read_excel(_src(), skiprows=skip or None)
                 if coluna_obrigatoria in df.columns:
                     return df
             except Exception:
@@ -61,7 +90,7 @@ def _ler_csv(path: Path, coluna_obrigatoria: str) -> pd.DataFrame | None:
         for sep in [',', ';', '\t']:
             for skip in [0, 1]:
                 try:
-                    df = pd.read_csv(str(path), encoding=enc, sep=sep, skiprows=skip)
+                    df = pd.read_csv(_src(), encoding=enc, sep=sep, skiprows=skip)
                     if coluna_obrigatoria in df.columns:
                         return df
                 except Exception:
@@ -77,14 +106,14 @@ def consolidar(path_vencidos: Path, path_alunos: Path) -> tuple[pd.DataFrame, di
     vencidos = _ler_csv(path_vencidos, 'Aluno')
     if vencidos is None:
         raise ValueError(
-            f"Não consegui ler '{path_vencidos.name}'. "
+            f"Não consegui ler '{_fonte_nome(path_vencidos)}'. "
             "Verifique se é o arquivo de Faturas Vencidas exportado do Synapta."
         )
 
     alunos = _ler_csv(path_alunos, 'CPF')
     if alunos is None:
         raise ValueError(
-            f"Não consegui ler '{path_alunos.name}'. "
+            f"Não consegui ler '{_fonte_nome(path_alunos)}'. "
             "Verifique se é o arquivo de Cadastro de Clientes."
         )
 
@@ -355,7 +384,7 @@ def consolidar_avencer(path_avencer: Path, path_alunos: Path,
     avencer = _ler_csv(path_avencer, 'Aluno')
     if avencer is None:
         raise ValueError(
-            f"Não consegui ler '{path_avencer.name}'. "
+            f"Não consegui ler '{_fonte_nome(path_avencer)}'. "
             "Verifique se é o arquivo de Faturas a Vencer exportado do Synapta."
         )
 
@@ -369,7 +398,7 @@ def consolidar_avencer(path_avencer: Path, path_alunos: Path,
         None
     )
     if col_valor is None:
-        raise ValueError(f"Coluna de valor não encontrada em '{path_avencer.name}'.")
+        raise ValueError(f"Coluna de valor não encontrada em '{_fonte_nome(path_avencer)}'.")
     avencer['_Valor'] = avencer[col_valor].apply(_converter_valor)
 
     # Detecta coluna de CPF
@@ -597,7 +626,7 @@ def processar_pagos_cancelados(path: Path) -> tuple[set, set]:
     df = _ler_csv(path, 'CPF sem mask')
     if df is None:
         raise ValueError(
-            f"Não consegui ler '{path.name}'. "
+            f"Não consegui ler '{_fonte_nome(path)}'. "
             "Verifique se é o relatório de Pagos e Cancelados exportado do Synapta."
         )
     df['CPF sem mask'] = df['CPF sem mask'].astype(str).str.strip().str.zfill(11)

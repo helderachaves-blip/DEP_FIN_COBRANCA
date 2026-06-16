@@ -31,12 +31,12 @@ def test_config_whatsapp_no_schema(db):
 
 
 def test_runner_aplica_ate_008(tmp_path, db):
-    """Banco novo aplica 1-9 e a 2ª passada é no-op."""
+    """Banco novo aplica 1-10 e a 2ª passada é no-op."""
     conn = sqlite3.connect(str(tmp_path / 'fresh.db'))
     conn.isolation_level = None
     try:
         aplicadas = db.runner.apply_pending(conn, db.MIGRATIONS_DIR)
-        assert aplicadas == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        assert aplicadas == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         assert 'config_whatsapp' in _tabelas(conn)
         assert db.runner.apply_pending(conn, db.MIGRATIONS_DIR) == []
     finally:

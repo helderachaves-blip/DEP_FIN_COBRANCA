@@ -51,12 +51,15 @@ e cole em `APP_SENHA`. Modelo completo em `.env.example`.
 ```
 C:\MATINE\
 ├── banco\inadimplencia.db   # SQLite (schema versionado via migrations\)
-├── uploads\{EMPRESA}\{tipo}\
-├── relatorios\{EMPRESA}\{ano}\{mes}\{dia}\
-├── crm-exports\
-├── estado\                  # sessão (pickle)
-└── logs\
+├── secrets\                 # JSON da Service Account do Drive (STORY-H-01)
+└── logs\                    # log em arquivo (só modo local; na nuvem vai p/ stdout)
 ```
+
+> **App stateless (EPIC-02 Ondas 3–4):** o estado da sessão, os arquivos importados
+> (staging) e os resultados ficam **no banco**, não em disco. Os relatórios e a Planilha
+> CRM são entregues por **download** (ZIP/arquivo) — não há mais pastas `uploads\`,
+> `relatorios\`, `crm-exports\` nem `estado\`, e nada é aberto no Explorer. Isso permite
+> rodar o app por uma URL num servidor Linux.
 
 ## 🧩 Dependências
 
