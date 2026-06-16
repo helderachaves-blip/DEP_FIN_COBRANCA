@@ -1,6 +1,6 @@
 # EPIC-02 — Cloud-Native / Stateless (ponte para a v2)
 
-> Status: **Em andamento** — Ondas 3 e 4 entregues (15–16/06/2026). Próximas: Ondas 0–2 (dual-dialect) e Onda 5 (segredos).
+> Status: **Em andamento** — Ondas 0, 3 e 4 entregues (16/06/2026). Próximas: Ondas 1–2 (dual-dialect) e Onda 5 (segredos).
 > Tipo: especificação técnica (não é arquivo de gestão). Gestão em `PLANO_DE_ACAO.md` / `ROADMAP.md`.
 
 ---

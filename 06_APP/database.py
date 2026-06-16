@@ -1,6 +1,7 @@
 """
-Operações SQLite — suporte multi-empresa (Fase D).
+Operações de banco — suporte multi-empresa (Fase D).
 Todas as funções recebem o parâmetro `empresa`.
+Dialeto selecionado por DATABASE_URL: ausente → SQLite, presente → Postgres (Onda 1+).
 """
 
 import importlib.util
@@ -9,6 +10,21 @@ import sqlite3
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+
+# ── Dialeto (EPIC-02 Onda 0) ─────────────────────────────────────────────────
+# DATABASE_URL ausente  → SQLite (dev/testes/local)
+# DATABASE_URL presente → Postgres (Render/produção)  — usado a partir da Onda 1
+DATABASE_URL = os.environ.get('DATABASE_URL')
+DIALECT = 'postgres' if DATABASE_URL else 'sqlite'
+
+# Import protegido: psycopg só é necessário quando DIALECT == 'postgres'.
+# Em dev/testes o pacote pode não estar instalado e o app continua funcionando.
+try:
+    import psycopg  # noqa: F401 — usado na Onda 1
+    import psycopg_pool  # noqa: F401 — usado na Onda 1
+    _PSYCOPG_OK = True
+except ImportError:
+    _PSYCOPG_OK = False
 
 # Diretório de dados configurável por ambiente (default: C:\MATINE — produção
 # inalterada). Os testes definem MATINE_DATA_DIR para um temp e nunca tocam o

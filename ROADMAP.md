@@ -318,7 +318,7 @@ Reorganização de UX em Configurações: hoje E-mail (Fase G) e WhatsApp (H-1) 
 arquivos dos clientes no meu servidor" e remove os acoplamentos que quebram na nuvem — pickle de
 estado (por-processo), arquivos em disco efêmero, keyring do Windows, `os.startfile` (derruba no Linux).
 
-- [ ] **Onda 0** — Deps (`psycopg`, `psycopg_pool`) + switch de dialeto (`DATABASE_URL`) sem uso
+- [x] **Onda 0** — Deps (`psycopg[binary]`, `psycopg_pool`) + `DATABASE_URL`/`DIALECT` em `database.py`; import protegido; suíte 90 verdes ✅ 16/06
 - [ ] **Onda 1** — Wrapper conn/cursor + `get_conn()` dual-dialect + placeholders `?`→`%s` + acessos `[0]`→alias
 - [ ] **Onda 2** — Migrations cross-dialect (`ddl.py`, AUTOINCREMENT→IDENTITY, `datetime`→`CURRENT_TIMESTAMP`, `ON CONFLICT`, `RETURNING`)
 - [x] **Onda 3** — Estado de sessão: pickle → tabela `estado_consolidacao` (BLOB/BYTEA) ✅ 15/06 — migration 009, `_salvar/_carregar/_limpar_estado` via blob no banco, `estado_existe`, +8 testes (suíte 79 verdes). Roda em SQLite hoje; pronta p/ Postgres
