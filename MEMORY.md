@@ -38,10 +38,11 @@ Automatizar cobrança de faturas vencidas.
 
 | Componente | Tecnologia |
 |-----------|-----------|
-| Backend | Python / Flask |
-| Banco | SQLite (`C:\MATINE\banco\inadimplencia.db`) |
+| Backend | Python / Flask (gunicorn `-w 2` na nuvem) |
+| Banco | **Dual-dialect** (EPIC-02): SQLite em dev/testes (`C:\MATINE\banco\inadimplencia.db`) · PostgreSQL na nuvem, selecionado por `DATABASE_URL` |
 | Frontend | Bootstrap 5.3.3 + Jinja2 |
 | Processamento | pandas |
+| Deploy | **Render** — Web Service `matine-cobranca` + Postgres `matine-db` (`render.yaml`, `rootDir=06_APP`). **No ar desde 16/06/2026** |
 | Branch de trabalho | `homologacao` |
 
 ---

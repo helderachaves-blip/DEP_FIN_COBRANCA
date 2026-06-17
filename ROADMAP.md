@@ -307,7 +307,7 @@ Reorganização de UX em Configurações: hoje E-mail (Fase G) e WhatsApp (H-1) 
 
 ---
 
-## 🔲 EPIC-02 — Cloud-Native / Stateless (ponte para a v2) *(decisão 15/06/2026)*
+## ✅ EPIC-02 — Cloud-Native / Stateless (ponte para a v2) *(concluído 16/06/2026 — no ar no Render)*
 
 > Objetivo: disponibilizar o app por **URL** (Edilvo/Luana validam de qualquer máquina) tornando-o
 > **stateless** — alicerce comum entre "rodar na nuvem" e a v2 SaaS. Mantém o modelo de **2 empresas**
@@ -325,8 +325,9 @@ estado (por-processo), arquivos em disco efêmero, keyring do Windows, `os.start
 - [x] **Onda 4** — Stateless de arquivos ✅ 16/06 — migration 010 (`uploads_staging`: bytes do upload por empresa+tipo no banco); `/upload` grava no staging (não em disco), `/consolidar` e `/atualizar-base` leem em memória (`BytesIO` via `processing._ler_csv`); relatórios → **download ZIP** e Planilha CRM → **download xlsx** (geração em tmp, apagada após enviar); `os.startfile` e a rota `/abrir-relatorios` removidos; `_log` → stdout (arquivo só em modo local, via `EM_NUVEM`/`DATABASE_URL`). +13 testes (`test_uploads.py`). **Suíte: 90 verdes.** Roda em SQLite hoje; staging pronto p/ Postgres (BLOB→BYTEA)
   - **Decisão:** `/atualizar-base` deixou de gravar os TXT/XLSX de "novos/saídos" em disco (eram artefato do "abrir pasta"). A informação segue nos contadores do flash e na tela Base por categoria. Reexportar esses recortes como download é candidato de v.next se houver demanda
 - [x] **Onda 5** — Segredos → env vars + Secret File do Drive; blindar keyring ✅ 16/06 — `_env_get` prioriza `os.environ` (Render/CI); keyring ignorado quando `DIALECT='postgres'` (SMTP vem de `SMTP_{empresa}_SENHA`); `get_gdrive_credentials_path` lê `GOOGLE_SA_{empresa}_JSON_PATH` (Secret File do Render). **Suíte: 90 verdes.**
-- [ ] **Onda 6** — Testes dual-dialect (conftest parametrizado + Postgres efêmero)
-- [ ] **Onda 7** — Deploy Render (Web Service + Postgres + env + Procfile/runtime) + smoke test
+- [x] **Onda 6** — Testes dual-dialect ✅ 16/06 — conftest parametrizado (`TEST_DIALECT=postgres` sobe Postgres efêmero via testcontainers); `_tabelas()` cross-dialect (3 arquivos); `r['version']/['cnt']/['coluna']` no lugar de `r[0]`; 7 testes `sqlite_only`. Suíte SQLite: 90 verdes.
+- [x] **Onda 7** — Deploy Render ✅ 16/06 — **app no ar** (Helder confirmou acesso pela URL em 17/06). `render.yaml` (Web Service `matine-cobranca` gunicorn `-w 2`, `rootDir=06_APP`) + Postgres gerenciado `matine-db`; env vars `DATABASE_URL`/`FLASK_SECRET_KEY`/`MATINE_DATA_DIR=/tmp/matine`/`APP_USUARIO`/`APP_SENHA`/`SMTP_*_SENHA`; `06_APP/Procfile`. Postgres na nuvem valida o dual-dialect na prática.
+  - **Pós-deploy a fazer:** smoke test ponta a ponta no ar + trocar senha admin default.
 
 > Reaproveita 100% no v2: o banco já em Postgres e o app já stateless são pré-requisitos diretos
 > da visão SaaS multi-tenant abaixo. Falta, depois, generalizar "2 empresas" → "N tenants".

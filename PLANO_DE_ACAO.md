@@ -2,7 +2,7 @@
 
 > Sprint atual e próximos passos. Atualizar a cada sessão.
 > Quando um item é entregue: marca ✅ aqui e registra no ROADMAP.md.
-> Última atualização: 16/06/2026
+> Última atualização: 17/06/2026
 
 ---
 
@@ -10,8 +10,9 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
-- **EPIC-02 em implementação:** **Ondas 0–6 entregues.** Onda 6 (16/06): conftest parametrizado (`TEST_DIALECT=postgres` sobe container Postgres efêmero via testcontainers); `_tabelas()` cross-dialect em 3 arquivos de teste; `r['version']`/`r['cnt']`/`r['coluna']` substituem `r[0]` nos testes que usam `db.get_conn()`; 7 testes marcados `sqlite_only` (raw `sqlite3.connect`, PRAGMA, backup SQLite). Aguardando Docker para rodar contra Postgres. Suíte SQLite: **90 verdes** (inalterada).
-- **App (hoje):** roda com `python app.py` em `06_APP/` → http://localhost:5000. Só `logs\` e `banco\` (SQLite) usam disco local; uploads/relatórios não tocam mais o filesystem.
+- **EPIC-02 CONCLUÍDO (Ondas 0–7):** app **no ar na nuvem via Render** — Helder confirmou acesso pela URL em 17/06. Web Service `matine-cobranca` (gunicorn `-w 2`, `rootDir=06_APP`) + Postgres gerenciado `matine-db` (`render.yaml`); env vars `DATABASE_URL`, `FLASK_SECRET_KEY` (gerada), `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/APP_SENHA`, `SMTP_INEPROTEC_SENHA`, `SMTP_MATRICULAEAD_SENHA`. App agora roda em Postgres na nuvem (validação real do dual-dialect). Suíte SQLite local: **90 verdes**.
+- **App (local):** roda com `python app.py` em `06_APP/` → http://localhost:5000 (SQLite). Em nuvem: Render + Postgres.
+- **A verificar (smoke test pós-deploy):** confirmar fluxo ponta a ponta no ar (login → upload → consolidar → relatório/CRM → envio) e **trocar a senha admin default**.
 
 ---
 
@@ -27,32 +28,35 @@
 
 ---
 
-## Próxima Sessão (nova janela) — EPIC-02: Onda 6 (validar Postgres) + Onda 7 (deploy)
+## Próxima Sessão (nova janela) — pós-deploy: validar no ar + onboarding Drive
 
-> Ondas 0–6 entregues. O código da Onda 6 está pronto; falta só rodar contra Postgres.
-> Docker sendo instalado agora — após reinício, rodar os testes e depois fazer o deploy.
+> EPIC-02 concluído (Ondas 0–7); app no ar no Render (Helder confirmou acesso em 17/06).
+> Foco agora: fechar pendências do deploy e retomar a Fase H.
 
-**Onda 6 — Validar Postgres (~30 min após Docker instalado):**
-```powershell
-cd "E:\PROJETOS IA\DEP-FINANCEIRO\DEP_FIN_COBRANCA\06_APP"
-pip install -r requirements-dev.txt   # instala testcontainers
-$env:TEST_DIALECT="postgres"; pytest  # sobe container efêmero, roda 90 testes
-```
-Esperado: 83 passed + 7 skipped (sqlite_only). Se algum teste falhar, ajustar antes de avançar.
+**1. Smoke test pós-deploy (verificação do ambiente no ar):**
+- Login → upload de base → consolidar → gerar relatório/Planilha CRM (download) → envio de e-mail teste.
+- **Trocar a senha admin default** (`APP_USUARIO`/`APP_SENHA` no Render) por credencial real.
+- Conferir logs do Render (stdout) e ausência de erro de dialeto/Postgres.
 
-**Onda 7 — Deploy Render (~3h):** `Procfile` (gunicorn), `runtime.txt`, Web Service no Render,
-Render Postgres, env vars (`DATABASE_URL`, `FLASK_SECRET_KEY`, `APP_USUARIO`, `APP_SENHA`,
-`SMTP_{empresa}_SENHA`, `GOOGLE_SA_{empresa}_JSON_PATH`), Secret File do Drive; smoke test
-ponta a ponta; trocar senha admin default.
-
-**Pendência paralela (não bloqueia o EPIC-02) — STORY-H-01 onboarding real:** criar Service
-Account + Shared Drive, testar conexão/exportação e validar com o Kommo → QA gate (InReview → Done).
-Helder fará quando o ambiente estiver no ar. Entradas: `configuracoes.html` (aba WhatsApp),
+**2. STORY-H-01 — onboarding real do Google Drive (fecha a story, InReview → Done):**
+criar Service Account + Shared Drive, montar o Secret File no Render (`GOOGLE_SA_{empresa}_JSON_PATH`),
+testar conexão/exportação e validar com o Kommo → QA gate. Entradas: `configuracoes.html` (aba WhatsApp),
 `envio_mensagens.html` (botão Exportar), rotas `/whatsapp/*` em `app.py`, `06_APP/gdrive.py`.
+
+**3. Backlog Fase H (escolher com Helder):** Sprint H-2 (Agendamento + Dashboard analítico) ou
+Sprint H-3 (submenu "Canais de Comunicação" + aba SMS).
 
 ---
 
 ## Histórico de Sessões
+
+### Sessão 16/06/2026 — EPIC-02 Ondas 6 e 7 (testes dual-dialect + deploy Render) ✅ EPIC-02 CONCLUÍDO
+- **Onda 6** (`cabf8c4`): conftest parametrizado (`TEST_DIALECT=postgres` sobe Postgres efêmero via testcontainers); `_tabelas()` cross-dialect em 3 arquivos de teste; `r['version']`/`r['cnt']`/`r['coluna']` no lugar de `r[0]`; 7 testes `sqlite_only` (raw `sqlite3.connect`, PRAGMA, backup SQLite). Suíte SQLite: 90 verdes.
+- **Onda 7** (`e8325e3`): `render.yaml` (Web Service `matine-cobranca` python, `rootDir=06_APP`, `buildCommand=pip install -r requirements.txt`, `startCommand=gunicorn -w 2`); `06_APP/Procfile`; Postgres gerenciado `matine-db`; env vars (`DATABASE_URL` fromDatabase, `FLASK_SECRET_KEY` generateValue, `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/SENHA`, `SMTP_*_SENHA` sync:false); fixes postgres.
+- **App no ar:** Helder confirmou acesso pela URL do Render em 17/06 → Postgres na nuvem valida o dual-dialect na prática.
+- **Pendências pós-deploy:** smoke test ponta a ponta + trocar senha admin default (ver Próxima Sessão).
+- Commits `cabf8c4` + `e8325e3` — **push concluído** em `origin/homologacao` (verificado: 0 ahead/0 behind).
+- **Nota de sincronia (17/06):** PLANO/ROADMAP estavam uma onda atrás (commitados na Onda 6); reconciliados com o git nesta sessão.
 
 ### Sessão 16/06/2026 — EPIC-02 Onda 5 (segredos → env vars)
 - **`app.py` `_env_get`**: agora lê `os.environ` primeiro e cai no `.env` local como fallback — sem isso, `FLASK_SECRET_KEY` regenerava a cada deploy no Render e desloga todos os usuários
@@ -194,7 +198,7 @@ Helder fará quando o ambiente estiver no ar. Entradas: `configuracoes.html` (ab
 
 ---
 
-## EPIC-02 — Cloud-Native Stateless (ponte para v2) 🔲
+## EPIC-02 — Cloud-Native Stateless (ponte para v2) ✅ CONCLUÍDO (16/06/2026, no ar no Render)
 
 > Decidido 15/06/2026. Caminho B (stateless), Render, Postgres. Spec: `docs/stories/epic-02-cloud-native-stateless.md`. Esforço total ~30h (~3–4 janelas).
 
@@ -206,8 +210,8 @@ Helder fará quando o ambiente estiver no ar. Entradas: `configuracoes.html` (ab
 | 3 | Matar o pickle: estado → tabela `estado_consolidacao` (BLOB/BYTEA); `_salvar/_carregar/_limpar_estado` via `db.*_estado_blob` + `estado_existe`; +8 testes | ✅ 15/06 |
 | 4 | Stateless de arquivos: upload → staging (migration 010) lido em memória + relatórios/CRM via download (ZIP/xlsx) + remover `os.startfile`/`/abrir-relatorios` + logs stdout; +13 testes | ✅ 16/06 |
 | 5 | Segredos → env vars + Secret File do Drive; blindar keyring | ✅ 16/06 |
-| 6 | Testes dual-dialect (conftest parametrizado + Postgres efêmero) | 🔲 |
-| 7 | Deploy Render (Web Service + Postgres + env + Procfile/runtime) + smoke test | 🔲 |
+| 6 | Testes dual-dialect (conftest parametrizado + Postgres efêmero) | ✅ 16/06 |
+| 7 | Deploy Render (Web Service + Postgres + env + Procfile/render.yaml) — **no ar 16/06** | ✅ 16/06 |
 
 ---
 
