@@ -50,6 +50,13 @@ Sprint H-3 (submenu "Canais de Comunicação" + aba SMS).
 
 ## Histórico de Sessões
 
+### Sessão 17/06/2026 — Validação do deploy + hardening de migrations concorrentes
+- **Smoke test automático do Render:** app no ar (HTTP 200 após cold start ~30–60s do free tier), `/` → 302 `/login`, página "Login – Cobranças INE-MAT" OK, sem erro 500/Postgres. Falta a parte interativa (login/upload/consolidar/relatório/envio + **trocar senha admin default** — login padrão `luana/matine2026` em `app.py:1510`).
+- **🔒 Race condition em migrations resolvido** (`06_APP/migrations/runner.py`): com `gunicorn -w 2`, os 2 workers chamam `init_db` no boot e podiam aplicar a mesma migration em paralelo (falha de PK em `schema_migrations`). Adicionados `acquire_lock`/`release_lock` (Postgres: `pg_advisory_lock` de sessão; SQLite: no-op) envolvendo `apply_pending` em try/finally. Agora 1 worker aplica e os demais esperam.
+- **+2 testes** (`test_migrations.py`): `test_lock_noop_sqlite` (passa) + `test_advisory_lock_serializa_migrations` (pula sem `TEST_DIALECT=postgres`). **Suíte: 91 passed, 1 skipped.**
+- Decisão formal (Modelo 1) sobre fluxo de gestão→commit→push, com comando `entregar`, gravada no CLAUDE.md global.
+- **Como migrations chegam ao Postgres:** automático no boot — `setup_inicial()` roda no import (`app.py:361`), sob gunicorn; runner aplica só as pendentes, em ordem, atômicas. Regra: forward-only + cross-dialect (`ddl.py`) + testar em Postgres antes.
+
 ### Sessão 16/06/2026 — EPIC-02 Ondas 6 e 7 (testes dual-dialect + deploy Render) ✅ EPIC-02 CONCLUÍDO
 - **Onda 6** (`cabf8c4`): conftest parametrizado (`TEST_DIALECT=postgres` sobe Postgres efêmero via testcontainers); `_tabelas()` cross-dialect em 3 arquivos de teste; `r['version']`/`r['cnt']`/`r['coluna']` no lugar de `r[0]`; 7 testes `sqlite_only` (raw `sqlite3.connect`, PRAGMA, backup SQLite). Suíte SQLite: 90 verdes.
 - **Onda 7** (`e8325e3`): `render.yaml` (Web Service `matine-cobranca` python, `rootDir=06_APP`, `buildCommand=pip install -r requirements.txt`, `startCommand=gunicorn -w 2`); `06_APP/Procfile`; Postgres gerenciado `matine-db`; env vars (`DATABASE_URL` fromDatabase, `FLASK_SECRET_KEY` generateValue, `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/SENHA`, `SMTP_*_SENHA` sync:false); fixes postgres.

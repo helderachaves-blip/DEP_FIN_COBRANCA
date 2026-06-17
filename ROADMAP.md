@@ -328,6 +328,7 @@ estado (por-processo), arquivos em disco efêmero, keyring do Windows, `os.start
 - [x] **Onda 6** — Testes dual-dialect ✅ 16/06 — conftest parametrizado (`TEST_DIALECT=postgres` sobe Postgres efêmero via testcontainers); `_tabelas()` cross-dialect (3 arquivos); `r['version']/['cnt']/['coluna']` no lugar de `r[0]`; 7 testes `sqlite_only`. Suíte SQLite: 90 verdes.
 - [x] **Onda 7** — Deploy Render ✅ 16/06 — **app no ar** (Helder confirmou acesso pela URL em 17/06). `render.yaml` (Web Service `matine-cobranca` gunicorn `-w 2`, `rootDir=06_APP`) + Postgres gerenciado `matine-db`; env vars `DATABASE_URL`/`FLASK_SECRET_KEY`/`MATINE_DATA_DIR=/tmp/matine`/`APP_USUARIO`/`APP_SENHA`/`SMTP_*_SENHA`; `06_APP/Procfile`. Postgres na nuvem valida o dual-dialect na prática.
   - **Pós-deploy a fazer:** smoke test ponta a ponta no ar + trocar senha admin default.
+- [x] **Hardening — migrations concorrentes** ✅ 17/06 — com `gunicorn -w 2` os 2 workers aplicavam migrations em paralelo no boot (falha de PK em `schema_migrations`). `runner.apply_pending` agora serializa via `pg_advisory_lock` de sessão (Postgres; no-op em SQLite) em try/finally. +2 testes. Suíte: 91 passed, 1 skipped. Essencial agora que haverá mudanças de banco frequentes.
 
 > Reaproveita 100% no v2: o banco já em Postgres e o app já stateless são pré-requisitos diretos
 > da visão SaaS multi-tenant abaixo. Falta, depois, generalizar "2 empresas" → "N tenants".
@@ -373,6 +374,12 @@ Observações e aprendizados do uso real. Serão tratados após Fase H como back
 - **Pickle de sessão sem expiração:** O estado de consolidação fica em pickle indefinidamente. Se o arquivo fonte mudar sem nova consolidação, os dados exibidos ficam desatualizados silenciosamente. Considerar timestamp de validade ou aviso visual de sessão antiga.
 
 - **Relatórios acumulam sem limpeza:** A pasta `C:\MATINE\relatorios\` cresce indefinidamente. Implementar política de retenção (ex.: 90 dias) ou tela de gerenciamento.
+
+### Infraestrutura (nuvem / Render) *(EPIC-02, no ar desde 16/06/2026)*
+
+- **🔴 Postgres free do Render expira em ~90 dias:** o banco gerenciado `matine-db` no plano free é **deletado após ~90 dias** (Render avisa por e-mail antes). É o **único risco real de perda de dados** (merge/redeploy NÃO apagam o banco — código e dados são serviços separados). Antes de virar produção pro Edilvo: migrar para Postgres **pago** (ou outro provedor) e definir **estratégia de backup** (dump periódico automatizado). *(observado 17/06/2026)*
+
+- **Cold start do free tier (~30–60s):** o Web Service `matine-cobranca` hiberna após ~15 min de inatividade; o primeiro acesso depois disso leva ~30–60s (vimos o 503 inicial no smoke test). Para Edilvo/Luana = "a primeira tela demora, depois fica rápida". Mitigações: upgrade do plano (sem hibernação) ou keep-alive (ping periódico externo). *(observado 17/06/2026)*
 
 ---
 

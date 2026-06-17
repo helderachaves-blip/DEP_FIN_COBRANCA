@@ -53,6 +53,40 @@ def test_runner_fresh_e_idempotente(tmp_path, db):
 
 
 @pytest.mark.sqlite_only
+def test_lock_noop_sqlite(tmp_path, db):
+    """No SQLite, acquire/release do advisory lock são no-op (não levantam, não rodam SQL PG)."""
+    conn = sqlite3.connect(str(tmp_path / 'lock.db'))
+    conn.row_factory = sqlite3.Row
+    conn.isolation_level = None
+    try:
+        db.runner.acquire_lock(conn)   # não deve levantar
+        db.runner.release_lock(conn)   # não deve levantar
+    finally:
+        conn.close()
+
+
+def test_advisory_lock_serializa_migrations(db):
+    """No Postgres, o advisory lock impede aplicação concorrente: enquanto um processo
+    o retém, um 2º não consegue o mesmo lock (pg_try_advisory_lock = False); liberado, consegue."""
+    if os.environ.get('TEST_DIALECT') != 'postgres':
+        pytest.skip('lock concorrente só é exercitável no Postgres')
+    key = db.runner._MIGRATION_LOCK_KEY
+    c1 = db.get_conn(); c1.isolation_level = None
+    c2 = db.get_conn(); c2.isolation_level = None
+    try:
+        db.runner.acquire_lock(c1)
+        retido = c2.execute(f"SELECT pg_try_advisory_lock({key}) AS ok").fetchone()
+        assert retido['ok'] is False  # c1 detém o lock → c2 não pega
+
+        db.runner.release_lock(c1)
+        livre = c2.execute(f"SELECT pg_try_advisory_lock({key}) AS ok").fetchone()
+        assert livre['ok'] is True   # liberado → c2 pega
+        c2.execute(f"SELECT pg_advisory_unlock({key})")
+    finally:
+        c1.close(); c2.close()
+
+
+@pytest.mark.sqlite_only
 def test_migration_007_up_down(tmp_path, db):
     """A migration 007 cria e remove a tabela usuarios (up/down)."""
     mods = {m.version: m for m in db.runner.discover(db.MIGRATIONS_DIR)}
