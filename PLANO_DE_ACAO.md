@@ -157,7 +157,6 @@ camada de envio + registro em `envios` (`canal='sms'`). Decisão do Helder/Edilv
 - **Onda 7** (`e8325e3`): `render.yaml` (Web Service `matine-cobranca` python, `rootDir=06_APP`, `buildCommand=pip install -r requirements.txt`, `startCommand=gunicorn -w 2`); `06_APP/Procfile`; Postgres gerenciado `matine-db`; env vars (`DATABASE_URL` fromDatabase, `FLASK_SECRET_KEY` generateValue, `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/SENHA`, `SMTP_*_SENHA` sync:false); fixes postgres.
 - **App no ar:** Helder confirmou acesso pela URL do Render em 17/06 → Postgres na nuvem valida o dual-dialect na prática.
 - **Pendências pós-deploy:** smoke test ponta a ponta + trocar senha admin default (ver Próxima Sessão).
-- Commits `cabf8c4` + `e8325e3` — **push concluído** em `origin/homologacao` (verificado: 0 ahead/0 behind).
 - **Nota de sincronia (17/06):** PLANO/ROADMAP estavam uma onda atrás (commitados na Onda 6); reconciliados com o git nesta sessão.
 
 ### Sessão 16/06/2026 — EPIC-02 Onda 5 (segredos → env vars)
@@ -202,7 +201,6 @@ camada de envio + registro em `envios` (`canal='sms'`). Decisão do Helder/Edilv
 - **+7 testes de rota** em `test_whatsapp.py`. **Suíte: 71 verdes.**
 - Limpeza: `wizard_whatsapp.html` (órfão, não referenciado) movido para `UTILITARIOS/TEMP/`
 - Story H-01 → InReview; PLANO, ROADMAP e story atualizados
-- Commits `440ccfc` (Onda 2) + `24ed9fc` (sincronia) — **push concluído** por @devops (`d93bc4b..24ed9fc`)
 - Onboarding real (SA + Shared Drive + teste com Kommo) — Helder fará depois
 
 ### Sessão 15/06/2026 — Destrava + Onda 1 da STORY-H-01
