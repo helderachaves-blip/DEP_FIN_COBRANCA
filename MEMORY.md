@@ -146,7 +146,7 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 | `config_whatsapp` | Config WhatsApp/Drive por empresa (migration 008, STORY-H-01). **Credencial da SA NÃO fica aqui** — JSON vai para `C:\MATINE\secrets\gdrive_{empresa}.json`; a coluna `gdrive_credentials` guarda só o marcador `[file]` |
 | `estado_consolidacao` | Estado da sessão de consolidação por empresa (migration 009, EPIC-02 Onda 3). Substitui o pickle em disco: `payload` BLOB = `pickle.dumps({consolidado, stats, avencer, stats_avencer})`. PK = empresa. Estado regenerável (reconsolidar). Cross-dialect: BLOB→BYTEA na Onda 2 |
 | `uploads_staging` | Bytes crus dos arquivos importados, por empresa+tipo (migration 010, EPIC-02 Onda 4). Substitui `uploads\{empresa}\{tipo}\` em disco: `conteudo` BLOB + `filename`. PK = (empresa, tipo) → 1 arquivo corrente por tipo, substituído no re-upload. `/consolidar` e `/atualizar-base` leem daqui em memória (`BytesIO`). Cross-dialect: BLOB→BYTEA na Onda 2 |
-| `config_sms` | Config SMS por empresa (migration 011, STORY-H-03). Provider-agnostic: `provider`, `sender_id`, `account_sid`, `endpoint`, `ativo`. **Chave de API NÃO fica aqui** — vai para `C:\MATINE\secrets\sms_{empresa}.key`; a coluna `api_key` guarda só o marcador `[file]` (env override `SMS_{empresa}_API_KEY` na nuvem). **Scaffold:** envio real de SMS ainda não implementado (provider TBD) |
+| `config_sms` | Config SMS por empresa (migration 011, STORY-H-03). Provider-agnostic: `provider`, `sender_id`, `account_sid`, `endpoint`, `ativo`. **Chave de API NÃO fica aqui** — vai para `C:\MATINE\secrets\sms_{empresa}.key`; a coluna `api_key` guarda só o marcador `[file]` (env override `SMS_{empresa}_API_KEY` na nuvem). **Scaffold:** envio real **adiado (Kommo-first, 18/06)** — não construir app-side enquanto o Kommo for o hub; SMS futuro via Twilio-no-Kommo |
 
 **Autenticação (STORY-01-06 → STORY-MULTIUSUARIO):** multi-usuário via tabela `usuarios`. Login/`user_loader` consultam o banco; senha sempre hash pbkdf2. O `.env` (`APP_USUARIO`/`APP_SENHA`) serve **só como semente** do 1º admin na tabela vazia — depois disso a gestão é pela tela `/usuarios` (admin) e cada um troca a própria senha em `/conta`. Admin default inicial: `luana` / `matine2026` (trocar em produção). Proteções anti-lockout: não remover/rebaixar o último admin nem a própria conta.
 
@@ -265,7 +265,38 @@ O Kommo lê a aba `Inadimplentes` — `Telefone` + `Tag CRM` são o essencial pa
 
 **Canal registrado na tabela `envios`:** `canal='whatsapp_crm'`
 
-**Estado da STORY-H-01:** código completo (Onda 1 backend + Onda 2 UI/fluxo), status **InReview**. Falta o onboarding real (criar Service Account + Shared Drive, testar conexão/exportação, validar ponta a ponta com o Kommo) → QA gate fecha a story. Commits no remoto: `440ccfc` (feat Onda 2). Detalhes operacionais em `PLANO_DE_ACAO.md`.
+**Estado da STORY-H-01:** código completo (Onda 1 backend + Onda 2 UI/fluxo), status **InReview**. Falta o onboarding real (criar Service Account + Shared Drive, testar conexão/exportação, validar ponta a ponta com o Kommo) → QA gate fecha a story. Passo a passo em `docs/guides/onboarding-h1-whatsapp-drive-kommo.md`. Detalhes operacionais em `PLANO_DE_ACAO.md`.
+
+---
+
+## Kommo CRM — Capacidades e Decisão Kommo-first *(18/06/2026)*
+
+**Decisão estratégica:** no 1º projeto, o **Kommo é o hub de disparo**. O app fica como
+**cérebro de dados** (classifica inadimplentes, gera Planilha CRM + `tag_crm`) e o Kommo
+**executa os envios** (WhatsApp/e-mail; SMS só se um gateway for contratado).
+
+**O que o Kommo dispara:**
+- **WhatsApp / E-mail / Instagram / Telegram** → **nativos** (Kommo é CRM messenger-first).
+- **SMS** → **NÃO nativo**. Só via gateway terceiro: **Twilio** (plug-and-play), RingCentral
+  ou Fromni. Provedores BR (Comtele/Zenvia) só via **Make/Salesbot+webhook**. **Kommo não
+  vende SMS** — habilitar SMS sempre exige contratar um gateway (não existe SMS gratuito).
+
+**Como o Kommo lê a planilha do app:** integração **nativa Google Sheets** (cada linha nova →
+lead; aplica tag de import) **ou** **Make** (mais flexível). Essencial da aba `Inadimplentes`:
+`Telefone` (internacional) + `Tag CRM`. *Atenção:* a via nativa lê Google Sheets, não XLSX solto
+— pode exigir conversão (validar no onboarding).
+
+**Planos:** Base US$15 / Avançado US$25 / Enterprise US$45 por usuário/mês (Salesbot a partir
+do Avançado). SMS é custo à parte (ex.: Twilio ~US$0,06/SMS).
+
+**Consequência para o SMS (STORY-H-03):** o scaffold provider-agnostic **permanece como está**
+(config + segredo prontos, sem contratação) — já é a postura "pronto para habilitar". **Não
+construir envio SMS app-side** enquanto for Kommo-first; quando habilitar, preferir **Twilio
+dentro do Kommo** (zero código no app, dirigido pela mesma `tag_crm`). Comtele (R$0,07–0,10/SMS,
+BR, PIX) fica como alternativa se optarem por envio direto do app no futuro.
+
+> Guia completo: `docs/guides/kommo-plataforma.md`. Onboarding do fluxo real:
+> `docs/guides/onboarding-h1-whatsapp-drive-kommo.md`.
 
 ---
 

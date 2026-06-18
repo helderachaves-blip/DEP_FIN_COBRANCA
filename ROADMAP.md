@@ -328,10 +328,16 @@ redirects pós-save existentes (não foi necessário aninhar fisicamente as abas
 - [x] Migration `011_add_config_sms` (cross-dialect) + `db.salvar_config_sms`/`get_config_sms`/`get_sms_api_key`/`tem_sms_api_key`
 - [x] Chave de API **fora do banco**: `secrets/sms_{empresa}.key` (marcador `[file]`) + override por env `SMS_{empresa}_API_KEY` (Render). Nunca renderizada no HTML
 - [x] Rotas `POST /sms/configurar` + `POST /sms/testar` (AJAX → JSON, valida sem chamar API) + **11 testes** (`tests/test_sms.py`). **Suíte SQLite: 116 passed, 1 skipped**
-- [ ] **Envio SMS real** individual + em lote, com registro em `envios` (`canal='sms'`) — *bloqueado: provider TBD*
+- [ ] **Envio SMS real** individual + em lote, com registro em `envios` (`canal='sms'`) — ⏸️ **adiado (Kommo-first, 18/06)**: não construir app-side enquanto o Kommo for o hub de disparo. Habilitar SMS um dia será via **Twilio dentro do Kommo** (zero código no app) ou Comtele direto do app (mais barato no BR). O scaffold já "deixa pronto" sem contratação
 - [ ] Validação visual no app rodando (smoke) — próxima sessão
 
 > Alinha com a visão SaaS: multi-canal (WhatsApp + E-mail + SMS) é funcionalidade universal, independente do segmento.
+>
+> **Decisão Kommo-first (18/06):** pesquisa confirmou que o Kommo **não tem SMS nativo** (só via
+> gateway Twilio/RingCentral/Fromni; Comtele/Zenvia só via Make). Como o 1º projeto prioriza o
+> **Kommo como hub de disparo**, o app fica como cérebro de dados (planilha + `tag_crm`) e o Kommo
+> executa. Guia da plataforma: `docs/guides/kommo-plataforma.md`. Onboarding do fluxo real:
+> `docs/guides/onboarding-h1-whatsapp-drive-kommo.md`.
 
 ---
 

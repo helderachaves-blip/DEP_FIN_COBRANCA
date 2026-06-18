@@ -56,21 +56,50 @@
 - 🔲 **Trocar a senha admin default** (`APP_USUARIO`/`APP_SENHA` no Render) por credencial real.
 - 🔲 Conferir logs do Render (stdout) durante o fluxo interativo.
 
-**2. STORY-H-01 — onboarding real do Google Drive (fecha a story, InReview → Done):**
-criar Service Account + Shared Drive, montar o Secret File no Render (`GOOGLE_SA_{empresa}_JSON_PATH`),
-testar conexão/exportação e validar com o Kommo → QA gate. Entradas: `configuracoes.html` (aba WhatsApp),
-`envio_mensagens.html` (botão Exportar), rotas `/whatsapp/*` em `app.py`, `06_APP/gdrive.py`.
+**2. ⭐ PRIORIDADE — STORY-H-01: onboarding real do Drive + Kommo (fecha a story, InReview → Done):**
+agora é o **foco principal** (decisão Kommo-first 18/06). Passo a passo completo em
+**`docs/guides/onboarding-h1-whatsapp-drive-kommo.md`**: criar Service Account + Shared Drive,
+montar o Secret File no Render (`GOOGLE_SA_{empresa}_JSON_PATH`), testar conexão/exportação no app
+e **conectar a planilha no Kommo** (nativo Google Sheets ou Make) → disparo WhatsApp por `tag_crm`
+→ QA gate. Para entender a plataforma antes: `docs/guides/kommo-plataforma.md`. Entradas:
+`configuracoes.html` (aba WhatsApp), `envio_mensagens.html` (botão Exportar), rotas `/whatsapp/*`
+em `app.py`, `06_APP/gdrive.py`.
 
 **3. Validação visual (smoke) no app rodando:** Dashboard (H-2) e a nova aba **SMS** + grupo
 "Canais de Comunicação" na sidebar (H-3). Conferir que os deep-links das abas seguem OK.
 
-**4. Decisão pendente — provider de SMS:** escolher Twilio / Zenvia / Comtele (ou outro) para
-**desbloquear o envio real de SMS**. O scaffold de config (STORY-H-03) já está pronto; falta a
-camada de envio + registro em `envios` (`canal='sms'`). Decisão do Helder/Edilvo.
+**4. SMS — decisão tomada (18/06): NÃO construir envio app-side agora (Kommo-first).**
+Pesquisa concluída: o **Kommo não tem SMS nativo** — só via gateway terceiro (Twilio/RingCentral/
+Fromni; provedores BR como Comtele/Zenvia só via Make). Como a prioridade do 1º projeto é o
+**Kommo como hub de disparo** (WhatsApp + futuramente SMS), o app fica como **cérebro de dados**
+(gera planilha + `tag_crm`) e o Kommo executa. Portanto o **scaffold de SMS (STORY-H-03)
+permanece como está** — config + segredo prontos, sem contratação. Habilitar SMS um dia será
+via **Twilio dentro do Kommo** (zero código no app) ou, se preferir mais barato no BR, Comtele
+direto do app (duplica caminho). Guia: `docs/guides/kommo-plataforma.md`.
 
 ---
 
 ## Histórico de Sessões
+
+### Sessão 18/06/2026 — Repriorização Kommo-first + pesquisa de canais (SMS)
+- **Decisão estratégica (Helder):** priorizar a integração com o **Kommo CRM** como **hub de
+  disparo** no 1º projeto, e **deixar o SMS pronto sem contratar** agora.
+- **Pesquisa concluída** sobre capacidades do Kommo:
+  - WhatsApp / E-mail / Instagram / Telegram = **canais nativos**.
+  - **SMS NÃO é nativo** — só via gateway terceiro (**Twilio**/RingCentral/Fromni). Provedores
+    BR (Comtele/Zenvia) só entram via Make/Salesbot+webhook.
+  - Não existe SMS gratuito em lugar nenhum: habilitar SMS sempre exige contratar um gateway.
+- **Conclusão arquitetural:** com o Kommo como hub, o app é **cérebro de dados** (planilha +
+  `tag_crm`) e o Kommo executa os disparos. Logo, **não construir envio SMS app-side**
+  (Comtele/Zenvia) enquanto for Kommo-first; o **scaffold do H-3 já "deixa pronto" sem contratação**.
+- **Comparação de custo registrada** (para quando/se habilitar SMS): Comtele R$0,07–0,10/SMS
+  (BR, sem mensalidade, PIX) · Twilio ~US$0,06/SMS (USD, plug-and-play no Kommo) · Zenvia por
+  plano (faz SMS+WhatsApp). Kommo: US$15/25/45 por usuário/mês (Salesbot a partir do Avançado).
+- **Docs criados** (referência, não gestão): `docs/guides/kommo-plataforma.md` (capacidades,
+  canais, planos, como o Kommo lê a planilha via Sheets/Make) e
+  `docs/guides/onboarding-h1-whatsapp-drive-kommo.md` (passo a passo SA + Shared Drive + Secret
+  File no Render + conexão no Kommo → fecha STORY-H-01).
+- Sem alteração de código; só pesquisa + documentação + gestão.
 
 ### Sessão 18/06/2026 — Smoke test HTTP do deploy (Render)
 - **Verificação não-interativa** do app no ar (`https://matine-cobranca.onrender.com`), feita por
@@ -307,7 +336,7 @@ camada de envio + registro em `envios` (`canal='sms'`). Decisão do Helder/Edilv
 | Chave de API fora do banco (`secrets/sms_{empresa}.key`, env override) | ✅ Entregue |
 | Rotas `POST /sms/configurar` + `POST /sms/testar` (AJAX) + `tests/test_sms.py` | ✅ Entregue |
 | Mover fisicamente E-mail/WhatsApp para uma aba-mãe aninhada | ❌ Dispensado (agrupamento na sidebar preserva deep-links/redirects) |
-| **Envio SMS real** individual + em lote + registro em `envios` (`canal='sms'`) | 🔲 Bloqueado (provider TBD) |
+| **Envio SMS real** individual + em lote + registro em `envios` (`canal='sms'`) | ⏸️ **Adiado (Kommo-first, 18/06)** — não construir app-side enquanto o Kommo for o hub; SMS futuro via Twilio-no-Kommo |
 
 ---
 
