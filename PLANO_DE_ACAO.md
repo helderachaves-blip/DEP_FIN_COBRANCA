@@ -13,8 +13,9 @@
 - **EPIC-02 CONCLUÍDO (Ondas 0–7):** app **no ar na nuvem via Render** — Helder confirmou acesso pela URL em 17/06. Web Service `matine-cobranca` (gunicorn `-w 2`, `rootDir=06_APP`) + Postgres gerenciado `matine-db` (`render.yaml`); env vars `DATABASE_URL`, `FLASK_SECRET_KEY` (gerada), `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/APP_SENHA`, `SMTP_INEPROTEC_SENHA`, `SMTP_MATRICULAEAD_SENHA`. App agora roda em Postgres na nuvem (validação real do dual-dialect). Suíte SQLite local: **116 passed, 1 skipped** (pós STORY-H-03).
 - **Fase H — Sprint H-2 (Dashboard):** ✅ **entregue em código** (STORY-H-02) — rota `/dashboard`, `db.dashboard_stats`, `dashboard.html` (Chart.js), +11 testes. Agendamento removido do H-2 (decisão 17/06). Falta só validação visual no app rodando.
 - **Fase H — Sprint H-3 (Canais de Comunicação):** ✅ **scaffold entregue em código** (STORY-H-03) — sidebar agrupa os canais sob "Canais de Comunicação"; aba **SMS** provider-agnostic (migration 011 `config_sms`, segredo em `secrets/`, rotas `/sms/configurar|testar`, `tests/test_sms.py`). **Envio real de SMS pendente** (provider TBD). Falta validação visual no app rodando.
-- **App (local):** roda com `python app.py` em `06_APP/` → http://localhost:5000 (SQLite). Em nuvem: Render + Postgres.
-- **A verificar (smoke test pós-deploy):** confirmar fluxo ponta a ponta no ar (login → upload → consolidar → relatório/CRM → envio) e **trocar a senha admin default**.
+- **App (local):** roda com `python app.py` em `06_APP/` → http://localhost:5000 (SQLite). Em nuvem: Render + Postgres. **URL:** `https://matine-cobranca.onrender.com`.
+- **Smoke test HTTP (18/06):** ✅ deploy saudável — `/` → 302 `/login?next=/`, `/login` → 200 (título correto), rotas protegidas (`/dashboard`, `/configuracoes`, `/base`, `/resultado`, `/ajuda`) todas 302 (sem 500 → Postgres conectado, sem erro de dialeto). Servido via Cloudflare → gunicorn; latência ~0,4–0,8s (estava quente).
+- **A verificar (parte interativa — depende do Helder):** fluxo logado ponta a ponta (login → upload → consolidar → relatório/CRM → envio de e-mail) e **trocar a senha admin default** (`luana/matine2026`).
 
 ---
 
@@ -49,10 +50,11 @@
 > EPIC-02 concluído (Ondas 0–7); app no ar no Render (Helder confirmou acesso em 17/06).
 > Foco agora: fechar pendências do deploy e retomar a Fase H.
 
-**1. Smoke test pós-deploy (verificação do ambiente no ar):**
-- Login → upload de base → consolidar → gerar relatório/Planilha CRM (download) → envio de e-mail teste.
-- **Trocar a senha admin default** (`APP_USUARIO`/`APP_SENHA` no Render) por credencial real.
-- Conferir logs do Render (stdout) e ausência de erro de dialeto/Postgres.
+**1. Smoke test pós-deploy:**
+- ✅ **HTTP (18/06):** app no ar, guard de auth OK, rotas 302/200, sem 500 (Postgres conectado).
+- 🔲 **Interativo (Helder):** Login → upload de base → consolidar → gerar relatório/Planilha CRM (download) → envio de e-mail teste.
+- 🔲 **Trocar a senha admin default** (`APP_USUARIO`/`APP_SENHA` no Render) por credencial real.
+- 🔲 Conferir logs do Render (stdout) durante o fluxo interativo.
 
 **2. STORY-H-01 — onboarding real do Google Drive (fecha a story, InReview → Done):**
 criar Service Account + Shared Drive, montar o Secret File no Render (`GOOGLE_SA_{empresa}_JSON_PATH`),
@@ -69,6 +71,19 @@ camada de envio + registro em `envios` (`canal='sms'`). Decisão do Helder/Edilv
 ---
 
 ## Histórico de Sessões
+
+### Sessão 18/06/2026 — Smoke test HTTP do deploy (Render)
+- **Verificação não-interativa** do app no ar (`https://matine-cobranca.onrender.com`), feita por
+  HTTP (não exige login): **deploy saudável**.
+  - `/` → **302** `/login?next=/` (guard de auth OK); `/login` → **200** com título
+    `Login – Cobranças INE-MAT`.
+  - Rotas protegidas `/dashboard`, `/configuracoes`, `/base`, `/resultado`, `/ajuda` → todas
+    **302** (sem 500) → roteamento OK e **Postgres conectado, sem erro de dialeto**.
+  - Servido via Cloudflare → gunicorn (`x-render-origin-server`); latência ~0,4–0,8s
+    (sem cold start — serviço estava quente).
+- **Continua pendente (lado do Helder):** parte interativa (login → upload → consolidar →
+  relatório/CRM → e-mail) e **trocar a senha admin default** — item de segurança mais urgente.
+- Sem alteração de código.
 
 ### Sessão 18/06/2026 — Correção de UI + atualização da Central de Ajuda
 - **Revisão do Helder** sobre a sidebar de Configurações entregue no H-3:
