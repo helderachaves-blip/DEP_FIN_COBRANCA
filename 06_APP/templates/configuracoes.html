@@ -43,6 +43,12 @@
         </button>
       </li>
       <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-sms-btn" data-bs-toggle="tab"
+                data-bs-target="#tab-sms" type="button" role="tab">
+          <i class="bi bi-chat-text me-1"></i>SMS
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
         <button class="nav-link text-danger" id="tab-risco-btn" data-bs-toggle="tab"
                 data-bs-target="#tab-risco" type="button" role="tab">
           <i class="bi bi-exclamation-triangle me-1"></i>Zona de Risco
@@ -504,6 +510,110 @@
 
       </div><!-- /tab-whatsapp -->
 
+      <!-- ── TAB SMS (Sprint H-3) ───────────────────────────────────────── -->
+      <div class="tab-pane fade" id="tab-sms" role="tabpanel">
+
+        <h5 class="fw-bold mb-1"><i class="bi bi-chat-text text-primary me-2"></i>Cobranças por SMS</h5>
+        <p class="text-muted small mb-3">
+          Configure um provider de SMS para enviar cobranças por mensagem de texto.
+          O conteúdo reaproveita as mensagens da aba
+          <a href="#" onclick="document.getElementById('tab-mensagens-btn').click(); return false;">Mensagens</a>.
+        </p>
+
+        <div class="alert alert-secondary">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Em preparação:</strong> a configuração já é salva com segurança, mas o
+          <strong>envio de SMS ainda não está habilitado</strong> — o provider será integrado
+          numa próxima entrega. Você já pode deixar as credenciais prontas aqui.
+        </div>
+
+        <form method="post" action="/sms/configurar" data-loading>
+
+          <!-- BLOCO PROVIDER -->
+          <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-broadcast me-2"></i>Provider de SMS</div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-5">
+                  <label class="form-label fw-semibold">Provider</label>
+                  <select class="form-select" name="provider">
+                    {% set prov = config_sms.get('provider', '') %}
+                    <option value="" {{ 'selected' if not prov else '' }}>— selecione —</option>
+                    <option value="twilio"  {{ 'selected' if prov == 'twilio'  else '' }}>Twilio</option>
+                    <option value="zenvia"  {{ 'selected' if prov == 'zenvia'  else '' }}>Zenvia</option>
+                    <option value="comtele" {{ 'selected' if prov == 'comtele' else '' }}>Comtele</option>
+                    <option value="outro"   {{ 'selected' if prov == 'outro'   else '' }}>Outro</option>
+                  </select>
+                  <div class="form-text">Define como a chave/endpoint são usados no envio.</div>
+                </div>
+                <div class="col-md-7">
+                  <label class="form-label fw-semibold">Remetente (Sender ID / número)</label>
+                  <input type="text" class="form-control" name="sender_id"
+                         value="{{ config_sms.get('sender_id', '') }}"
+                         placeholder="Ex: MATINE ou +5511999999999">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Chave de API / Token
+                    {% if not config_sms.get('tem_api_key') %}<span class="text-danger">*</span>{% endif %}
+                  </label>
+                  <input type="password" class="form-control" name="api_key"
+                         value="" autocomplete="new-password"
+                         placeholder="{{ '••••••••' if config_sms.get('tem_api_key') else 'Chave secreta do provider' }}">
+                  <div class="form-text">
+                    {% if config_sms.get('tem_api_key') %}
+                      <i class="bi bi-shield-lock-fill text-success me-1"></i>Chave salva com segurança (fora do banco). Deixe em branco para manter.
+                    {% else %}
+                      Guardada em <code>C:\MATINE\secrets\</code>, nunca no banco nem no HTML.
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Account SID / Identificador <span class="text-muted fw-normal">(opcional)</span></label>
+                  <input type="text" class="form-control" name="account_sid"
+                         value="{{ config_sms.get('account_sid', '') }}"
+                         placeholder="Ex: Account SID (Twilio)">
+                  <div class="form-text">Identificador não-secreto exigido por alguns providers.</div>
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold">Endpoint / Base URL <span class="text-muted fw-normal">(opcional)</span></label>
+                  <input type="text" class="form-control" name="endpoint"
+                         value="{{ config_sms.get('endpoint', '') }}"
+                         placeholder="Deixe em branco para usar o endpoint padrão do provider">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOCO COMPORTAMENTO -->
+          <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-sliders me-2"></i>Comportamento</div>
+            <div class="card-body">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="ativo" value="1"
+                       id="smsAtivo"
+                       {{ 'checked' if config_sms.get('ativo') else '' }}>
+                <label class="form-check-label" for="smsAtivo">
+                  Canal SMS ativo (habilita o envio quando o provider estiver integrado)
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm" data-loading-text="Salvando...">
+              <i class="bi bi-floppy me-1"></i>Salvar Configurações
+            </button>
+            {% if config_sms.get('tem_api_key') %}
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnTestarSms">
+              <i class="bi bi-plug me-1"></i>Testar Configuração
+            </button>
+            {% endif %}
+            <span id="testarSmsResultado" class="align-self-center small"></span>
+          </div>
+        </form>
+
+      </div><!-- /tab-sms -->
+
       <!-- ── TAB ZONA DE RISCO ──────────────────────────────────────────── -->
       <div class="tab-pane fade" id="tab-risco" role="tabpanel">
 
@@ -765,6 +875,30 @@ if (btnTestarWpp) {
     } finally {
       btnTestarWpp.disabled = false;
       btnTestarWpp.innerHTML = orig;
+    }
+  });
+}
+
+// Testar Configuração de SMS (AJAX, padrão WhatsApp). Sem chamada externa por ora.
+const btnTestarSms = document.getElementById('btnTestarSms');
+if (btnTestarSms) {
+  btnTestarSms.addEventListener('click', async () => {
+    const out  = document.getElementById('testarSmsResultado');
+    const orig = btnTestarSms.innerHTML;
+    btnTestarSms.disabled = true;
+    btnTestarSms.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testando...';
+    out.textContent = '';
+    try {
+      const res  = await fetch('/sms/testar', { method: 'POST' });
+      const data = await res.json();
+      out.className = 'align-self-center small fw-semibold ' + (data.ok ? 'text-success' : 'text-danger');
+      out.textContent = (data.ok ? '✓ ' : '✗ ') + data.msg;
+    } catch (e) {
+      out.className = 'align-self-center small fw-semibold text-danger';
+      out.textContent = '✗ Erro de conexão ao testar.';
+    } finally {
+      btnTestarSms.disabled = false;
+      btnTestarSms.innerHTML = orig;
     }
   });
 }

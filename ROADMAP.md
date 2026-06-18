@@ -1,7 +1,7 @@
 # ROADMAP — MAT-INE Inadimplência 2026
 
 > Linha do tempo completa. Itens entregues nunca são deletados — apenas marcados ✅.
-> Última atualização: 17/06/2026
+> Última atualização: 18/06/2026
 
 ---
 
@@ -308,15 +308,24 @@ keep-alive) ficam no backlog de infra (ver INSIGHTS → Infraestrutura).
 - [ ] Validação visual no app rodando (smoke) — próxima sessão
 - [ ] *(v.next)* Taxa de resposta/conversões reais do WhatsApp — exige callback do Kommo
 
-### Sprint H-3 — Canais de Comunicação + SMS *(novo — 15/06/2026)*
+### Sprint H-3 — Canais de Comunicação + SMS *(scaffold entregue em código 17/06/2026)*
 
-Reorganização de UX em Configurações: hoje E-mail (Fase G) e WhatsApp (H-1) ficam como abas soltas. Agrupar tudo sob um submenu único e somar SMS como terceiro canal.
+Reorganização de UX em Configurações: E-mail (Fase G) e WhatsApp (H-1) ficavam como abas
+soltas. Agrupados sob "Canais de Comunicação" e somado o SMS como terceiro canal.
 
-- [ ] Submenu **"Canais de Comunicação"** em Configurações, agrupando os três canais
-- [ ] Mover aba **E-mail** (existente, Fase G) para dentro do submenu
-- [ ] Mover aba **WhatsApp** (H-1) para dentro do submenu
-- [ ] Nova aba **SMS** — configuração de provider (provider TBD: Twilio / Zenvia / Comtele etc.)
-- [ ] Envio SMS individual + em lote, com registro na tabela `envios` (`canal='sms'`)
+**Decisão de escopo (17/06):** a aba SMS é um **scaffold provider-agnostic** — a config e o
+segredo já ficam prontos, mas a **camada de envio real** depende do provider (ainda TBD:
+Twilio / Zenvia / Comtele). O agrupamento foi feito na **sidebar** (cabeçalho de grupo),
+mantendo E-mail/WhatsApp/SMS como abas irmãs — preserva os deep-links `#tab-*` e os
+redirects pós-save existentes (não foi necessário aninhar fisicamente as abas).
+
+- [x] Submenu **"Canais de Comunicação"** na sidebar, agrupando os três canais (`layout.html`, classe `.nav-subheader`)
+- [x] Nova aba **SMS** (STORY-H-03) — provider (select), remetente/Sender ID, chave de API, Account SID, endpoint, toggle ativo
+- [x] Migration `011_add_config_sms` (cross-dialect) + `db.salvar_config_sms`/`get_config_sms`/`get_sms_api_key`/`tem_sms_api_key`
+- [x] Chave de API **fora do banco**: `secrets/sms_{empresa}.key` (marcador `[file]`) + override por env `SMS_{empresa}_API_KEY` (Render). Nunca renderizada no HTML
+- [x] Rotas `POST /sms/configurar` + `POST /sms/testar` (AJAX → JSON, valida sem chamar API) + **11 testes** (`tests/test_sms.py`). **Suíte SQLite: 116 passed, 1 skipped**
+- [ ] **Envio SMS real** individual + em lote, com registro em `envios` (`canal='sms'`) — *bloqueado: provider TBD*
+- [ ] Validação visual no app rodando (smoke) — próxima sessão
 
 > Alinha com a visão SaaS: multi-canal (WhatsApp + E-mail + SMS) é funcionalidade universal, independente do segmento.
 

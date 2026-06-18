@@ -945,6 +945,97 @@ def get_config_whatsapp(empresa: str) -> dict | None:
     return cfg
 
 
+# ── Config SMS (Sprint H-3, terceiro canal) ──────────────────────────────────
+# Provider-agnostic. O segredo (api_key/token) é sensível e NÃO fica no banco: vai
+# para DATA_DIR/secrets/sms_{empresa}.key (fora do git e do banco) e a coluna
+# `api_key` carrega apenas o marcador `[file]` — mesmo padrão da credencial do Drive
+# (config_whatsapp). Na nuvem, a chave vem da env var SMS_{empresa}_API_KEY (Render).
+# A camada de ENVIO ainda não existe (provider TBD) — isto é só o scaffold de config.
+
+SMS_KEY_MARKER = '[file]'
+
+
+def _sms_key_path(empresa: str) -> Path:
+    return SECRETS_DIR / f'sms_{empresa}.key'
+
+
+def gravar_sms_api_key(empresa: str, api_key: str) -> bool:
+    """Grava a chave de API do SMS em DATA_DIR/secrets/. Retorna True em sucesso."""
+    try:
+        SECRETS_DIR.mkdir(parents=True, exist_ok=True)
+        _sms_key_path(empresa).write_text(api_key, encoding='utf-8')
+        return True
+    except Exception as e:  # pragma: no cover - falha de filesystem
+        print(f"[sms] falha ao gravar api_key de {empresa}: {e}")
+        return False
+
+
+def get_sms_api_key(empresa: str) -> str | None:
+    """Chave de API do SMS: env var SMS_{empresa}_API_KEY (nuvem) → arquivo (local).
+
+    Usada pela futura camada de envio. None se não configurada.
+    """
+    env_key = os.environ.get(f'SMS_{empresa}_API_KEY')
+    if env_key:
+        return env_key
+    p = _sms_key_path(empresa)
+    if p.exists():
+        try:
+            return p.read_text(encoding='utf-8') or None
+        except Exception as e:  # pragma: no cover
+            print(f"[sms] falha ao ler api_key de {empresa}: {e}")
+    return None
+
+
+def tem_sms_api_key(empresa: str) -> bool:
+    return get_sms_api_key(empresa) is not None
+
+
+def salvar_config_sms(empresa: str, provider: str, sender_id: str, account_sid: str,
+                      endpoint: str, ativo: bool, api_key: str | None = None):
+    """Salva (upsert) a config SMS da empresa.
+
+    `api_key` só é gravado quando vem preenchido — campo vazio preserva a chave atual
+    (espelha o comportamento da senha SMTP e da credencial do Drive). A coluna recebe
+    o marcador `[file]` quando há chave em disco; o segredo nunca vai para o banco.
+    """
+    if api_key:
+        gravar_sms_api_key(empresa, api_key)
+    key_marker = SMS_KEY_MARKER if tem_sms_api_key(empresa) else None
+    with get_conn() as conn:
+        now_ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute("""
+            INSERT INTO config_sms
+                (empresa, provider, sender_id, account_sid, api_key, endpoint, ativo, atualizado_em)
+            VALUES (?,?,?,?,?,?,?,?)
+            ON CONFLICT(empresa) DO UPDATE SET
+                provider=excluded.provider,
+                sender_id=excluded.sender_id,
+                account_sid=excluded.account_sid,
+                api_key=excluded.api_key,
+                endpoint=excluded.endpoint,
+                ativo=excluded.ativo,
+                atualizado_em=excluded.atualizado_em
+        """, (empresa, provider, sender_id, account_sid, key_marker, endpoint,
+              1 if ativo else 0, now_ts))
+        conn.commit()
+
+
+def get_config_sms(empresa: str) -> dict | None:
+    """Config SMS da empresa. A chave de API nunca é devolvida em texto: apenas o
+    flag `tem_api_key` (segue o padrão de config_whatsapp)."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM config_sms WHERE empresa=?", (empresa,)
+        ).fetchone()
+    if not row:
+        return None
+    cfg = dict(row)
+    cfg.pop('api_key', None)  # nunca expor o marcador/conteúdo
+    cfg['tem_api_key'] = tem_sms_api_key(empresa)
+    return cfg
+
+
 def salvar_assunto_template(template_id: int, assunto: str, empresa: str):
     with get_conn() as conn:
         conn.execute(

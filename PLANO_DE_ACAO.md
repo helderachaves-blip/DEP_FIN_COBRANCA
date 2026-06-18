@@ -2,7 +2,7 @@
 
 > Sprint atual e próximos passos. Atualizar a cada sessão.
 > Quando um item é entregue: marca ✅ aqui e registra no ROADMAP.md.
-> Última atualização: 17/06/2026
+> Última atualização: 18/06/2026
 
 ---
 
@@ -10,8 +10,9 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
-- **EPIC-02 CONCLUÍDO (Ondas 0–7):** app **no ar na nuvem via Render** — Helder confirmou acesso pela URL em 17/06. Web Service `matine-cobranca` (gunicorn `-w 2`, `rootDir=06_APP`) + Postgres gerenciado `matine-db` (`render.yaml`); env vars `DATABASE_URL`, `FLASK_SECRET_KEY` (gerada), `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/APP_SENHA`, `SMTP_INEPROTEC_SENHA`, `SMTP_MATRICULAEAD_SENHA`. App agora roda em Postgres na nuvem (validação real do dual-dialect). Suíte SQLite local: **105 passed, 1 skipped**.
+- **EPIC-02 CONCLUÍDO (Ondas 0–7):** app **no ar na nuvem via Render** — Helder confirmou acesso pela URL em 17/06. Web Service `matine-cobranca` (gunicorn `-w 2`, `rootDir=06_APP`) + Postgres gerenciado `matine-db` (`render.yaml`); env vars `DATABASE_URL`, `FLASK_SECRET_KEY` (gerada), `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/APP_SENHA`, `SMTP_INEPROTEC_SENHA`, `SMTP_MATRICULAEAD_SENHA`. App agora roda em Postgres na nuvem (validação real do dual-dialect). Suíte SQLite local: **116 passed, 1 skipped** (pós STORY-H-03).
 - **Fase H — Sprint H-2 (Dashboard):** ✅ **entregue em código** (STORY-H-02) — rota `/dashboard`, `db.dashboard_stats`, `dashboard.html` (Chart.js), +11 testes. Agendamento removido do H-2 (decisão 17/06). Falta só validação visual no app rodando.
+- **Fase H — Sprint H-3 (Canais de Comunicação):** ✅ **scaffold entregue em código** (STORY-H-03) — sidebar agrupa os canais sob "Canais de Comunicação"; aba **SMS** provider-agnostic (migration 011 `config_sms`, segredo em `secrets/`, rotas `/sms/configurar|testar`, `tests/test_sms.py`). **Envio real de SMS pendente** (provider TBD). Falta validação visual no app rodando.
 - **App (local):** roda com `python app.py` em `06_APP/` → http://localhost:5000 (SQLite). Em nuvem: Render + Postgres.
 - **A verificar (smoke test pós-deploy):** confirmar fluxo ponta a ponta no ar (login → upload → consolidar → relatório/CRM → envio) e **trocar a senha admin default**.
 
@@ -21,7 +22,7 @@
 
 ### Pendente de implementação
 - **STORY-H-01 — Onda 2 (UI + fluxo)** ✅ **ENTREGUE 15/06** — aba "WhatsApp" em Configurações (Drive + Kommo + Comportamento) + sublink, rotas `/whatsapp/configurar|testar|exportar`, botão Testar Conexão (AJAX), botão "Exportar para WhatsApp" em Envio de Mensagens, registro em `envios` (`canal='whatsapp_crm'`). +7 testes. **Falta só o onboarding real** (ver Próxima Sessão).
-- **Submenu "Canais de Comunicação" + aba SMS** — reorganizar Configurações: agrupar E-mail (Fase G ✅), WhatsApp (H-1 ✅) e SMS (novo) sob um submenu "Canais de Comunicação". Inclui criar a aba de configuração de SMS (provider TBD). Ver Sprint H-3.
+- **Submenu "Canais de Comunicação" + aba SMS** ✅ **SCAFFOLD ENTREGUE 17/06** — sidebar agrupa E-mail (Fase G ✅) + WhatsApp (H-1 ✅) + SMS (novo) sob o cabeçalho "Canais de Comunicação"; aba SMS provider-agnostic (config + segredo em `secrets/`). **Falta só o envio real** (provider TBD). Ver Sprint H-3.
 
 ### Correções de UI — revisão Edilvo (17/06/2026) ✅
 
@@ -58,12 +59,38 @@ criar Service Account + Shared Drive, montar o Secret File no Render (`GOOGLE_SA
 testar conexão/exportação e validar com o Kommo → QA gate. Entradas: `configuracoes.html` (aba WhatsApp),
 `envio_mensagens.html` (botão Exportar), rotas `/whatsapp/*` em `app.py`, `06_APP/gdrive.py`.
 
-**3. Backlog Fase H (escolher com Helder):** Sprint H-3 (submenu "Canais de Comunicação" + aba SMS).
-Sprint H-2 (Dashboard) já entregue em código — falta só validar visualmente no app rodando.
+**3. Validação visual (smoke) no app rodando:** Dashboard (H-2) e a nova aba **SMS** + grupo
+"Canais de Comunicação" na sidebar (H-3). Conferir que os deep-links das abas seguem OK.
+
+**4. Decisão pendente — provider de SMS:** escolher Twilio / Zenvia / Comtele (ou outro) para
+**desbloquear o envio real de SMS**. O scaffold de config (STORY-H-03) já está pronto; falta a
+camada de envio + registro em `envios` (`canal='sms'`). Decisão do Helder/Edilvo.
 
 ---
 
 ## Histórico de Sessões
+
+### Sessão 18/06/2026 — Sprint H-3: Canais de Comunicação + scaffold de SMS
+- **Sessão autônoma** (Helder ausente, modo accept-edits) com escopo combinado: implementar
+  o que não exige decisão dele nem ação externa. Push **não** feito (exclusivo @devops) —
+  só commit local; smoke test no ar e onboarding Drive continuam pendentes (dependem dele).
+- **Sidebar reorganizada:** os 3 canais (E-mail, WhatsApp, SMS) agrupados sob o cabeçalho
+  **"Canais de Comunicação"** (classe `.nav-subheader` nova). Agrupamento feito na sidebar
+  (não aninhando as abas) para **preservar os deep-links** `#tab-email`/`#tab-whatsapp` e os
+  redirects pós-save já existentes.
+- **Aba SMS (STORY-H-03) — scaffold provider-agnostic:** migration `011_add_config_sms`
+  (cross-dialect), helpers `db.salvar_config_sms`/`get_config_sms`/`get_sms_api_key`/
+  `tem_sms_api_key`, rotas `POST /sms/configurar` + `POST /sms/testar` (AJAX, valida sem
+  chamar API), aba em Configurações (provider select + remetente + chave + Account SID +
+  endpoint + toggle ativo) com aviso explícito de que o **envio ainda não está habilitado**.
+- **Segredo fora do banco:** chave de API em `secrets/sms_{empresa}.key` (marcador `[file]`
+  na coluna) + override por env `SMS_{empresa}_API_KEY` (Render) — mesmo padrão da credencial
+  do Drive; testável (cai no tempdir do conftest, não no Credential Store real).
+- **Decisão:** **envio real de SMS bloqueado** até escolha do provider (Twilio / Zenvia /
+  Comtele). O scaffold deixa config + segredo prontos.
+- **+11 testes** (`tests/test_sms.py`); asserções da lista de migrations atualizadas (1–11)
+  em `test_migrations.py` e `test_whatsapp.py`. **Suíte: 116 passed, 1 skipped.**
+- Story em `docs/stories/story-h3-canais-sms.md` (status InReview — falta validação visual no ar).
 
 ### Sessão 17/06/2026 — Sprint H-2: Dashboard analítico
 - **Decisão de escopo:** "Agendamento via Windows Task Scheduler" **removido** do H-2 (obsoleto
@@ -237,17 +264,21 @@ Sprint H-2 (Dashboard) já entregue em código — falta só validar visualmente
 | `tests/test_dashboard.py` (11 testes) | ✅ Entregue |
 | Validação visual no app rodando (smoke) | 🔲 Próxima sessão |
 
-## Sprint H-3 — Canais de Comunicação + SMS 🔲
+## Sprint H-3 — Canais de Comunicação + SMS 🔄 (scaffold entregue em código)
 
 > Reorganização de UX em Configurações: agrupar os canais sob um submenu único.
+> **Decisão (17/06):** a aba SMS é um **scaffold provider-agnostic** (config + segredo
+> prontos); a camada de **envio real** fica para quando o provider for escolhido (TBD).
 
 | Item | Status |
 |------|--------|
-| Submenu **"Canais de Comunicação"** em Configurações (agrupa E-mail + WhatsApp + SMS) | 🔲 |
-| Mover aba **E-mail** (existente) para dentro do submenu | 🔲 |
-| Mover aba **WhatsApp** (criada na H-1) para dentro do submenu | 🔲 |
-| Nova aba **SMS** — config de provider (provider TBD: Twilio / Zenvia / Comtele etc.) | 🔲 |
-| Envio SMS individual + em lote + registro em `envios` (`canal='sms'`) | 🔲 |
+| Submenu **"Canais de Comunicação"** na sidebar (agrupa E-mail + WhatsApp + SMS) | ✅ Entregue |
+| Nova aba **SMS** — config de provider (select Twilio/Zenvia/Comtele/Outro) | ✅ Entregue |
+| Migration `011_add_config_sms` (cross-dialect) + helpers no `database.py` | ✅ Entregue |
+| Chave de API fora do banco (`secrets/sms_{empresa}.key`, env override) | ✅ Entregue |
+| Rotas `POST /sms/configurar` + `POST /sms/testar` (AJAX) + `tests/test_sms.py` | ✅ Entregue |
+| Mover fisicamente E-mail/WhatsApp para uma aba-mãe aninhada | ❌ Dispensado (agrupamento na sidebar preserva deep-links/redirects) |
+| **Envio SMS real** individual + em lote + registro em `envios` (`canal='sms'`) | 🔲 Bloqueado (provider TBD) |
 
 ---
 

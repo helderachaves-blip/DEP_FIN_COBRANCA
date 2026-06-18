@@ -886,12 +886,15 @@ def configuracoes():
     # WhatsApp/Drive (STORY-H-01 Onda 2). get_config_whatsapp nunca devolve a credencial,
     # apenas o flag tem_credenciais — segue o mesmo padrão da senha SMTP.
     config_whatsapp = db.get_config_whatsapp(empresa) or {}
+    # SMS (Sprint H-3, terceiro canal). A chave de API nunca vai para o HTML — só o flag.
+    config_sms = db.get_config_sms(empresa) or {}
     return render_template('configuracoes.html',
                            templates=templates,
                            auto_alunos=auto_alunos,
                            config_email=config_email,
                            smtp_senha_set=smtp_senha_set,
                            config_whatsapp=config_whatsapp,
+                           config_sms=config_sms,
                            gdrive_disponivel=gdrive.disponivel())
 
 
@@ -1509,6 +1512,48 @@ def whatsapp_exportar():
         return redirect(url_for('envio_mensagens'))
     finally:
         shutil.rmtree(pasta, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# SMS (Sprint H-3) — terceiro canal. Scaffold provider-agnostic: a configuração é
+# persistida (provider, remetente, chave em secrets/), mas a camada de ENVIO ainda
+# não está implementada (provider TBD: Twilio / Zenvia / Comtele). A chave de API
+# nunca vai para o HTML — só o flag tem_api_key (mesmo padrão da credencial do Drive).
+# ---------------------------------------------------------------------------
+
+@app.route('/sms/configurar', methods=['POST'])
+def sms_configurar():
+    empresa     = get_empresa()
+    provider    = request.form.get('provider', '').strip()
+    sender_id   = request.form.get('sender_id', '').strip()
+    account_sid = request.form.get('account_sid', '').strip()
+    endpoint    = request.form.get('endpoint', '').strip()
+    ativo       = request.form.get('ativo') == '1'
+    # Chave de API: só grava se veio preenchida; vazio preserva a atual (espelha SMTP/Drive).
+    api_key     = request.form.get('api_key', '').strip() or None
+
+    db.salvar_config_sms(
+        empresa, provider, sender_id, account_sid, endpoint, ativo, api_key,
+    )
+    flash("✅ Configurações de SMS salvas com sucesso.", "success")
+    return redirect(url_for('configuracoes') + '#tab-sms')
+
+
+@app.route('/sms/testar', methods=['POST'])
+def sms_testar():
+    """Valida a presença da config de SMS. Responde JSON (padrão AJAX).
+
+    O envio real ainda não está implementado (provider TBD); por ora este teste apenas
+    confirma que provider + chave estão configurados, sem chamar nenhuma API externa.
+    """
+    empresa = get_empresa()
+    cfg = db.get_config_sms(empresa)
+    if not cfg or not cfg.get('provider'):
+        return jsonify(ok=False, msg="Escolha o provider de SMS e salve antes de testar.")
+    if not cfg.get('tem_api_key'):
+        return jsonify(ok=False, msg="Informe a chave de API do provider e salve antes de testar.")
+    return jsonify(ok=True, msg=f"Configuração de SMS ({cfg['provider']}) válida. "
+                                f"O envio será habilitado quando o provider for integrado.")
 
 
 # ---------------------------------------------------------------------------

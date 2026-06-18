@@ -46,7 +46,7 @@ def test_runner_aplica_ate_008(tmp_path, db):
     conn.isolation_level = None
     try:
         aplicadas = db.runner.apply_pending(conn, db.MIGRATIONS_DIR)
-        assert aplicadas == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        assert aplicadas == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         assert 'config_whatsapp' in _tabelas(conn)
         assert db.runner.apply_pending(conn, db.MIGRATIONS_DIR) == []
     finally:
