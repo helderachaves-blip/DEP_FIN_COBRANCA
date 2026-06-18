@@ -319,7 +319,8 @@ Twilio / Zenvia / Comtele). O agrupamento foi feito na **sidebar** (cabeçalho d
 mantendo E-mail/WhatsApp/SMS como abas irmãs — preserva os deep-links `#tab-*` e os
 redirects pós-save existentes (não foi necessário aninhar fisicamente as abas).
 
-- [x] Submenu **"Canais de Comunicação"** na sidebar, agrupando os três canais (`layout.html`, classe `.nav-subheader`)
+- [x] Submenu **"Canais de Comunicação"** na sidebar, agrupando os três canais (`layout.html`)
+  - **Ajuste 18/06:** o grupo virou **colapsável** (toggle Bootstrap `#submenuCanais` + chevron, como o de Configurações) e **"Zona de Risco"** saiu de dentro do grupo — agora fica logo após "Clientes", antes dos canais
 - [x] Nova aba **SMS** (STORY-H-03) — provider (select), remetente/Sender ID, chave de API, Account SID, endpoint, toggle ativo
 - [x] Migration `011_add_config_sms` (cross-dialect) + `db.salvar_config_sms`/`get_config_sms`/`get_sms_api_key`/`tem_sms_api_key`
 - [x] Chave de API **fora do banco**: `secrets/sms_{empresa}.key` (marcador `[file]`) + override por env `SMS_{empresa}_API_KEY` (Render). Nunca renderizada no HTML

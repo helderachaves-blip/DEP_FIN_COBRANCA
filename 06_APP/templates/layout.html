@@ -183,8 +183,15 @@
       font-size: .66rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: .06em;
       display: flex; align-items: center; gap: .4rem;
+      cursor: pointer; user-select: none;
     }
+    .nav-subheader:hover { color: rgba(255,255,255,.55); }
     .nav-subheader i { font-size: .7rem; opacity: .8; }
+    .nav-subheader .chevron {
+      margin-left: auto; font-size: .7rem;
+      transition: transform .2s; opacity: .6;
+    }
+    .nav-subheader[aria-expanded="false"] .chevron { transform: rotate(-90deg); }
   </style>
 </head>
 <body>
@@ -232,21 +239,25 @@
       <a class="nav-sublink" href="/configuracoes#tab-alunos">
         <i class="bi bi-dot"></i>Clientes
       </a>
-      <div class="nav-subheader">
-        <i class="bi bi-broadcast-pin"></i>Canais de Comunicação
-      </div>
-      <a class="nav-sublink" href="/configuracoes#tab-email">
-        <i class="bi bi-dot"></i>E-mail
-      </a>
-      <a class="nav-sublink" href="/configuracoes#tab-whatsapp">
-        <i class="bi bi-dot"></i>WhatsApp
-      </a>
-      <a class="nav-sublink" href="/configuracoes#tab-sms">
-        <i class="bi bi-dot"></i>SMS
-      </a>
       <a class="nav-sublink" href="/configuracoes#tab-risco">
         <i class="bi bi-dot"></i>Zona de Risco
       </a>
+      <div class="nav-subheader" data-bs-toggle="collapse" role="button"
+           data-bs-target="#submenuCanais" aria-expanded="true" aria-controls="submenuCanais">
+        <i class="bi bi-broadcast-pin"></i>Canais de Comunicação
+        <i class="bi bi-chevron-down chevron"></i>
+      </div>
+      <div class="collapse show" id="submenuCanais">
+        <a class="nav-sublink" href="/configuracoes#tab-email">
+          <i class="bi bi-dot"></i>E-mail
+        </a>
+        <a class="nav-sublink" href="/configuracoes#tab-whatsapp">
+          <i class="bi bi-dot"></i>WhatsApp
+        </a>
+        <a class="nav-sublink" href="/configuracoes#tab-sms">
+          <i class="bi bi-dot"></i>SMS
+        </a>
+      </div>
     </div>
 
   </nav>
