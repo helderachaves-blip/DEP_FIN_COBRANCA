@@ -9,7 +9,7 @@ import os
 import sqlite3
 import pandas as pd
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ── Dialeto (EPIC-02 Onda 0) ─────────────────────────────────────────────────
 # DATABASE_URL ausente  → SQLite (dev/testes/local)
@@ -672,6 +672,144 @@ def get_envios_hoje(empresa: str, canal: str = None) -> list[dict]:
                 (empresa, f"{hoje}%")
             ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Dashboard analítico (Sprint H-2) ─────────────────────────────────────────
+
+def _parse_dt_br(s) -> datetime | None:
+    """Converte texto de data pt-BR em datetime.
+
+    As colunas `data`/`data_envio`/`data_atualizacao` são gravadas como texto em
+    pt-BR ('dd/mm/AAAA' ou 'dd/mm/AAAA HH:MM:SS' — ver salvar_base/registrar_envio).
+    A agregação por período é feita em Python para não depender de funções de data
+    específicas de cada dialeto (SQLite vs Postgres). Retorna None se não parsear.
+    """
+    if not s:
+        return None
+    txt = str(s).strip()
+    for fmt in ('%d/%m/%Y %H:%M:%S', '%d/%m/%Y'):
+        try:
+            return datetime.strptime(txt, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def dashboard_stats(empresa: str, dias: int = 30) -> dict:
+    """Métricas agregadas para o painel analítico (Sprint H-2).
+
+    Escopadas pela empresa ativa. Counts/somas via SQL (cross-dialect); recortes
+    por data feitos em Python sobre texto pt-BR. Usa apenas tabelas existentes
+    (inadimplentes, historico_atualizacoes, envios) — sem novas tabelas/deps.
+    """
+    limite = datetime.now() - timedelta(days=dias)
+
+    with get_conn() as conn:
+        # KPIs por status: quantidade + valor (R$) em cada status
+        por_status: dict[str, dict] = {}
+        for r in conn.execute(
+            "SELECT status, COUNT(*) AS cnt, COALESCE(SUM(total), 0) AS valor "
+            "FROM inadimplentes WHERE empresa = ? GROUP BY status", (empresa,)
+        ).fetchall():
+            por_status[r['status'] or 'INDEFINIDO'] = {
+                'qtd': r['cnt'], 'valor': float(r['valor'] or 0)
+            }
+
+        # Distribuição por categoria (somente inadimplentes ativos)
+        categorias: list[dict] = []
+        for r in conn.execute(
+            "SELECT categoria, COUNT(*) AS cnt, COALESCE(SUM(total), 0) AS valor "
+            "FROM inadimplentes WHERE empresa = ? AND status = 'INADIMPLENTE' "
+            "GROUP BY categoria ORDER BY cnt DESC", (empresa,)
+        ).fetchall():
+            categorias.append({
+                'categoria': r['categoria'] or 'Sem categoria',
+                'qtd': r['cnt'], 'valor': float(r['valor'] or 0),
+            })
+
+        # Taxa de quitação pós-cobrança: dos CPFs que já receberam >=1 cobrança
+        # (qtd_cobranca > 0), quantos hoje constam como QUITADO.
+        cobrados = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM inadimplentes "
+            "WHERE empresa = ? AND qtd_cobranca > 0", (empresa,)
+        ).fetchone()['cnt']
+        quitados_cobrados = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM inadimplentes "
+            "WHERE empresa = ? AND qtd_cobranca > 0 AND status = 'QUITADO'", (empresa,)
+        ).fetchone()['cnt']
+
+        # Envios: total por canal + recorte do período (datas em texto → Python)
+        envios_por_canal: dict[str, int] = {}
+        envios_periodo = 0
+        for r in conn.execute(
+            "SELECT canal, data_envio FROM envios WHERE empresa = ?", (empresa,)
+        ).fetchall():
+            envios_por_canal[r['canal']] = envios_por_canal.get(r['canal'], 0) + 1
+            dt = _parse_dt_br(r['data_envio'])
+            if dt and dt >= limite:
+                envios_periodo += 1
+
+        # Evolução da carteira (historico_atualizacoes), ordenada por inserção
+        hist = conn.execute(
+            "SELECT data, total_base, novos, saidos FROM historico_atualizacoes "
+            "WHERE empresa = ? ORDER BY id", (empresa,)
+        ).fetchall()
+
+    # Bucketiza o histórico por semana ISO: soma novos/saídos da semana e mantém
+    # o último total_base observado dentro dela.
+    buckets: dict[tuple, dict] = {}
+    for r in hist:
+        dt = _parse_dt_br(r['data'])
+        if dt is None:
+            continue
+        iy, iw, _ = dt.isocalendar()
+        key = (iy, iw)
+        novos, saidos = (r['novos'] or 0), (r['saidos'] or 0)
+        b = buckets.get(key)
+        if b is None:
+            buckets[key] = {'dt': dt, 'total_base': r['total_base'] or 0,
+                            'novos': novos, 'saidos': saidos}
+        else:
+            b['novos'] += novos
+            b['saidos'] += saidos
+            if dt >= b['dt']:
+                b['dt'] = dt
+                b['total_base'] = r['total_base'] or 0
+
+    evolucao = [
+        {'label': v['dt'].strftime('%d/%m'),
+         'data': v['dt'].strftime('%d/%m/%Y'),
+         'total_base': v['total_base'], 'novos': v['novos'], 'saidos': v['saidos']}
+        for _, v in sorted(buckets.items())
+    ][-12:]
+
+    inad  = por_status.get('INADIMPLENTE', {'qtd': 0, 'valor': 0.0})
+    reneg = por_status.get('RENEGOCIADO',  {'qtd': 0, 'valor': 0.0})
+    canc  = por_status.get('CANCELADO',    {'qtd': 0, 'valor': 0.0})
+    taxa = round(100 * quitados_cobrados / cobrados, 1) if cobrados else 0.0
+    valor_total = sum(v['valor'] for v in por_status.values())
+
+    return {
+        'total_inadimplentes': inad['qtd'],
+        'valor_aberto':        inad['valor'],
+        'valor_total':         valor_total,
+        'quitados':            por_status.get('QUITADO', {}).get('qtd', 0),
+        'renegociados':        reneg['qtd'],
+        'valor_renegociados':  reneg['valor'],
+        'cancelados':          canc['qtd'],
+        'valor_cancelados':    canc['valor'],
+        'por_status':          por_status,
+        'categorias':          categorias,
+        'cobrados':            cobrados,
+        'quitados_cobrados':   quitados_cobrados,
+        'taxa_quitacao':       taxa,
+        'envios_total':        sum(envios_por_canal.values()),
+        'envios_periodo':      envios_periodo,
+        'envios_por_canal':    envios_por_canal,
+        'evolucao':            evolucao,
+        'periodo_dias':        dias,
+        'tem_dados':           bool(inad['qtd'] or por_status or evolucao),
+    }
 
 
 # ── Config e-mail (Fase G) ───────────────────────────────────────────────────

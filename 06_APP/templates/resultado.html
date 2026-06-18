@@ -103,7 +103,7 @@
       <div class="card-body d-flex align-items-center gap-3 py-3">
         <div id="totalAlunos" style="font-size:2.4rem;font-weight:700;color:#1565C0;line-height:1">{{ stats.total }}</div>
         <div>
-          <div class="fw-semibold text-dark" style="font-size:.95rem">Total de Inadimplentes</div>
+          <div class="fw-semibold text-dark" style="font-size:.95rem" id="lblTotalNum">Total de Inadimplentes</div>
           <small class="text-muted"><i class="bi bi-arrow-left-right me-1"></i>atualiza com o filtro</small>
         </div>
       </div>
@@ -114,7 +114,7 @@
       <div class="card-body d-flex align-items-center gap-3 py-3">
         <div id="totalValor" style="font-size:1.6rem;font-weight:700;color:#2e7d32;line-height:1">{{ stats.valor_total | brl }}</div>
         <div>
-          <div class="fw-semibold text-dark" style="font-size:.95rem">Total em Atraso</div>
+          <div class="fw-semibold text-dark" style="font-size:.95rem" id="lblTotalValor">Total em Atraso</div>
           <small class="text-muted"><i class="bi bi-arrow-left-right me-1"></i>atualiza com o filtro</small>
         </div>
       </div>
@@ -228,7 +228,7 @@
         <tbody>
           {% for a in avencer_linhas %}
           <tr class="{{ 'table-warning' if a.categoria == 'Vence Hoje' else '' }}"
-              data-cat="{{ a.categoria }}" data-nome="{{ a.nome|lower }}">
+              data-cat="{{ a.categoria }}" data-nome="{{ a.nome|lower }}" data-valor="{{ a.valor_raw }}">
             <td class="text-muted small">{{ loop.index }}</td>
             <td class="fw-semibold">{{ a.nome }}</td>
             <td>{{ a.telefone }}</td>
@@ -261,6 +261,8 @@ const filtroBusca = document.getElementById('filtroBusca');
 const contador    = document.getElementById('contadorFiltro');
 const totalAlunos = document.getElementById('totalAlunos');
 const totalValor  = document.getElementById('totalValor');
+const lblTotalNum   = document.getElementById('lblTotalNum');
+const lblTotalValor = document.getElementById('lblTotalValor');
 const linhas      = document.querySelectorAll('#tabelaResultado tbody tr');
 const linhasAv    = document.querySelectorAll('#tabelaAvencer tbody tr');
 const cards       = document.querySelectorAll('.stat-filtro');
@@ -286,23 +288,34 @@ function filtrar() {
     tr.style.display = show ? '' : 'none';
     if (show) { vis++; soma += parseFloat(tr.dataset.valor || 0); }
   });
-  totalAlunos.textContent = vis;
-  totalValor.textContent  = fmtBrl(soma);
 
   // Tabela "A Vencer"
-  let visAv = 0;
+  let visAv = 0, somaAv = 0;
   linhasAv.forEach(tr => {
     const catOk  = !cat   || tr.dataset.cat === cat;
     const nomeOk = !busca || tr.dataset.nome.includes(busca);
     const show   = catOk && nomeOk;
     tr.style.display = show ? '' : 'none';
-    if (show) visAv++;
+    if (show) { visAv++; somaAv += parseFloat(tr.dataset.valor || 0); }
   });
 
   // Mostra/oculta as seções conforme a categoria escolhida
   if (secMain)    secMain.style.display    = isAv ? 'none' : '';
-  if (secTot)     secTot.style.display     = isAv ? 'none' : '';
   if (secAvencer) secAvencer.style.display = (cat === '' || isAv) ? '' : 'none';
+
+  // Totalizadores: SEMPRE visíveis e refletem a tabela ativa (inclui Vence Hoje / A Vencer)
+  if (secTot) secTot.style.display = '';
+  if (isAv) {
+    totalAlunos.textContent = visAv;
+    totalValor.textContent  = fmtBrl(somaAv);
+    if (lblTotalNum)   lblTotalNum.textContent   = 'Total de Lembretes';
+    if (lblTotalValor) lblTotalValor.textContent = 'Valor a Vencer';
+  } else {
+    totalAlunos.textContent = vis;
+    totalValor.textContent  = fmtBrl(soma);
+    if (lblTotalNum)   lblTotalNum.textContent   = 'Total de Inadimplentes';
+    if (lblTotalValor) lblTotalValor.textContent = 'Total em Atraso';
+  }
 
   // Contador reflete a tabela ativa
   const cnt = isAv ? visAv : vis;

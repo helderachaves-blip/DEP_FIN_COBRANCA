@@ -1,0 +1,223 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Dashboard</h4>
+    <small class="text-muted">Visão analítica da carteira — {{ empresa_label }}</small>
+  </div>
+</div>
+
+{% if not stats.tem_dados %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-clipboard-data" style="font-size:2.5rem;color:#9aa0b5"></i>
+      <p class="mt-3 mb-1 fw-semibold">Ainda não há dados para exibir</p>
+      <p class="text-muted mb-3">Consolide uma base de inadimplentes para começar a ver os indicadores.</p>
+      <a href="/" class="btn btn-primary"><i class="bi bi-house me-1"></i>Ir para o Início</a>
+    </div>
+  </div>
+{% else %}
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Inadimplentes</div>
+          <div class="fw-bold" style="font-size:1.7rem;line-height:1.1">{{ stats.total_inadimplentes }}</div>
+          <div class="text-muted small">ativos na carteira</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Valor em aberto</div>
+          <div class="fw-bold" style="font-size:1.5rem;line-height:1.1;color:#c62828">{{ stats.valor_aberto | brl }}</div>
+          <div class="text-muted small">soma dos inadimplentes</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Valor total da carteira</div>
+          <div class="fw-bold" style="font-size:1.5rem;line-height:1.1">{{ stats.valor_total | brl }}</div>
+          <div class="text-muted small">todos os status</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Em renegociação</div>
+          <div class="fw-bold" style="font-size:1.7rem;line-height:1.1;color:#e65100">{{ stats.renegociados }}</div>
+          <div class="text-muted small">{{ stats.valor_renegociados | brl }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Quitados</div>
+          <div class="fw-bold" style="font-size:1.7rem;line-height:1.1;color:#2e7d32">{{ stats.quitados }}</div>
+          <div class="text-muted small">saíram da inadimplência</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Cancelados</div>
+          <div class="fw-bold" style="font-size:1.7rem;line-height:1.1;color:#607d8b">{{ stats.cancelados }}</div>
+          <div class="text-muted small">{{ stats.valor_cancelados | brl }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Mensagens</div>
+          <div class="fw-bold" style="font-size:1.7rem;line-height:1.1">{{ stats.envios_periodo }}</div>
+          <div class="text-muted small">últimos {{ stats.periodo_dias }} dias ({{ stats.envios_total }} no total)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Evolução da carteira -->
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="card-title">Evolução da carteira <small class="text-muted fw-normal">(por semana)</small></h6>
+          {% if stats.evolucao %}
+            <canvas id="chartEvolucao" height="110"></canvas>
+          {% else %}
+            <p class="text-muted small mb-0 mt-2">Sem histórico de atualizações ainda — o gráfico aparece após algumas consolidações.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Taxa de quitação -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="card-title">Taxa de quitação pós-cobrança</h6>
+          <div class="text-center my-2">
+            <div class="fw-bold" style="font-size:2.4rem;line-height:1;color:#2e7d32">{{ stats.taxa_quitacao }}%</div>
+          </div>
+          <div class="progress mb-2" style="height:.6rem">
+            <div class="progress-bar bg-success" role="progressbar"
+                 style="width: {{ stats.taxa_quitacao }}%"
+                 aria-valuenow="{{ stats.taxa_quitacao }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <p class="text-muted small mb-0">
+            {{ stats.quitados_cobrados }} de {{ stats.cobrados }} CPFs que já receberam
+            ao menos uma cobrança constam como quitados.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribuição por categoria -->
+    <div class="col-12 col-lg-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="card-title">Inadimplentes por categoria</h6>
+          {% if stats.categorias %}
+            <canvas id="chartCategoria" height="160"></canvas>
+          {% else %}
+            <p class="text-muted small mb-0 mt-2">Nenhum inadimplente ativo no momento.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela categorias + canais -->
+    <div class="col-12 col-lg-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="card-title">Detalhamento</h6>
+          <table class="table table-sm align-middle mb-3">
+            <thead><tr><th>Categoria</th><th class="text-end">Qtd</th><th class="text-end">Valor</th></tr></thead>
+            <tbody>
+              {% for c in stats.categorias %}
+                <tr>
+                  <td>{{ c.categoria }}</td>
+                  <td class="text-end">{{ c.qtd }}</td>
+                  <td class="text-end text-nowrap">{{ c.valor | brl }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="3" class="text-muted text-center">Sem inadimplentes ativos.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <h6 class="card-title">Mensagens por canal (total)</h6>
+          {% if stats.envios_por_canal %}
+            <div class="d-flex flex-wrap gap-2">
+              {% for canal, qtd in stats.envios_por_canal.items() %}
+                <span class="badge text-bg-light border">{{ canal }}: <strong class="ms-1">{{ qtd }}</strong></span>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted small mb-0">Nenhuma mensagem registrada ainda.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if stats.tem_dados %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const evolucao = {{ stats.evolucao | tojson }};
+  const categorias = {{ stats.categorias | tojson }};
+
+  if (evolucao.length && document.getElementById('chartEvolucao')) {
+    new Chart(document.getElementById('chartEvolucao'), {
+      type: 'line',
+      data: {
+        labels: evolucao.map(e => e.label),
+        datasets: [{
+          label: 'Total da base',
+          data: evolucao.map(e => e.total_base),
+          borderColor: '#1a1a2e',
+          backgroundColor: 'rgba(26,26,46,.08)',
+          fill: true, tension: .3, pointRadius: 3,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+
+  if (categorias.length && document.getElementById('chartCategoria')) {
+    new Chart(document.getElementById('chartCategoria'), {
+      type: 'doughnut',
+      data: {
+        labels: categorias.map(c => c.categoria),
+        datasets: [{
+          data: categorias.map(c => c.qtd),
+          backgroundColor: ['#1976d2', '#f9a825', '#c62828', '#6a1b9a', '#00838f'],
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+</script>
+{% endif %}
+{% endblock %}

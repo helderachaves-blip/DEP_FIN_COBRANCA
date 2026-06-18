@@ -10,7 +10,8 @@
 
 - **Branch:** `homologacao`
 - **Fase do produto:** Fases A–G + EPIC-01 (Sprint Zero) **100% concluídos**. Fase H em andamento — STORY-H-01 **completa em código** (status InReview): falta o onboarding real (Service Account + Shared Drive + teste com Kommo).
-- **EPIC-02 CONCLUÍDO (Ondas 0–7):** app **no ar na nuvem via Render** — Helder confirmou acesso pela URL em 17/06. Web Service `matine-cobranca` (gunicorn `-w 2`, `rootDir=06_APP`) + Postgres gerenciado `matine-db` (`render.yaml`); env vars `DATABASE_URL`, `FLASK_SECRET_KEY` (gerada), `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/APP_SENHA`, `SMTP_INEPROTEC_SENHA`, `SMTP_MATRICULAEAD_SENHA`. App agora roda em Postgres na nuvem (validação real do dual-dialect). Suíte SQLite local: **90 verdes**.
+- **EPIC-02 CONCLUÍDO (Ondas 0–7):** app **no ar na nuvem via Render** — Helder confirmou acesso pela URL em 17/06. Web Service `matine-cobranca` (gunicorn `-w 2`, `rootDir=06_APP`) + Postgres gerenciado `matine-db` (`render.yaml`); env vars `DATABASE_URL`, `FLASK_SECRET_KEY` (gerada), `MATINE_DATA_DIR=/tmp/matine`, `APP_USUARIO/APP_SENHA`, `SMTP_INEPROTEC_SENHA`, `SMTP_MATRICULAEAD_SENHA`. App agora roda em Postgres na nuvem (validação real do dual-dialect). Suíte SQLite local: **105 passed, 1 skipped**.
+- **Fase H — Sprint H-2 (Dashboard):** ✅ **entregue em código** (STORY-H-02) — rota `/dashboard`, `db.dashboard_stats`, `dashboard.html` (Chart.js), +11 testes. Agendamento removido do H-2 (decisão 17/06). Falta só validação visual no app rodando.
 - **App (local):** roda com `python app.py` em `06_APP/` → http://localhost:5000 (SQLite). Em nuvem: Render + Postgres.
 - **A verificar (smoke test pós-deploy):** confirmar fluxo ponta a ponta no ar (login → upload → consolidar → relatório/CRM → envio) e **trocar a senha admin default**.
 
@@ -22,7 +23,21 @@
 - **STORY-H-01 — Onda 2 (UI + fluxo)** ✅ **ENTREGUE 15/06** — aba "WhatsApp" em Configurações (Drive + Kommo + Comportamento) + sublink, rotas `/whatsapp/configurar|testar|exportar`, botão Testar Conexão (AJAX), botão "Exportar para WhatsApp" em Envio de Mensagens, registro em `envios` (`canal='whatsapp_crm'`). +7 testes. **Falta só o onboarding real** (ver Próxima Sessão).
 - **Submenu "Canais de Comunicação" + aba SMS** — reorganizar Configurações: agrupar E-mail (Fase G ✅), WhatsApp (H-1 ✅) e SMS (novo) sob um submenu "Canais de Comunicação". Inclui criar a aba de configuração de SMS (provider TBD). Ver Sprint H-3.
 
-### Decisões dos bloqueadores da STORY-H-01 — ✅ RESOLVIDOS (15/06/2026)
+### Correções de UI — revisão Edilvo (17/06/2026) ✅
+
+> Lote de ajustes reportados pelo Edilvo, implementado na mesma sessão do H-2.
+
+| # | Aba | Correção | Status |
+|---|-----|----------|--------|
+| C1 | **Resultado** | "Vence Hoje"/"A Vencer" agora **mantêm os totalizadores visíveis** (antes o JS os escondia); refletem a tabela "A Vencer" com rótulos próprios ("Total de Lembretes" / "Valor a Vencer"). `data-valor` adicionado às linhas A Vencer. | ✅ |
+| C2 | **Início** | Mensagem *"Arquivo de Clientes não encontrado"* (no Consolidar sem o arquivo Alunos) agora traz **link** para Configurações → Clientes (`#tab-alunos`). Via `Markup` — só essa flash é HTML, as demais seguem escapadas. | ✅ |
+| C3 | **Dashboard** | KPIs novos: **Valor total da carteira** (soma de todos os status), **Em renegociação** (qtd + R$) e **Cancelados** (qtd + R$). `dashboard_stats` expõe `valor_total`/`valor_renegociados`/`cancelados`/`valor_cancelados`. | ✅ |
+| C4 | **Base** | **Totalizadores** (registros filtrados + valor total) acima da tabela, que **atualizam a cada filtro** (card/select/busca). `data-valor` por linha + `total_raw` na rota. | ✅ |
+
+> **Verificação:** C3/C4 conferidos no app rodando (com dados reais do backup). C1 exige uma
+> consolidação ativa para ver ao vivo (template+JS). Testes: +1 (dashboard C3) +2 (`test_correcoes_ui.py`: C2 link, C4 render).
+
+
 1. ✅ **Formato da planilha:** reaproveitar a **Planilha CRM** existente (`proc.gerar_planilha_crm`), gerada em Envio de Mensagens → botão "Planilha CRM". XLSX com 2 abas: `Inadimplentes` (Nome, CPF, Telefone, E-mail, Categoria, Dias Atraso, Valor, Tag CRM) + `Saídos_Quitados`. O Kommo lê a aba `Inadimplentes` (Telefone + Tag CRM são o essencial).
 2. ✅ **Auth Google Drive:** **Service Account** (JSON) + **Shared Drive** (Workspace confirmado). Arquivos pertencem à organização (não à SA) → sem `storageQuotaExceeded`. SA como membro Gerenciador de conteúdo; API com `supportsAllDrives=True`. OAuth fica para a v2 SaaS (cada tenant conecta o próprio Drive); `gdrive.py` modular para troca barata.
 
@@ -43,12 +58,34 @@ criar Service Account + Shared Drive, montar o Secret File no Render (`GOOGLE_SA
 testar conexão/exportação e validar com o Kommo → QA gate. Entradas: `configuracoes.html` (aba WhatsApp),
 `envio_mensagens.html` (botão Exportar), rotas `/whatsapp/*` em `app.py`, `06_APP/gdrive.py`.
 
-**3. Backlog Fase H (escolher com Helder):** Sprint H-2 (Agendamento + Dashboard analítico) ou
-Sprint H-3 (submenu "Canais de Comunicação" + aba SMS).
+**3. Backlog Fase H (escolher com Helder):** Sprint H-3 (submenu "Canais de Comunicação" + aba SMS).
+Sprint H-2 (Dashboard) já entregue em código — falta só validar visualmente no app rodando.
 
 ---
 
 ## Histórico de Sessões
+
+### Sessão 17/06/2026 — Sprint H-2: Dashboard analítico
+- **Decisão de escopo:** "Agendamento via Windows Task Scheduler" **removido** do H-2 (obsoleto
+  pós-EPIC-02: app no Render/Linux, sem ingestão automática do Synapta). Jobs de infra reais
+  (dump do Postgres + keep-alive) ficam no backlog de infra do EPIC-02/v2 (INSIGHTS).
+- **Dashboard entregue (STORY-H-02):** `db.dashboard_stats(empresa, dias=30)` agrega KPIs
+  (inadimplentes, valor em aberto, quitados, renegociados, msgs no período), distribuição por
+  categoria, **taxa de quitação pós-cobrança** (dos CPFs com `qtd_cobranca>0`, % hoje `QUITADO`)
+  e **evolução semanal** da carteira (bucketização ISO de `historico_atualizacoes`).
+- **Cross-dialect:** datas em texto pt-BR (`dd/mm/AAAA`) são parseadas em Python (`_parse_dt_br`),
+  sem funções de data específicas de dialeto → vale p/ SQLite e Postgres.
+- **UI:** rota `/dashboard` (login obrigatório), link na sidebar, `dashboard.html` com cards de
+  KPI + gráficos **Chart.js** (linha de evolução + doughnut de categorias) + barra de taxa de
+  quitação + estado vazio amigável. Sem novas tabelas/deps de backend.
+- **+11 testes** (`tests/test_dashboard.py`). **Suíte: 102 passed, 1 skipped.**
+- Story em `docs/stories/story-h2-dashboard.md` (status InProgress → falta só validação visual no ar).
+- **Fix de boot local (pré-existente):** o banner do `__main__` imprimia `✓` e o console Windows
+  (cp1252, Python 3.14) derrubava o app na 1ª execução. `app.py` agora força UTF-8 em stdout/stderr
+  locais (`reconfigure(errors='replace')`) — não afeta o Render (já UTF-8).
+- **`.bat` corrigido p/ esta máquina:** `ABRIR CONSOLIDADOR WEB.bat` tinha caminhos hardcoded de
+  outra máquina (usuário `Cliente`, drive `E:`). Reescrito com caminho dinâmico (`%~dp0` + `06_APP`)
+  + detecção de Python (`py`→`python`) + validações. Testado: sobe o servidor e abre o navegador.
 
 ### Sessão 17/06/2026 — Validação do deploy + hardening de migrations concorrentes
 - **Smoke test automático do Render:** app no ar (HTTP 200 após cold start ~30–60s do free tier), `/` → 302 `/login`, página "Login – Cobranças INE-MAT" OK, sem erro 500/Postgres. Falta a parte interativa (login/upload/consolidar/relatório/envio + **trocar senha admin default** — login padrão `luana/matine2026` em `app.py:1510`).
@@ -184,12 +221,21 @@ Sprint H-3 (submenu "Canais de Comunicação" + aba SMS).
 | Testes de rota (`test_whatsapp.py`, +7) | ✅ Onda 2 |
 | Onboarding real (SA + Shared Drive + teste com Kommo) | 🔲 Próxima sessão |
 
-## Sprint H-2 — Agendamento + Dashboard 🔲
+## Sprint H-2 — Dashboard analítico 🔄 (Agendamento removido)
+
+> **Decisão 17/06:** o item "Agendamento via Windows Task Scheduler" foi **removido** do H-2.
+> Com o app no Render/Linux e sem ingestão automática do Synapta, não há o que consolidar
+> automaticamente. Os jobs que de fato importam (dump do Postgres p/ risco dos 90 dias +
+> keep-alive contra cold start) viram **backlog de infra do EPIC-02/v2** (já em INSIGHTS).
 
 | Item | Status |
 |------|--------|
-| Agendamento via Windows Task Scheduler | 🔲 |
-| Dashboard analítico básico (evolução semanal, taxa de quitação) | 🔲 |
+| ~~Agendamento via Windows Task Scheduler~~ | ❌ Removido (obsoleto pós-EPIC-02) |
+| `db.dashboard_stats` — KPIs, categorias, taxa de quitação, evolução semanal (cross-dialect) | ✅ Entregue |
+| Rota `/dashboard` + link na sidebar | ✅ Entregue |
+| `dashboard.html` — KPIs + gráficos Chart.js + taxa de quitação + estado vazio | ✅ Entregue |
+| `tests/test_dashboard.py` (11 testes) | ✅ Entregue |
+| Validação visual no app rodando (smoke) | 🔲 Próxima sessão |
 
 ## Sprint H-3 — Canais de Comunicação + SMS 🔲
 

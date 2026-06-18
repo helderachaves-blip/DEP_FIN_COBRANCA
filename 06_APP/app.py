@@ -10,6 +10,7 @@ import pickle
 import secrets
 import shutil
 import smtplib
+import sys
 import tempfile
 import zipfile
 from datetime import datetime, timedelta
@@ -47,6 +48,7 @@ from flask_login import (
     LoginManager, UserMixin, current_user,
     login_user, logout_user,
 )
+from markupsafe import Markup
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import database as db
@@ -521,6 +523,13 @@ def index():
     )
 
 
+@app.route('/dashboard')
+def dashboard():
+    empresa = get_empresa()
+    stats = db.dashboard_stats(empresa)
+    return render_template('dashboard.html', stats=stats)
+
+
 @app.route('/upload', methods=['POST'])
 def upload():
     empresa = get_empresa()
@@ -560,7 +569,11 @@ def consolidar():
         flash("Arquivo de Vencidos não encontrado. Importe-o primeiro.", "danger")
         return redirect(url_for('index'))
     if not path_alunos:
-        flash("Arquivo de Clientes não encontrado. Importe-o primeiro.", "danger")
+        flash(Markup(
+            'Arquivo de Clientes não encontrado. '
+            f'<a href="{url_for("configuracoes")}#tab-alunos" class="alert-link">'
+            'Importe-o em Configurações → Clientes</a> primeiro.'
+        ), "danger")
         return redirect(url_for('index'))
 
     try:
@@ -824,6 +837,7 @@ def base():
             'email':           row['email'] or '-',
             'qtd':             row['qtd_boletos'],
             'total':           fmt_brl(float(row['total'])),
+            'total_raw':       float(row['total']),
             'vencimento':      row['ultimo_vencimento'],
             'dias':            row['dias_atraso'],
             'categoria':       row['categoria'],
@@ -1502,6 +1516,14 @@ def whatsapp_exportar():
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
+    # O console do Windows (cp1252) não encoda ✓/emoji e derruba o boot ao imprimir
+    # o banner. Força UTF-8 no stdout/stderr locais; não afeta a nuvem (Render já é
+    # UTF-8). errors='replace' garante que nenhum print volte a travar a aplicação.
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding='utf-8', errors='replace')
+        except (AttributeError, ValueError):
+            pass
     print("=" * 60)
     print("  Consolidador de Inadimplências — Multi-empresa")
     if PRIMEIRA_EXECUCAO:

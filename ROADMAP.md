@@ -1,7 +1,7 @@
 # ROADMAP — MAT-INE Inadimplência 2026
 
 > Linha do tempo completa. Itens entregues nunca são deletados — apenas marcados ✅.
-> Última atualização: 16/06/2026
+> Última atualização: 17/06/2026
 
 ---
 
@@ -288,10 +288,25 @@ Tags mapeiam para templates no Kommo: `INADIMPLENTE_NOVO`, `INADIMPLENTE_REGUA`,
 
 **Falta para fechar a STORY-H-01 (próxima sessão):** onboarding real (criar Service Account + Shared Drive, testar conexão e exportação) e validação ponta a ponta com o Kommo → QA gate (InReview → Done).
 
-### Sprint H-2 — Agendamento + Dashboard
+### Sprint H-2 — Dashboard analítico *(entregue em código 17/06/2026)*
 
-- [ ] Agendamento via Windows Task Scheduler — consolidação + exportação automática em horário configurável
-- [ ] Dashboard analítico básico: evolução semanal de inadimplentes, taxa de quitação pós-cobrança, mensagens enviadas × conversões
+**Decisão de escopo (17/06):** o *Agendamento via Windows Task Scheduler* foi **removido** do H-2.
+Pós-EPIC-02 o app roda no Render/Linux e não há ingestão automática do Synapta — não há o que
+consolidar automaticamente. Os jobs de infra que importam (dump do Postgres p/ risco dos 90 dias +
+keep-alive) ficam no backlog de infra (ver INSIGHTS → Infraestrutura).
+
+- [x] **Dashboard analítico (STORY-H-02)** — rota `/dashboard` (login obrigatório, escopado pela
+  empresa ativa) + link na sidebar. `db.dashboard_stats(empresa, dias=30)` agrega:
+  - KPIs: total de inadimplentes, valor em aberto (R$), quitados, em renegociação, mensagens no período
+  - Distribuição por categoria (Novos / Régua / Acima 30 dias) — qtd + valor
+  - **Taxa de quitação pós-cobrança:** dos CPFs com `qtd_cobranca>0`, % hoje `QUITADO` (com numerador/denominador à vista)
+  - **Evolução semanal** da carteira (bucketização ISO de `historico_atualizacoes`)
+  - `dashboard.html` com gráficos **Chart.js** (linha + doughnut) + estado vazio amigável
+  - Cross-dialect: datas pt-BR parseadas em Python (`_parse_dt_br`) — vale p/ SQLite e Postgres
+  - Sem novas tabelas/deps de backend. **+11 testes** (`tests/test_dashboard.py`). Suíte: 102 passed, 1 skipped
+- [ ] ~~Agendamento via Windows Task Scheduler~~ — **removido** (obsoleto pós-EPIC-02)
+- [ ] Validação visual no app rodando (smoke) — próxima sessão
+- [ ] *(v.next)* Taxa de resposta/conversões reais do WhatsApp — exige callback do Kommo
 
 ### Sprint H-3 — Canais de Comunicação + SMS *(novo — 15/06/2026)*
 

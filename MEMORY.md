@@ -159,6 +159,7 @@ Templates são configuráveis em Configurações → Mensagens. Cada template te
 |------|-----------|
 | `/login` · `/logout` | Autenticação (público); guard `before_request` protege o resto |
 | `/` | Início — upload e consolidação |
+| `/dashboard` | Painel analítico (Sprint H-2): KPIs, evolução semanal, distribuição por categoria, taxa de quitação pós-cobrança. Dados via `db.dashboard_stats`; gráficos Chart.js |
 | `/resultado` | Resultado da consolidação com filtros |
 | `/envio-mensagens` | Wizard de envio (WhatsApp + E-mail) |
 | `/base` | Base de inadimplentes persistida |
@@ -188,6 +189,7 @@ Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Min
 | `06_APP/templates/layout.html` | Sidebar, topbar, dropdown do usuário, CSS global (Bootstrap 5.3.3) |
 | `06_APP/templates/login.html` | Tela de login standalone (sem sidebar) |
 | `06_APP/templates/index.html` | Upload + ações de consolidação |
+| `06_APP/templates/dashboard.html` | Painel analítico (Sprint H-2) — KPIs + gráficos Chart.js (CDN) + taxa de quitação |
 | `06_APP/templates/resultado.html` | Tabela de resultado com filtros |
 | `06_APP/templates/envio_mensagens.html` | Wizard de envio (WhatsApp + E-mail) |
 | `06_APP/templates/base.html` | Base persistida com cards de filtro |
@@ -196,7 +198,7 @@ Acesso pelo menu do usuário (dropdown no canto superior direito da topbar): Min
 | `06_APP/templates/usuarios.html` · `conta.html` | Gestão de usuários (admin) · Minha conta |
 | `06_APP/conftest.py` · `pytest.ini` · `tests/` | Suíte de testes pytest (banco isolado via `MATINE_DATA_DIR`) |
 
-**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (90 testes; nunca tocam produção).
+**Testes:** `cd 06_APP && pip install -r requirements-dev.txt && pytest` (105 passed, 1 skipped; nunca tocam produção).
 
 ---
 

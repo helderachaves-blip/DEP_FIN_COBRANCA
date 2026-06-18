@@ -109,6 +109,32 @@
   </div>
 </div>
 
+<!-- TOTALIZADORES (atualizam com o filtro) -->
+<div class="row g-2 mb-3" id="rowTotaisBase">
+  <div class="col-6 col-md-4">
+    <div class="card shadow-sm h-100" style="border:none;border-left:4px solid #1565C0;border-radius:12px">
+      <div class="card-body d-flex align-items-center gap-3 py-2">
+        <div id="baseTotalCount" style="font-size:1.8rem;font-weight:700;color:#1565C0;line-height:1">{{ alunos|length }}</div>
+        <div>
+          <div class="fw-semibold text-dark" style="font-size:.9rem">Registros filtrados</div>
+          <small class="text-muted"><i class="bi bi-arrow-left-right me-1"></i>atualiza com o filtro</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card shadow-sm h-100" style="border:none;border-left:4px solid #2e7d32;border-radius:12px">
+      <div class="card-body d-flex align-items-center gap-3 py-2">
+        <div id="baseTotalValor" style="font-size:1.4rem;font-weight:700;color:#2e7d32;line-height:1">{{ (alunos | sum(attribute='total_raw')) | brl }}</div>
+        <div>
+          <div class="fw-semibold text-dark" style="font-size:.9rem">Valor total</div>
+          <small class="text-muted"><i class="bi bi-arrow-left-right me-1"></i>atualiza com o filtro</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- FILTROS -->
 <div class="card mb-3">
   <div class="card-body py-2">
@@ -169,7 +195,7 @@
         </thead>
         <tbody>
           {% for a in alunos %}
-          <tr data-status="{{ a.status }}" data-cat="{{ a.categoria }}" data-ren="{{ 'true' if a.em_renegociacao else '' }}" data-nome="{{ a.aluno|lower }}" data-vence-hoje="{{ 'true' if a.vence_hoje else '' }}">
+          <tr data-status="{{ a.status }}" data-cat="{{ a.categoria }}" data-ren="{{ 'true' if a.em_renegociacao else '' }}" data-nome="{{ a.aluno|lower }}" data-vence-hoje="{{ 'true' if a.vence_hoje else '' }}" data-valor="{{ a.total_raw }}">
             <td class="text-muted small">{{ loop.index }}</td>
             <td class="fw-semibold">{{ a.aluno }}</td>
             <td class="small text-muted">{{ a.cpf }}</td>
@@ -282,6 +308,12 @@ const filtroCategoria = document.getElementById('filtroCategoria');
 const filtroBusca     = document.getElementById('filtroBusca');
 const contador        = document.getElementById('contador');
 const linhas          = document.querySelectorAll('#tabelaBase tbody tr');
+const baseTotalCount  = document.getElementById('baseTotalCount');
+const baseTotalValor  = document.getElementById('baseTotalValor');
+
+function fmtBrl(val) {
+  return 'R$ ' + val.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
 
 let filtroCard = '';
 
@@ -303,7 +335,7 @@ function filtrar() {
   const st    = filtroStatus    ? filtroStatus.value    : '';
   const cat   = filtroCategoria ? filtroCategoria.value : '';
   const busca = filtroBusca     ? filtroBusca.value.toLowerCase() : '';
-  let vis = 0;
+  let vis = 0, soma = 0;
   linhas.forEach(tr => {
     const cardOk = cardMatchRow(tr, filtroCard);
     const stOk   = !st   || tr.dataset.status === st;
@@ -314,9 +346,11 @@ function filtrar() {
     const nomeOk = !busca || tr.dataset.nome.includes(busca);
     const show   = cardOk && stOk && catOk && nomeOk;
     tr.style.display = show ? '' : 'none';
-    if (show) vis++;
+    if (show) { vis++; soma += parseFloat(tr.dataset.valor || 0); }
   });
-  if (contador) contador.textContent = vis + ' cliente' + (vis !== 1 ? 's' : '');
+  if (contador)       contador.textContent       = vis + ' cliente' + (vis !== 1 ? 's' : '');
+  if (baseTotalCount) baseTotalCount.textContent = vis;
+  if (baseTotalValor) baseTotalValor.textContent = fmtBrl(soma);
 }
 
 if (filtroStatus)    filtroStatus.addEventListener('change', filtrar);
