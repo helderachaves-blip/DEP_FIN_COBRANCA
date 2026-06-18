@@ -210,6 +210,9 @@ Suporte embutido no sistema — reduz dependência de Edilvo/Helder para dúvida
 - [x] Conteúdo operacional passo a passo: Visão geral, Início, Resultado, Envio de Mensagens,
   Base, Configurações + Dúvidas frequentes
 - [x] Responsivo (índice some em telas estreitas); manutenção documentada na story
+- [x] **Atualização 18/06:** nova seção **Dashboard** (H-2) + bloco **Canais de Comunicação**
+  em Configurações (E-mail/WhatsApp/SMS, H-1/H-3) — Ajuda sincronizada com as telas entregues.
+  *(Pendente: prints das telas — ver INSIGHTS → Documentação)*
 
 ---
 

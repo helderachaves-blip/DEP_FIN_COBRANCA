@@ -57,6 +57,7 @@
     <div class="nav-title">Telas</div>
     <a class="nav-link" href="#visao-geral"><i class="bi bi-compass"></i> Visão geral</a>
     <a class="nav-link" href="#inicio"><i class="bi bi-house"></i> Início</a>
+    <a class="nav-link" href="#dashboard"><i class="bi bi-bar-chart-line"></i> Dashboard</a>
     <a class="nav-link" href="#resultado"><i class="bi bi-table"></i> Resultado</a>
     <a class="nav-link" href="#envio"><i class="bi bi-whatsapp"></i> Envio de Mensagens</a>
     <a class="nav-link" href="#base"><i class="bi bi-database"></i> Base</a>
@@ -80,8 +81,8 @@
           <kbd-btn>Ineprotec | Mat. EaD</kbd-btn>. Cada empresa tem seus próprios dados, arquivos e
           mensagens. <strong>Confira sempre qual empresa está selecionada</strong> (o nome aparece
           colorido no topo) antes de trabalhar.</li>
-        <li><strong>Menu lateral:</strong> à esquerda estão todas as telas — Início, Resultado,
-          Envio de Mensagens, Base, Configurações e esta Ajuda.</li>
+        <li><strong>Menu lateral:</strong> à esquerda estão todas as telas — Início, Dashboard,
+          Resultado, Envio de Mensagens, Base, Configurações e esta Ajuda.</li>
       </ul>
       <div class="ajuda-tip"><i class="bi bi-lightbulb"></i> <strong>Dica:</strong> trocar de empresa
         no meio de um trabalho não apaga nada — apenas muda a visualização. Os dados de cada empresa
@@ -108,6 +109,27 @@
         (geralmente faltando telefone).</div>
       <p>Para descartar a consolidação atual e recomeçar, use <kbd-btn>Limpar Sessão</kbd-btn>
         (pede confirmação). Isso não apaga a Base.</p>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="ajuda-sec">
+      <h3><i class="bi bi-bar-chart-line"></i>Dashboard</h3>
+      <p class="lead-text">Uma visão geral, em números e gráficos, da situação da empresa
+        selecionada — útil para acompanhar a evolução sem entrar em cada lista.</p>
+      <ul>
+        <li><strong>Indicadores (cartões no topo):</strong> total de inadimplentes e valor em
+          aberto, valor total da carteira, quantos estão quitados, em renegociação e cancelados,
+          e quantas mensagens foram enviadas no período.</li>
+        <li><strong>Distribuição por categoria:</strong> mostra, em gráfico, quantos alunos há em
+          Novos Inadimplentes, Régua (2 a 29 dias) e Acima de 30 Dias.</li>
+        <li><strong>Taxa de quitação pós-cobrança:</strong> dos alunos que já foram cobrados, qual
+          a porcentagem que hoje está quitada — uma medida de quanto a cobrança está dando resultado.</li>
+        <li><strong>Evolução semanal:</strong> gráfico de linha acompanhando a carteira ao longo
+          das semanas.</li>
+      </ul>
+      <div class="ajuda-tip"><i class="bi bi-info-circle"></i> O Dashboard sempre reflete a
+        <strong>empresa selecionada</strong> no topo e considera os últimos 30 dias para as
+        mensagens enviadas. Se a empresa ainda não tem dados, a tela mostra um aviso amigável.</div>
     </section>
 
     <!-- RESULTADO -->
@@ -188,9 +210,21 @@
         <li><strong>Régua:</strong> define as faixas de dias de atraso de cada mensagem
           (ex.: 1 dia, 2 a 29 dias, acima de 30 dias).</li>
         <li><strong>Clientes:</strong> importa/atualiza o cadastro de alunos (telefones e e-mails).</li>
-        <li><strong>E-mail:</strong> configura o servidor de envio de e-mail (SMTP) e permite
-          <kbd-btn>Testar Conexão</kbd-btn> antes de usar.</li>
         <li><strong>Zona de Risco:</strong> reúne as ações que apagam dados — use com atenção.</li>
+      </ul>
+      <p class="mt-3 mb-2"><strong>Canais de Comunicação</strong> — um submenu que agrupa as três
+        formas de contato. Clique no título para abrir ou fechar o grupo:</p>
+      <ul>
+        <li><strong>E-mail:</strong> configura o servidor de envio de e-mail (SMTP) e permite
+          <kbd-btn>Testar Conexão</kbd-btn> antes de usar. É o que habilita o envio por e-mail na
+          tela de Envio de Mensagens.</li>
+        <li><strong>WhatsApp:</strong> configura a integração que leva os contatos ao CRM (Kommo)
+          via Google Drive — credencial da conta de serviço, pasta de destino e comportamento.
+          Tem <kbd-btn>Testar Conexão</kbd-btn>. Uma vez configurado, aparece o botão
+          <kbd-btn>Exportar para WhatsApp</kbd-btn> em Envio de Mensagens.</li>
+        <li><strong>SMS:</strong> tela de configuração do canal de SMS (provedor, remetente e chave
+          de acesso). <strong>O envio de SMS ainda não está habilitado</strong> — a tela já deixa a
+          configuração pronta para quando o provedor for definido.</li>
       </ul>
       <div class="ajuda-tip"><i class="bi bi-lightbulb"></i> Mudou um texto de mensagem? A alteração
         vale a partir da próxima geração de relatórios.</div>

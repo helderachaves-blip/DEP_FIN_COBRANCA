@@ -70,14 +70,21 @@ camada de envio + registro em `envios` (`canal='sms'`). Decisão do Helder/Edilv
 
 ## Histórico de Sessões
 
-### Sessão 18/06/2026 — Correção de UI: submenu Canais colapsável + Zona de Risco
+### Sessão 18/06/2026 — Correção de UI + atualização da Central de Ajuda
 - **Revisão do Helder** sobre a sidebar de Configurações entregue no H-3:
   - "Canais de Comunicação" estava **estático** (era só um rótulo `.nav-subheader`) → virou
     **submenu colapsável** (toggle Bootstrap `#submenuCanais` + chevron giratório, mesmo padrão
     do submenu "Configurações"). E-mail/WhatsApp/SMS agora abrem/fecham ao clicar (começa aberto).
   - "Zona de Risco" estava **dentro** do grupo de canais → movida para **logo após "Clientes"**,
     antes do submenu de canais.
-- Só `layout.html` (template + CSS); deep-links `#tab-email|whatsapp|sms` preservados. Sem backend → suíte inalterada.
+  - Só `layout.html` (template + CSS); deep-links `#tab-email|whatsapp|sms` preservados.
+- **Central de Ajuda atualizada** (`ajuda.html`) para cobrir o que foi entregue desde que ela
+  foi escrita: nova seção **Dashboard** (KPIs, distribuição, taxa de quitação, evolução) + link
+  no índice + citação na Visão Geral; bloco **Canais de Comunicação** em Configurações
+  (E-mail/WhatsApp/SMS, com aviso de que o envio de SMS ainda não está habilitado); "Zona de
+  Risco" reposicionada no texto para refletir a sidebar.
+- Tudo template puro (sem backend) → **suíte inalterada**. Pendente do lado do Helder: incluir
+  **prints** das telas na Ajuda (item de INSIGHTS).
 
 ### Sessão 18/06/2026 — Sprint H-3: Canais de Comunicação + scaffold de SMS
 - **Sessão autônoma** (Helder ausente, modo accept-edits) com escopo combinado: implementar
